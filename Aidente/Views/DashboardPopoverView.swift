@@ -2,6 +2,30 @@ import AppKit
 import Defaults
 import SwiftUI
 
+/// Shared geometry for the dashboard presentation. Keep the width in one
+/// place so the popover, standalone window and preview panel stay in sync;
+/// the height is an upper bound only — the real height is measured from the
+/// visible content and reported to AppKit.
+enum DashboardLayout {
+    static let width: CGFloat = 400
+    static let maxHeight: CGFloat = 800
+    static let dividerHeight: CGFloat = 1
+}
+
+private struct DashboardHeaderHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct DashboardContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct DashboardPopoverView: View {
     let viewModel: MenuViewModel
     let onOpenSettings: (SettingsTab) -> Void
@@ -14,45 +38,106 @@ struct DashboardPopoverView: View {
     @Default(.stopChargingWhileSleeping) private var sleepPauseEnabled
     @Default(.sailingMode) private var sailingModeEnabled
     @Default(.appLanguage) private var appLanguage
+    @Default(.showPowerSource) private var showPowerSource
+    @Default(.showTimeTillDischarge) private var showTimeTillDischarge
+    @Default(.showUptime) private var showUptime
+    @Default(.showBatteryCycleCount) private var showBatteryCycleCount
+    @Default(.showBatteryHealth) private var showBatteryHealth
+    @Default(.showInternalPower) private var showInternalPower
+    @Default(.showExternalPower) private var showExternalPower
+    @Default(.showPowerDistribution) private var showPowerDistribution
+    @Default(.showCapacityHistory) private var showCapacityHistory
+    @Default(.showEnergyAppRanking) private var showEnergyAppRanking
+    @Default(.showCareActions) private var showCareActions
+    @Default(.showAutomaticProtection) private var showAutomaticProtection
+    @Default(.appAppearance) private var appAppearance
+    @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var systemAppearanceMonitor = SystemAppearanceMonitor()
+
+    /// Called whenever the measured content height changes so AppKit can
+    /// resize the popover / standalone window / preview panel.
+    var onHeightChange: (CGFloat) -> Void = { _ in }
 
     @State private var chargeLimitDraft: Double = 80
     @State private var isAdjustingChargeLimit = false
     @State private var capacityHistoryRange: CapacityHistoryRange = .all
+    @State private var headerHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+
+    /// Always explicit;「自动」resolves to the current system appearance (see
+    /// SettingsView.resolvedPreferredScheme — nil is sticky in AppKit hosting).
+    private var resolvedPreferredScheme: ColorScheme {
+        switch appAppearance {
+        case .light: return .light
+        case .dark: return .dark
+        case .auto: return systemAppearanceMonitor.isDark ? .dark : .light
+        }
+    }
+
+    private var scrollHeight: CGFloat {
+        let available =
+            DashboardLayout.maxHeight
+            - headerHeight
+            - DashboardLayout.dividerHeight
+        return max(0, min(contentHeight, available))
+    }
+
+    private var totalHeight: CGFloat {
+        headerHeight + DashboardLayout.dividerHeight + scrollHeight
+    }
 
     var body: some View {
         ZStack {
             AidenteWindowBackdrop()
 
             VStack(spacing: 0) {
+                // Plan A + B: the dashboard chrome is transparent so the
+                // L0 glass shows through; only a 1pt neutral rule remains.
                 header
+                    .background(GeometryReader { geo in
+                        Color.clear.preference(
+                            key: DashboardHeaderHeightKey.self,
+                            value: geo.size.height
+                        )
+                    })
 
                 Rectangle()
-                    .fill(.primary.opacity(0.11))
-                    .frame(height: 1)
-                    .padding(.horizontal, 14)
+                    .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
+                    .frame(height: DashboardLayout.dividerHeight)
 
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         statusHero
                         powerSummary
                         batterySummary
-                        capacityHistory
-                        energyAppRanking
-                        careActions
-                        automaticProtection
-                        settingsLinks
+                        if showCapacityHistory { capacityHistory }
+                        if showEnergyAppRanking { energyAppRanking }
+                        if showCareActions { careActions }
+                        if showAutomaticProtection { automaticProtection }
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 11)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(GeometryReader { geo in
+                        Color.clear.preference(
+                            key: DashboardContentHeightKey.self,
+                            value: geo.size.height
+                        )
+                    })
                 }
                 .scrollIndicators(.never)
-
-                footer
+                .frame(height: scrollHeight)
             }
         }
-        .frame(width: 408, height: 720)
-        .preferredColorScheme(.dark)
+        .frame(width: DashboardLayout.width, height: totalHeight)
+        .preferredColorScheme(resolvedPreferredScheme)
         .tint(AidenteTheme.jade)
+        .onPreferenceChange(DashboardHeaderHeightKey.self) { headerHeight = $0 }
+        .onPreferenceChange(DashboardContentHeightKey.self) { contentHeight = $0 }
+        .onChange(of: totalHeight) { _, newValue in
+            guard newValue > 0 else { return }
+            onHeightChange(newValue)
+        }
         .onAppear {
             chargeLimitDraft = Double(chargeLimit)
         }
@@ -63,38 +148,39 @@ struct DashboardPopoverView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(
-                    viewModel.adapterConnected
-                        ? AidenteL10n.t("电源已连接")
-                        : AidenteL10n.t("正在使用电池")
-                )
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(viewModel.batteryModeText)
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+
+                Spacer()
+
+                HStack(spacing: 6) {
+                    FooterButton(icon: "arrow.clockwise") { viewModel.refresh() }
+                    FooterButton(icon: "gearshape.fill") { onOpenSettings(.general) }
+                    FooterButton(icon: "power") { onQuit() }
+                }
             }
 
-            Spacer()
-
-            if showBatteryTemperature {
-                Label(viewModel.batteryTemperatureText, systemImage: "thermometer.medium")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AidenteTheme.jade)
+            if showUptime || showTimeTillDischarge {
+                VStack(alignment: .leading, spacing: 2) {
+                    if showUptime {
+                        Text(AidenteL10n.t("系统运行时间：") + viewModel.uptimeText)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    if showTimeTillDischarge {
+                        Text(AidenteL10n.t("电池剩余时间：") + viewModel.timeRemainingText)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
             }
-
-            Rectangle()
-                .fill(.primary.opacity(0.16))
-                .frame(width: 1, height: 25)
-
-            Text(viewModel.batteryPercentageText)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .monospacedDigit()
         }
         .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
     }
 
     private var statusHero: some View {
@@ -106,30 +192,16 @@ struct DashboardPopoverView: View {
                         : "battery.75percent"
                 )
                 .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(colorScheme == .dark ? Color.white : heroTint)
                 .frame(width: 39, height: 39)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(statusTint.opacity(0.17))
+                        .fill(heroTint.opacity(0.17))
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(viewModel.operationStatusText)
                         .font(.system(size: 15, weight: .bold))
-                    Text(
-                        viewModel.adapterConnected
-                            ? AidenteL10n.t(
-                                "充电器规格 \(viewModel.adapterSpecificationText)",
-                                "Charger \(viewModel.adapterSpecificationText)"
-                            )
-                            : AidenteL10n.t(
-                                "电池 \(viewModel.internalInputText)",
-                                "Battery \(viewModel.internalInputText)"
-                            )
-                    )
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
                 }
 
                 Spacer()
@@ -138,7 +210,7 @@ struct DashboardPopoverView: View {
             BatteryChargeLimitControl(
                 batteryLevel: viewModel.displayPercentage,
                 chargeLimitDraft: $chargeLimitDraft,
-                tint: statusTint
+                tint: heroTint
             ) { editing in
                 isAdjustingChargeLimit = editing
                 if !editing {
@@ -148,10 +220,10 @@ struct DashboardPopoverView: View {
 
             HStack(spacing: 6) {
                 Circle()
-                    .fill(manageCharging ? AidenteTheme.jade : AidenteTheme.amber)
+                    .fill(manageCharging ? heroTint : warningTint)
                     .frame(width: 6, height: 6)
                     .shadow(
-                        color: manageCharging ? AidenteTheme.jade : AidenteTheme.amber,
+                        color: manageCharging ? heroTint : warningTint,
                         radius: 4
                     )
                 Text(
@@ -175,10 +247,15 @@ struct DashboardPopoverView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.115, green: 0.145, blue: 0.18).opacity(0.95),
-                            Color(red: 0.065, green: 0.075, blue: 0.09).opacity(0.92),
-                        ],
+                        colors: colorScheme == .dark
+                            ? [
+                                Color(red: 0.115, green: 0.145, blue: 0.18).opacity(0.95),
+                                Color(red: 0.065, green: 0.075, blue: 0.09).opacity(0.92),
+                            ]
+                            : [
+                                Color.white.opacity(0.97),
+                                heroTint.opacity(0.14),
+                            ],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -186,68 +263,114 @@ struct DashboardPopoverView: View {
         }
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(statusTint)
+                .fill(heroTint)
                 .frame(width: 2)
-                .shadow(color: statusTint, radius: 8)
+                .shadow(color: heroTint, radius: 8)
                 .padding(.vertical, 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.white.opacity(0.12), lineWidth: 1)
+                .strokeBorder(
+                    colorScheme == .dark
+                        ? Color.white.opacity(0.12)
+                        : heroTint.opacity(0.28),
+                    lineWidth: 1
+                )
         }
-        .shadow(color: statusTint.opacity(0.12), radius: 10, y: 4)
+        .shadow(color: heroTint.opacity(0.12), radius: 10, y: 4)
+        // The hero now follows the system appearance like the rest of the
+        // dashboard, so .primary/.secondary resolve correctly on its surface.
     }
 
     private var batterySummary: some View {
-        PopoverCompactCard {
-            HStack(spacing: 0) {
-                CompactMetric(
-                    title: "电池健康",
-                    value: viewModel.batteryHealthText,
-                    tint: AidenteTheme.jade
-                )
-                CompactDivider()
-                CompactMetric(
-                    title: "循环次数",
-                    value: viewModel.cycleCountText,
-                    tint: AidenteTheme.violet
-                )
-                CompactDivider()
-                CompactMetric(
-                    title: "剩余时间",
-                    value: viewModel.timeRemainingText,
-                    tint: AidenteTheme.amber,
-                    compact: true
-                )
+        let metrics: [(title: String, value: String, tint: Color, compact: Bool)] = [
+            showBatteryHealth
+                ? ("电池健康", viewModel.batteryHealthText, AidenteTheme.jade, false)
+                : nil,
+            showBatteryCycleCount
+                ? ("循环次数", viewModel.cycleCountText, AidenteTheme.violet, false)
+                : nil,
+            showBatteryTemperature
+                ? ("电池温度", viewModel.batteryTemperatureText, AidenteTheme.amber, false)
+                : nil,
+        ]
+        .compactMap { $0 }
+
+        return Group {
+            if !metrics.isEmpty {
+                PopoverCompactCard {
+                    HStack(spacing: 0) {
+                        ForEach(0..<metrics.count, id: \.self) { index in
+                            if index > 0 {
+                                CompactDivider()
+                            }
+                            let metric = metrics[index]
+                            CompactMetric(
+                                title: metric.title,
+                                value: metric.value,
+                                tint: metric.tint,
+                                compact: metric.compact
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 
     private var powerSummary: some View {
-        PopoverCompactCard {
-            VStack(spacing: 8) {
-                HStack {
-                    Label(
-                        AidenteL10n.t("实时功率分流"),
-                        systemImage: "point.3.connected.trianglepath.dotted"
-                    )
-                        .font(.system(size: 13, weight: .semibold))
-                    Spacer()
-                    Text(viewModel.powerSourceText)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+        Group {
+            if showPowerDistribution {
+                PopoverCompactCard {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Label(
+                                AidenteL10n.t("实时功率分流"),
+                                systemImage: "point.3.connected.trianglepath.dotted"
+                            )
+                                .font(.system(size: 13, weight: .semibold))
+                            Spacer()
+                            if showPowerSource {
+                                Text(viewModel.powerSourceText)
+                                    .font(.system(size: 10.5, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
 
-                CompactPowerFlowDiagram(
-                    powerSource: viewModel.powerSource,
-                    isCharging: viewModel.isCharging,
-                    adapterPower: viewModel.adapterPower,
-                    systemPower: viewModel.systemPower,
-                    batteryPower: viewModel.batteryPower,
-                    adapterElectricalText: viewModel.adapterElectricalText,
-                    batteryElectricalText: viewModel.batteryElectricalText
-                )
+                        CompactPowerFlowDiagram(
+                            powerSource: viewModel.powerSource,
+                            isCharging: viewModel.isCharging,
+                            adapterPower: viewModel.adapterPower,
+                            systemPower: viewModel.systemPower,
+                            batteryPower: viewModel.batteryPower,
+                            adapterElectricalText: viewModel.adapterElectricalText,
+                            batteryElectricalText: viewModel.batteryElectricalText
+                        )
+
+                        if showInternalPower || showExternalPower {
+                            HStack(spacing: 12) {
+                                if showInternalPower {
+                                    Label(
+                                        viewModel.internalInputText,
+                                        systemImage: "battery.50percent"
+                                    )
+                                        .font(.system(size: 9.5, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                                if showExternalPower {
+                                    Label(
+                                        viewModel.externalInputText,
+                                        systemImage: "powerplug.fill"
+                                    )
+                                        .font(.system(size: 9.5, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -471,68 +594,6 @@ struct DashboardPopoverView: View {
         }
     }
 
-    private var settingsLinks: some View {
-        HStack(spacing: 9) {
-            DashboardLinkButton(
-                title: "电池详情",
-                icon: "info.circle"
-            ) {
-                onOpenSettings(.dashboard)
-            }
-            DashboardLinkButton(
-                title: "充电设置",
-                icon: "slider.horizontal.3"
-            ) {
-                onOpenSettings(.charging)
-            }
-        }
-    }
-
-    private var footer: some View {
-        HStack(spacing: 9) {
-            Text("Aidente")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [
-                            AidenteTheme.violet,
-                            AidenteTheme.jade,
-                            AidenteTheme.pink,
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-
-            Text(AidenteL10n.t("实时电池养护"))
-                .font(.system(size: 10.5, weight: .medium))
-                .foregroundStyle(.secondary)
-
-            Spacer()
-
-            FooterButton(icon: "arrow.clockwise") {
-                viewModel.refresh()
-            }
-            FooterButton(icon: "gearshape.fill") {
-                onOpenSettings(.general)
-            }
-            FooterButton(icon: "power") {
-                onQuit()
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background {
-            AidenteChromeBar()
-                .opacity(0.72)
-        }
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(.primary.opacity(0.11))
-                .frame(height: 1)
-        }
-    }
-
     private var displayedChargeLimit: Int {
         min(max(Int(chargeLimitDraft.rounded()), 20), 100)
     }
@@ -541,6 +602,25 @@ struct DashboardPopoverView: View {
         if viewModel.hasControlError { return AidenteTheme.coral }
         if viewModel.isCharging { return AidenteTheme.amber }
         return AidenteTheme.jade
+    }
+
+    /// The regular accents are tuned for dark surfaces and wash out on white.
+    /// The hero card is light in light mode, so use deeper variants there.
+    private var heroTint: Color {
+        guard colorScheme == .light else { return statusTint }
+        if viewModel.hasControlError {
+            return Color(red: 0.80, green: 0.16, blue: 0.14)
+        }
+        if viewModel.isCharging {
+            return Color(red: 0.78, green: 0.40, blue: 0.04)
+        }
+        return Color(red: 0.05, green: 0.52, blue: 0.28)
+    }
+
+    private var warningTint: Color {
+        colorScheme == .dark
+            ? AidenteTheme.amber
+            : Color(red: 0.78, green: 0.40, blue: 0.04)
     }
 
     private func energyTint(for index: Int) -> Color {
@@ -554,6 +634,7 @@ struct DashboardPopoverView: View {
 
 private struct BatteryChargeLimitControl: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.colorScheme) private var colorScheme
 
     let batteryLevel: Int
     @Binding var chargeLimitDraft: Double
@@ -586,7 +667,7 @@ private struct BatteryChargeLimitControl: View {
                     Text("\(chargeLimit)%")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(AidenteTheme.jade)
+                        .foregroundStyle(tint)
                 }
             }
 
@@ -598,7 +679,11 @@ private struct BatteryChargeLimitControl: View {
 
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.white.opacity(0.085))
+                        .fill(
+                            colorScheme == .dark
+                                ? Color.white.opacity(0.085)
+                                : Color.black.opacity(0.08)
+                        )
                         .frame(height: 10)
 
                     Capsule()
@@ -614,7 +699,11 @@ private struct BatteryChargeLimitControl: View {
 
                     ForEach(1..<10, id: \.self) { tick in
                         Rectangle()
-                            .fill(.white.opacity(tick % 2 == 0 ? 0.24 : 0.13))
+                            .fill(
+                                colorScheme == .dark
+                                    ? Color.white.opacity(tick % 2 == 0 ? 0.24 : 0.13)
+                                    : Color.black.opacity(tick % 2 == 0 ? 0.20 : 0.10)
+                            )
                             .frame(width: 1, height: tick % 2 == 0 ? 7 : 5)
                             .offset(x: width * CGFloat(tick) / 10)
                     }
@@ -630,9 +719,9 @@ private struct BatteryChargeLimitControl: View {
                             .frame(width: 13, height: 13)
                             .overlay {
                                 Circle()
-                                    .strokeBorder(AidenteTheme.jade.opacity(0.75), lineWidth: 2)
+                                    .strokeBorder(tint.opacity(0.85), lineWidth: 2)
                             }
-                            .shadow(color: AidenteTheme.jade.opacity(0.45), radius: 5)
+                            .shadow(color: tint.opacity(0.45), radius: 5)
                     }
                     .frame(width: 18, height: 24)
                     .offset(x: min(max(limitX - 9, 0), width - 18))
@@ -661,7 +750,7 @@ private struct BatteryChargeLimitControl: View {
                 Text("100%")
             }
             .font(.system(size: 9.5, weight: .medium))
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
@@ -712,6 +801,12 @@ private struct CompactPowerFlowDiagram: View {
 
     private let nodeWidth: CGFloat = 124
     private let nodeHeight: CGFloat = 54
+    /// Cap the distance between the two node columns so a wider panel does
+    /// not stretch the flow line all the way out to both edges.
+    private let maxNodeGap: CGFloat = 72
+    /// Keep wire ends clear of the node cards: their background is now
+    /// semi-transparent, and round line caps extend past the endpoint.
+    private let flowEndInset: CGFloat = 6
 
     private var diagramHeight: CGFloat {
         switch diagramMode {
@@ -724,8 +819,14 @@ private struct CompactPowerFlowDiagram: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let leftX = nodeWidth / 2
-            let rightX = geometry.size.width - nodeWidth / 2
+            let availableGap = max(0, geometry.size.width - nodeWidth * 2)
+            let gap = min(availableGap, maxNodeGap)
+            let leading = (geometry.size.width - nodeWidth * 2 - gap) / 2
+            let leftX = leading + nodeWidth / 2
+            let rightX = leftX + nodeWidth + gap
+            // Shrink the inset on very narrow panels so the wire never folds
+            // back on itself.
+            let wireInset = min(flowEndInset, gap / 4)
             let topY: CGFloat = nodeHeight / 2
             let middleY = diagramHeight / 2
             let bottomY = diagramHeight - nodeHeight / 2
@@ -734,13 +835,15 @@ private struct CompactPowerFlowDiagram: View {
                 Canvas { context, _ in
                     drawFlows(
                         context: context,
-                        leftX: leftX + nodeWidth / 2 - 5,
-                        rightX: rightX - nodeWidth / 2 + 5,
+                        leftX: leftX + nodeWidth / 2 + wireInset,
+                        rightX: rightX - nodeWidth / 2 - wireInset,
+                        arrowTipX: rightX - nodeWidth / 2,
                         topY: topY,
                         middleY: middleY,
                         bottomY: bottomY
                     )
                 }
+                .clipped()
 
                 switch diagramMode {
                 case .adapterSplit:
@@ -872,6 +975,7 @@ private struct CompactPowerFlowDiagram: View {
         context: GraphicsContext,
         leftX: CGFloat,
         rightX: CGFloat,
+        arrowTipX: CGFloat,
         topY: CGFloat,
         middleY: CGFloat,
         bottomY: CGFloat
@@ -884,7 +988,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: topY),
                 power: batteryPower,
                 startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.jade
+                endColor: AidenteTheme.jade,
+                arrowTipX: arrowTipX
             )
             drawFlow(
                 context: context,
@@ -892,7 +997,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: bottomY),
                 power: systemPower,
                 startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean
+                endColor: AidenteTheme.ocean,
+                arrowTipX: arrowTipX
             )
 
         case .sourcesMerge:
@@ -902,7 +1008,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: middleY),
                 power: batteryPower,
                 startColor: AidenteTheme.jade,
-                endColor: AidenteTheme.ocean
+                endColor: AidenteTheme.ocean,
+                arrowTipX: arrowTipX
             )
             drawFlow(
                 context: context,
@@ -910,7 +1017,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: middleY),
                 power: adapterPower,
                 startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean
+                endColor: AidenteTheme.ocean,
+                arrowTipX: arrowTipX
             )
 
         case .adapterOnly:
@@ -920,7 +1028,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: middleY),
                 power: adapterPower,
                 startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean
+                endColor: AidenteTheme.ocean,
+                arrowTipX: arrowTipX
             )
 
         case .batteryOnly:
@@ -930,7 +1039,8 @@ private struct CompactPowerFlowDiagram: View {
                 to: CGPoint(x: rightX, y: middleY),
                 power: systemPower,
                 startColor: AidenteTheme.jade,
-                endColor: AidenteTheme.ocean
+                endColor: AidenteTheme.ocean,
+                arrowTipX: arrowTipX
             )
         }
     }
@@ -941,7 +1051,8 @@ private struct CompactPowerFlowDiagram: View {
         to end: CGPoint,
         power: Double,
         startColor: Color,
-        endColor: Color
+        endColor: Color,
+        arrowTipX: CGFloat
     ) {
         let controlX = start.x + (end.x - start.x) * 0.50
         let path = Path { path in
@@ -972,10 +1083,12 @@ private struct CompactPowerFlowDiagram: View {
             style: StrokeStyle(lineWidth: width, lineCap: .round)
         )
 
+        // The wire stops short of the node card, but the arrow should still
+        // point at its leading edge instead of hanging in the gap.
         var arrow = Path()
-        arrow.move(to: CGPoint(x: end.x - 1, y: end.y))
-        arrow.addLine(to: CGPoint(x: end.x - 8, y: end.y - 5))
-        arrow.addLine(to: CGPoint(x: end.x - 8, y: end.y + 5))
+        arrow.move(to: CGPoint(x: arrowTipX, y: end.y))
+        arrow.addLine(to: CGPoint(x: arrowTipX - 7, y: end.y - 5))
+        arrow.addLine(to: CGPoint(x: arrowTipX - 7, y: end.y + 5))
         arrow.closeSubpath()
         context.fill(arrow, with: .color(endColor.opacity(0.95)))
     }
@@ -987,6 +1100,7 @@ private struct CompactPowerFlowDiagram: View {
 
 private struct PowerFlowNode: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.colorScheme) private var colorScheme
 
     let title: String
     let icon: String
@@ -1030,10 +1144,17 @@ private struct PowerFlowNode: View {
         .frame(width: 124, height: 54)
         .background {
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(.black.opacity(0.19))
+                .fill(
+                    colorScheme == .dark
+                        ? Color.black.opacity(0.19)
+                        : tint.opacity(0.07)
+                )
                 .overlay {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(tint.opacity(0.30), lineWidth: 1)
+                        .strokeBorder(
+                            tint.opacity(colorScheme == .dark ? 0.30 : 0.32),
+                            lineWidth: 1
+                        )
                 }
         }
         .shadow(color: tint.opacity(0.12), radius: 5, y: 2)
@@ -1057,12 +1178,16 @@ private struct PopoverCompactCard<Content: View>: View {
 }
 
 private struct PopoverCardBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Color.white.opacity(0.045))
+        AidenteLevelSurface(level: .card, cornerRadius: 14)
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(.white.opacity(0.10), lineWidth: 1)
+                    .strokeBorder(
+                        AidenteSurfaceTokens.stroke(scheme: colorScheme),
+                        lineWidth: 1
+                    )
             }
     }
 }
@@ -1181,6 +1306,8 @@ private struct CompactActionRow: View {
 }
 
 private struct EnergyAppRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let rank: Int
     let app: AppEnergyUsageSnapshot
     let maximumCPUUsage: Double
@@ -1212,7 +1339,11 @@ private struct EnergyAppRow: View {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(.white.opacity(0.07))
+                            .fill(
+                                colorScheme == .dark
+                                    ? Color.white.opacity(0.07)
+                                    : Color.black.opacity(0.08)
+                            )
                         Capsule()
                             .fill(tint)
                             .frame(
@@ -1275,35 +1406,9 @@ private struct ProtectionPill: View {
     }
 }
 
-private struct DashboardLinkButton: View {
-    @Default(.appLanguage) private var appLanguage
-
-    let title: String
-    let icon: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Label(AidenteL10n.t(title), systemImage: icon)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.secondary)
-            }
-            .font(.system(size: 12, weight: .semibold))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
-        .background {
-            PopoverCardBackground()
-        }
-    }
-}
-
 private struct FooterButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let icon: String
     let action: () -> Void
 
@@ -1311,11 +1416,19 @@ private struct FooterButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.secondary)
                 .frame(width: 25, height: 20)
-                .background(
+                .background {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(.white.opacity(0.10))
-                )
+                        .fill(AidenteSurfaceTokens.controlFill(scheme: colorScheme))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .strokeBorder(
+                                    AidenteSurfaceTokens.stroke(scheme: colorScheme),
+                                    lineWidth: 1
+                                )
+                        }
+                }
         }
         .buttonStyle(.plain)
     }

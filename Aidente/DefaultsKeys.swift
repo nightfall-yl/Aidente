@@ -29,6 +29,26 @@ enum AidenteMigration {
 
         defaults.set(true, forKey: migrationMarker)
     }
+
+    /// One-time migration from the retired four-way material picker to the
+    /// readability strategy. The old "solid" choice becomes the new
+    /// "always use an opaque background" override; every other choice falls
+    /// back to following the system. Runs once and never reads the old key
+    /// again.
+    private static let materialMigrationMarker =
+        "didMigrateInterfaceMaterialStyleV1"
+
+    static func migrateMaterialPreferenceIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: materialMigrationMarker) else { return }
+
+        if defaults.object(forKey: "forceOpaqueBackground") == nil,
+           let legacy = defaults.string(forKey: "interfaceMaterialStyle") {
+            Defaults[.forceOpaqueBackground] = (legacy == "solid")
+        }
+
+        defaults.set(true, forKey: materialMigrationMarker)
+    }
 }
 
 extension MagSafeLEDState: Defaults.Serializable {}
@@ -43,8 +63,24 @@ enum AppLanguage: String, Defaults.Serializable, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .system: AidenteL10n.t("跟随系统", "System")
-        case .simplifiedChinese: "中文"
+        case .simplifiedChinese: AidenteL10n.t("中文", "Chinese")
         case .english: "English"
+        }
+    }
+}
+
+enum AppAppearance: String, Defaults.Serializable, CaseIterable, Identifiable {
+    case auto
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .auto: AidenteL10n.t("自动", "Auto")
+        case .light: AidenteL10n.t("浅色", "Light")
+        case .dark: AidenteL10n.t("深色", "Dark")
         }
     }
 }
@@ -81,49 +117,16 @@ enum MenuBarReadoutStyle: String, Defaults.Serializable, CaseIterable, Identifia
     }
 }
 
-enum InterfaceMaterialStyle: String, Defaults.Serializable, CaseIterable, Identifiable {
-    case solid
-    case glass
-    case frosted
-    case liquidGlass
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .solid: AidenteL10n.t("清晰实体")
-        case .glass: AidenteL10n.t("毛玻璃")
-        case .frosted: AidenteL10n.t("高斯柔化")
-        case .liquidGlass: AidenteL10n.t("液态玻璃")
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .solid: AidenteL10n.t("最高文字对比度")
-        case .glass: AidenteL10n.t("平衡透明度与清晰度")
-        case .frosted: AidenteL10n.t("更明显的背景虚化")
-        case .liquidGlass:
-            AidenteL10n.t("适配 macOS 26/27，旧系统自动使用兼容效果")
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .solid: "rectangle.fill"
-        case .glass: "square.on.square"
-        case .frosted: "aqi.medium"
-        case .liquidGlass: "drop.circle.fill"
-        }
-    }
-}
+// The four-way interface material picker has been retired. macOS supplies
+// the material; the app only exposes one readability override below.
 
 extension Defaults.Keys {
     // General
     static let appLanguage = Key<AppLanguage>("appLanguage", default: .system)
+    static let appAppearance = Key<AppAppearance>("appAppearance", default: .auto)
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
-    static let interfaceMaterialStyle = Key<InterfaceMaterialStyle>(
-        "interfaceMaterialStyle", default: .glass)
+    static let forceOpaqueBackground = Key<Bool>(
+        "forceOpaqueBackground", default: false)
     static let automaticallyCheckForUpdates = Key<Bool>(
         "automaticallyCheckForUpdates", default: true)
 
@@ -150,7 +153,11 @@ extension Defaults.Keys {
     static let showBatteryMode = Key<Bool>("showBatteryMode", default: true)
     static let showInternalPower = Key<Bool>("showInternalPower", default: true)
     static let showExternalPower = Key<Bool>("showExternalPower", default: true)
-    static let showPowerDistribution = Key<Bool>("showPowerDistribution", default: false)
+    static let showPowerDistribution = Key<Bool>("showPowerDistribution", default: true)
+    static let showCapacityHistory = Key<Bool>("showCapacityHistory", default: true)
+    static let showEnergyAppRanking = Key<Bool>("showEnergyAppRanking", default: true)
+    static let showCareActions = Key<Bool>("showCareActions", default: true)
+    static let showAutomaticProtection = Key<Bool>("showAutomaticProtection", default: true)
 
     // Charging
     static let manageCharging = Key<Bool>("manageCharging", default: false)

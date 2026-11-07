@@ -10,7 +10,22 @@ struct GeneralSettingsView: View {
     @Default(.showBatteryStateInStatusIcon) var showBatteryStateInStatusIcon
     @Default(.disableNotifications) var disableNotifications
     @Default(.showChargingStatusChangedNotification) var showChargingStatusChangedNotification
-    @Default(.interfaceMaterialStyle) var interfaceMaterialStyle
+    @Default(.forceOpaqueBackground) var forceOpaqueBackground
+    @Default(.useHardwarePercentage) var useHardwarePercentage
+    @Default(.appAppearance) var appAppearance
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    /// The card reports the app-wide policy, not the settings window's own
+    /// container capability. That window always renders an opaque baseline
+    /// because it cannot sample a backdrop; the explanation still describes
+    /// what the system would supply on a capable surface.
+    private var resolution: AidenteReadabilityResolution {
+        AidenteReadability.resolve(
+            reduceTransparency: reduceTransparency,
+            forceOpaque: forceOpaqueBackground,
+            canSampleBackdrop: true
+        )
+    }
 
     var body: some View {
         AidenteSettingsPage {
@@ -32,40 +47,30 @@ struct GeneralSettingsView: View {
             }
 
             AidenteCard(
-                "界面材质",
-                subtitle: "选择菜单浮层和设置窗口的透明与虚化程度。",
-                icon: "square.on.square",
+                "外观",
+                subtitle: resolution.strategy.detail,
+                icon: "paintbrush.fill",
                 colors: AidenteTheme.dashboardColors
             ) {
-                Picker(AidenteL10n.t("界面材质"), selection: $interfaceMaterialStyle) {
-                    ForEach(InterfaceMaterialStyle.allCases) { style in
-                        Label(style.title, systemImage: style.icon)
-                            .tag(style)
+                Picker(AidenteL10n.t("外观模式"), selection: $appAppearance) {
+                    ForEach(AppAppearance.allCases) { appearance in
+                        Text(appearance.title)
+                            .tag(appearance)
                     }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .id(appLanguage)
 
-                HStack(spacing: 8) {
-                    Image(systemName: interfaceMaterialStyle.icon)
-                        .foregroundStyle(AidenteTheme.violet)
-                    Text(interfaceMaterialStyle.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if interfaceMaterialStyle == .liquidGlass {
-                        Text("macOS 26 / 27")
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .foregroundStyle(AidenteTheme.sky)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                Capsule()
-                                    .fill(AidenteTheme.sky.opacity(0.12))
-                            )
-                    }
-                }
+                AidenteRowDivider()
+
+                AidenteSettingToggle(
+                    "始终使用不透明背景",
+                    subtitle: "系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。",
+                    icon: "rectangle.inset.filled",
+                    colors: AidenteTheme.dashboardColors,
+                    isOn: $forceOpaqueBackground
+                )
             }
 
             AidenteCard(
@@ -142,11 +147,27 @@ struct GeneralSettingsView: View {
                 AidenteRowDivider()
 
                 AidenteSettingToggle(
-                    "用颜色显示电池状态",
+                    "使用颜色显示电池状态",
                     subtitle: "充电、接通电源、低电量使用不同颜色",
                     icon: "paintpalette.fill",
                     colors: AidenteTheme.dashboardColors,
                     isOn: $showBatteryStateInStatusIcon
+                )
+
+                AidenteRowDivider()
+
+                AidenteSettingToggle(
+                    "使用硬件电量百分比",
+                    subtitle: "直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值",
+                    icon: "cpu.fill",
+                    colors: AidenteTheme.chargingColors,
+                    isOn: $useHardwarePercentage
+                )
+
+                AidenteNotice(
+                    text: "硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。",
+                    icon: "info.circle.fill",
+                    colors: AidenteTheme.chargingColors
                 )
             }
 

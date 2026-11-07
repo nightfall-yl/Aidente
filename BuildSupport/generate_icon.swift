@@ -166,9 +166,33 @@ bolt.stroke()
 
 image.unlockFocus()
 
+// Apple macOS app icon template: 1024×1024 canvas with the artwork centered in
+// an 824×824 box (100pt safe margin on each side). The drawing above uses a
+// 1024pt design space whose rounded background is inset by 64pt, so remap that
+// 896pt artwork box onto the 824pt template box instead of stretching to fill.
+// NOTE: lockFocus() renders at the display backing scale (2x on Retina), so this
+// script emits a 2048px supersampled PNG. The iconset is downsampled from it to
+// the exact 1024/512/256/128/64/32/16 pixel sizes.
+let templateCanvas: CGFloat = 1024
+let templateInset: CGFloat = 100
+let artworkInset: CGFloat = 64
+let artworkScale = (templateCanvas - templateInset * 2) / (templateCanvas - artworkInset * 2)
+let drawSize = templateCanvas * artworkScale
+let drawOrigin = templateInset - artworkInset * artworkScale
+
+let finalImage = NSImage(size: NSSize(width: templateCanvas, height: templateCanvas))
+finalImage.lockFocus()
+image.draw(
+    in: NSRect(x: drawOrigin, y: drawOrigin, width: drawSize, height: drawSize),
+    from: NSRect(origin: .zero, size: size),
+    operation: .copy,
+    fraction: 1
+)
+finalImage.unlockFocus()
+
 guard
     CommandLine.arguments.count > 1,
-    let tiff = image.tiffRepresentation,
+    let tiff = finalImage.tiffRepresentation,
     let bitmap = NSBitmapImageRep(data: tiff),
     let data = bitmap.representation(using: .png, properties: [:])
 else {

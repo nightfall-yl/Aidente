@@ -8,7 +8,16 @@ object_dir="$build_dir/Objects"
 module_cache_dir="$build_dir/ModuleCache"
 dist_dir="$project_dir/Dist"
 app_dir="$dist_dir/Aidente.app"
-sdk="/Library/Developer/CommandLineTools/SDKs/MacOSX15.5.sdk"
+# Swift 6.2.4's Observation macro in the macOS 15.x SDKs is affected by
+# swiftlang/swift#86778: @Observable expands generic parameter names as mangled
+# Swift symbols ($s7Aidente13...fMu1_), which the compiler rejects with
+# "declaration name 'shouldNotifyObservers' is not covered by macro 'Observable'".
+# The macOS 26 SDK ships a fixed Observation macro, so resolve the newest SDK
+# instead of pinning 15.5. The deployment target below stays at 14.0.
+sdk=$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)
+if [[ -z "$sdk" || ! -d "$sdk" ]]; then
+    sdk="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+fi
 target="arm64-apple-macosx14.0"
 signing_identity="${AIDENTE_SIGNING_IDENTITY:--}"
 signing_options=(--timestamp=none)
@@ -255,4 +264,14 @@ if [[ "${AIDENTE_RELEASE_BUILD:-0}" == "1" ]]; then
         codesign --verify --strict -R '=anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists' "$signed_component"
     done
 fi
+
+# Each build replaces the bundle under a new inode. Finder/IconServices keys
+# its thumbnail cache on the bundle identity, so without re-registration it
+# keeps serving the stale (often blank generic) icon from the previous bundle.
+/usr/bin/touch "$app_dir"
+lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "$lsregister" ]]; then
+    "$lsregister" -f "$app_dir" >/dev/null 2>&1 || true
+fi
+
 echo "$app_dir"

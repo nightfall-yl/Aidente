@@ -23,227 +23,438 @@ enum AidenteTheme {
     static let aboutColors = [coral, amber]
 }
 
-struct AidenteVisualEffectView: NSViewRepresentable {
-    let material: NSVisualEffectView.Material
-    let blendingMode: NSVisualEffectView.BlendingMode
+// MARK: - New Glass surface system (`new-glass.html`, plan A + B + L4)
+
+/// macOS supplies the glass on surfaces that can sample a backdrop; the app
+/// owns one fixed neutral level scale and one readability promise.
+/// L0 window / L1 chrome / L2 card / L3 emphasis. L4 controls carry only a
+/// hairline fill and are drawn by their own views.
+enum AidenteSurfaceLevel {
+    case window
+    case chrome
+    case card
+    case emphasis
+}
+
+enum AidenteSurfaceTokens {
+    /// Fixed values from `new-glass.html`: light #F4F5F6 / #F8F8F8 /
+    /// #FCFCFC, dark #232326 / #28282B / #2D2D31. L1 > L0 and L2 > L0 stay
+    /// constant across appearance, container and system state.
+    static func color(
+        _ level: AidenteSurfaceLevel,
+        scheme: ColorScheme
+    ) -> Color {
+        let light = scheme != .dark
+        switch level {
+        case .window: return light ? rgb(244, 245, 246) : rgb(35, 35, 38)
+        case .chrome: return light ? rgb(248, 248, 248) : rgb(40, 40, 43)
+        case .card: return light ? rgb(252, 252, 252) : rgb(45, 45, 49)
+        case .emphasis: return light ? rgb(233, 246, 239) : rgb(26, 46, 36)
+        }
+    }
+
+    private static func rgb(
+        _ red: CGFloat,
+        _ green: CGFloat,
+        _ blue: CGFloat
+    ) -> Color {
+        Color(
+            nsColor: NSColor(
+                calibratedRed: red / 255,
+                green: green / 255,
+                blue: blue / 255,
+                alpha: 1
+            )
+        )
+    }
+
+    /// One 1pt neutral stroke is the only hierarchy signal on a card.
+    static func stroke(scheme: ColorScheme) -> Color {
+        scheme == .dark
+            ? Color.white.opacity(0.10)
+            : Color.black.opacity(0.09)
+    }
+
+    /// L4 controls: a barely-there fill so the 1pt border stays legible on
+    /// top of live glass. Values from `new-glass.html`.
+    static func controlFill(scheme: ColorScheme) -> Color {
+        scheme == .dark
+            ? Color.white.opacity(0.055)
+            : Color.white.opacity(0.24)
+    }
+
+    /// A light tint over the live backdrop material. Values are the frozen
+    /// defaults from `liquid-glass-proposal.html`: light white 0.14, dark
+    /// rgb(30,30,34) 0.24. AppKit's `.popover` material carries its own tint,
+    /// so this stays a small correction on top of the sampled backdrop.
+    static func glassTint(scheme: ColorScheme) -> Color {
+        scheme == .dark
+            ? Color(red: 30 / 255, green: 30 / 255, blue: 34 / 255).opacity(0.24)
+            : Color.white.opacity(0.14)
+    }
+}
+
+/// Frozen parameters of the "方案 A" glass prototype. The rim-light alpha is
+/// the one master knob; every other layer scales off it with the same fixed
+/// coefficients as the prototype CSS. The user confirmed the coupling
+/// (rim thickness follows rim light) should stay as-is.
+private enum AidenteGlassTokens {
+    static let rimLightAlpha: CGFloat = 0.20
+    static let rimWidth: CGFloat = 40
+    static let rimAlphaScale: CGFloat = 0.55
+    static let topHighlightScale: CGFloat = 0.30
+    static let innerGlowScale: CGFloat = 0.07
+    static let bottomRightScale: CGFloat = 0.55
+    static let darkRimLightScale: CGFloat = 0.38
+    static let darkBottomRightScale: CGFloat = 0.18
+    static let darkTopHighlightScale: CGFloat = 0.12
+    static let darkEdgeShadeScale: CGFloat = 0.34
+    static let lightEdgeShadeScale: CGFloat = 0.16
+}
+
+/// Static glass approximation: rim thickness, inset glow, top highlight and a
+/// 1pt corner-to-corner gradient stroke. Everything is SwiftUI drawing, so it
+/// needs no backdrop bitmap and works from macOS 14 on. This corresponds to
+/// layers 3 / 5 and the 1pt stroke of the glasswork material; blur, saturation
+/// and brightness stay with the system `NSVisualEffectView`, and dispersion
+/// (layer 2 of the lens) is deliberately not implemented.
+private struct AidenteGlassOverlay: View {
+    let shape: RoundedRectangle
+    let scheme: ColorScheme
+
+    private var dark: Bool { scheme == .dark }
+    private var light: CGFloat { AidenteGlassTokens.rimLightAlpha }
+    private var rim: CGFloat { AidenteGlassTokens.rimWidth }
+    private var rimAlpha: CGFloat { light * AidenteGlassTokens.rimAlphaScale }
+
+    var body: some View {
+        let topLeft = light * (dark ? AidenteGlassTokens.darkRimLightScale : 1)
+        let bottomRight = light * (dark
+            ? AidenteGlassTokens.darkBottomRightScale
+            : AidenteGlassTokens.bottomRightScale)
+        let topHighlight = light * (dark
+            ? AidenteGlassTokens.darkTopHighlightScale
+            : AidenteGlassTokens.topHighlightScale)
+        let edgeShade = rimAlpha * (dark
+            ? AidenteGlassTokens.darkEdgeShadeScale
+            : AidenteGlassTokens.lightEdgeShadeScale)
+
+        ZStack {
+            // 3 - rim thickness: clear in the middle, shaded toward the edge.
+            shape.fill(
+                RadialGradient(
+                    colors: [.clear, Color.black.opacity(edgeShade)],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: rim * 2
+                )
+            )
+            // 5a - soft inset glow.
+            shape.strokeBorder(
+                Color.white.opacity(light * AidenteGlassTokens.innerGlowScale),
+                lineWidth: rim / 8
+            )
+            // 5b - top highlight.
+            shape.fill(
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.white.opacity(topHighlight), location: 0),
+                        .init(color: .clear, location: 0.16)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            // 5c - top-left / bottom-right rim light as a 1pt gradient stroke.
+            shape.strokeBorder(
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.white.opacity(topLeft), location: 0),
+                        .init(color: .clear, location: 0.26),
+                        .init(color: .clear, location: 0.70),
+                        .init(color: Color.white.opacity(bottomRight), location: 1)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 1
+            )
+        }
+    }
+}
+
+/// Real backdrop-sampling material for macOS 15 and earlier. On macOS 26+
+/// `glassEffect` replaces it; that version branch lives in
+/// `AidenteLevelSurface` only.
+struct AidenteBackdropMaterial: NSViewRepresentable {
+    @Default(.appAppearance) private var appAppearance
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = blendingMode
+        view.material = .popover
+        view.blendingMode = .behindWindow
         view.state = .active
+        view.appearance = appAppearance.nsAppearance
         return view
     }
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {
-        view.material = material
-        view.blendingMode = blendingMode
+        view.material = .popover
+        view.blendingMode = .behindWindow
         view.state = .active
+        view.appearance = appAppearance.nsAppearance
     }
 }
 
-struct AidenteMaterialLayer: View {
-    @Default(.interfaceMaterialStyle) private var materialStyle
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        ZStack {
-            switch materialStyle {
-            case .solid:
-                Color(
-                    nsColor: colorScheme == .dark
-                        ? NSColor(calibratedWhite: 0.105, alpha: 1)
-                        : NSColor(calibratedWhite: 0.975, alpha: 1)
-                )
-            case .glass:
-                Rectangle()
-                    .fill(.regularMaterial)
-                Color.black.opacity(colorScheme == .dark ? 0.04 : 0.01)
-            case .frosted:
-                AidenteVisualEffectView(
-                    material: .hudWindow,
-                    blendingMode: .behindWindow
-                )
-                Color(
-                    red: 0.065,
-                    green: 0.052,
-                    blue: 0.043
-                )
-                .opacity(colorScheme == .dark ? 0.58 : 0.08)
-            case .liquidGlass:
-                AidenteVisualEffectView(
-                    material: .popover,
-                    blendingMode: .behindWindow
-                )
-                Color(
-                    red: 0.08,
-                    green: 0.10,
-                    blue: 0.12
-                )
-                .opacity(colorScheme == .dark ? 0.26 : 0.045)
-                AidenteLiquidGlassHighlights()
-            }
+extension AppAppearance {
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .auto: return nil
+        case .light: return NSAppearance(named: .aqua)
+        case .dark: return NSAppearance(named: .darkAqua)
         }
     }
 }
 
-struct AidenteWindowBackdrop: View {
-    @Default(.interfaceMaterialStyle) private var materialStyle
-    @Environment(\.colorScheme) private var colorScheme
+/// Observes the **system** appearance so「自动」can be resolved to a concrete
+/// ColorScheme. Needed because `.preferredColorScheme(nil)` is sticky in an
+/// AppKit-hosted SwiftUI hierarchy: switching from an explicit value back to
+/// nil does not clear the previous override, so「自动」must be re-applied as an
+/// explicit value derived from the system appearance instead.
+@MainActor
+final class SystemAppearanceMonitor: ObservableObject {
+    @Published var isDark: Bool
 
-    var body: some View {
-        ZStack {
-            switch materialStyle {
-            case .solid:
-                Color(
-                    nsColor: colorScheme == .dark
-                        ? NSColor(calibratedRed: 0.10, green: 0.095, blue: 0.09, alpha: 1)
-                        : NSColor(calibratedWhite: 0.96, alpha: 1)
-                )
-            case .glass:
-                AidenteVisualEffectView(
-                    material: .popover,
-                    blendingMode: .behindWindow
-                )
-                Color(
-                    red: 0.08,
-                    green: 0.065,
-                    blue: 0.05
-                )
-                .opacity(colorScheme == .dark ? 0.22 : 0.035)
-            case .frosted:
-                AidenteVisualEffectView(
-                    material: .underWindowBackground,
-                    blendingMode: .behindWindow
-                )
-                Color(
-                    red: 0.07,
-                    green: 0.055,
-                    blue: 0.045
-                )
-                .opacity(colorScheme == .dark ? 0.50 : 0.085)
-            case .liquidGlass:
-                AidenteVisualEffectView(
-                    material: .underWindowBackground,
-                    blendingMode: .behindWindow
-                )
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.11, green: 0.14, blue: 0.18)
-                            .opacity(colorScheme == .dark ? 0.40 : 0.045),
-                        AidenteTheme.violet
-                            .opacity(colorScheme == .dark ? 0.055 : 0.028),
-                        AidenteTheme.jade
-                            .opacity(colorScheme == .dark ? 0.045 : 0.022),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                AidenteLiquidGlassHighlights()
+    private var observation: NSKeyValueObservation?
+
+    init() {
+        isDark = Self.currentSystemIsDark()
+        observation = NSApp.observe(\.effectiveAppearance) { [weak self] app, _ in
+            let dark = Self.isDark(app.effectiveAppearance)
+            Task { @MainActor in
+                self?.isDark = dark
             }
+        }
+    }
 
-            LinearGradient(
-                colors: colorScheme == .dark
-                    ? [
-                        Color.white.opacity(0.035),
-                        Color(red: 0.17, green: 0.14, blue: 0.10).opacity(0.20),
-                        Color.black.opacity(0.18),
-                    ]
-                    : [
-                        Color.white.opacity(0.34),
-                        AidenteTheme.jade.opacity(0.025),
-                        Color.black.opacity(0.025),
-                    ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+    deinit {
+        observation?.invalidate()
+    }
+
+    nonisolated private static func isDark(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
+
+    /// Called only from `init()`, which is on the main actor, so this inherits
+    /// the class isolation and may read `NSApp.effectiveAppearance` directly.
+    /// `isDark(_:)` stays nonisolated because the KVO callback needs it.
+    private static func currentSystemIsDark() -> Bool {
+        isDark(NSApp.effectiveAppearance)
+    }
+}
+
+enum AidenteAppearanceResolver {
+    /// Concrete NSAppearance for a user setting. 「自动」resolves to the current
+    /// system appearance (aqua / darkAqua) instead of returning nil, so windows
+    /// always receive a real appearance change and can never stay pinned to
+    /// the value captured when they were created.
+    @MainActor
+    static func resolved(_ setting: AppAppearance) -> NSAppearance? {
+        switch setting {
+        case .light:
+            return NSAppearance(named: .aqua)
+        case .dark:
+            return NSAppearance(named: .darkAqua)
+        case .auto:
+            let systemIsDark = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            return NSAppearance(named: systemIsDark ? .darkAqua : .aqua)
+        }
+    }
+}
+
+private struct AidenteBackdropSamplingKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    /// Whether the hosting AppKit container can sample the content behind it.
+    /// An `NSPopover` can; the transparent settings `NSWindow`, the
+    /// standalone dashboard `NSWindow` and the preview `NSPanel` cannot.
+    var aidenteCanSampleBackdrop: Bool {
+        get { self[AidenteBackdropSamplingKey.self] }
+        set { self[AidenteBackdropSamplingKey.self] = newValue }
+    }
+}
+
+enum AidenteReadabilityStrategy: String {
+    case systemMaterial
+    case compatible
+    case opaque
+
+    var badge: String {
+        switch self {
+        case .systemMaterial:
+            return AidenteL10n.t("系统材质", "System Material")
+        case .compatible:
+            return AidenteL10n.t("兼容材质", "Compatible Material")
+        case .opaque:
+            return AidenteL10n.t("不透明", "Opaque")
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .systemMaterial:
+            return AidenteL10n.t(
+                "界面材质由系统提供，并在受支持的界面上自动使用系统液态玻璃材质。",
+                "macOS supplies the material and automatically uses system Liquid Glass on supported surfaces."
+            )
+        case .compatible:
+            return AidenteL10n.t(
+                "macOS 26 以前的系统，仪表盘使用类液态玻璃材质；升级到 macOS 26+，自动使用系统液态玻璃材质。",
+                "On macOS versions earlier than 26, the dashboard uses a liquid-glass-like material. Upgrading to macOS 26 or later adopts the system Liquid Glass automatically."
+            )
+        case .opaque:
+            return AidenteL10n.t(
+                "当前使用不透明背景，所有界面层均为实体，文字对比度最高。",
+                "An opaque background is active. Every surface is solid for maximum text contrast."
             )
         }
-        .ignoresSafeArea()
     }
 }
 
-struct AidenteLiquidGlassHighlights: View {
+enum AidenteReadabilitySource: String {
+    case followSystem
+    case systemReduceTransparency
+    case appOverride
+    case containerFallback
+}
+
+struct AidenteReadabilityResolution {
+    let strategy: AidenteReadabilityStrategy
+    let source: AidenteReadabilitySource
+}
+
+enum AidenteReadability {
+    /// The only version branch in the app. On macOS 26+ `glassEffect` is the
+    /// system material; older systems use `NSVisualEffectView(.popover)`,
+    /// which is also real backdrop-sampling glass, not a solid fallback.
+    static var supportsSystemMaterial: Bool {
+        if #available(macOS 26, *) { return true }
+        return false
+    }
+
+    /// Priority: system Reduce Transparency > app override > container
+    /// capability > follow system.
+    static func resolve(
+        reduceTransparency: Bool,
+        forceOpaque: Bool,
+        canSampleBackdrop: Bool
+    ) -> AidenteReadabilityResolution {
+        if reduceTransparency {
+            return AidenteReadabilityResolution(
+                strategy: .opaque, source: .systemReduceTransparency)
+        }
+        if forceOpaque {
+            return AidenteReadabilityResolution(
+                strategy: .opaque, source: .appOverride)
+        }
+        if !canSampleBackdrop {
+            return AidenteReadabilityResolution(
+                strategy: .opaque, source: .containerFallback)
+        }
+        return AidenteReadabilityResolution(
+            strategy: supportsSystemMaterial ? .systemMaterial : .compatible,
+            source: .followSystem
+        )
+    }
+}
+
+/// The single painting outlet. No other view owns a material, gradient,
+/// blur or overall opacity.
+struct AidenteLevelSurface: View {
+    @Default(.forceOpaqueBackground) private var forceOpaque
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.aidenteCanSampleBackdrop) private var canSampleBackdrop
+
+    let level: AidenteSurfaceLevel
+    var cornerRadius: CGFloat = 0
+
+    private var resolution: AidenteReadabilityResolution {
+        AidenteReadability.resolve(
+            reduceTransparency: reduceTransparency,
+            forceOpaque: forceOpaque,
+            canSampleBackdrop: canSampleBackdrop
+        )
+    }
+
+    /// Only L0 can carry live glass, and only on a container that can sample
+    /// a backdrop when neither the system nor the user asked for opacity.
+    /// macOS 26+ uses `glassEffect`; macOS 15 and earlier use the real
+    /// `.popover` / `.behindWindow` material. L1/L2/L3 stay on the authored
+    /// tokens so their fixed offsets remain measurable.
+    private var usesBackdropMaterial: Bool {
+        resolution.strategy != .opaque && level == .window
+    }
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Ellipse()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color.white.opacity(
-                                    colorScheme == .dark ? 0.13 : 0.42
-                                ),
-                                Color.clear,
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: max(geometry.size.width, 1) * 0.58
-                        )
-                    )
-                    .frame(
-                        width: geometry.size.width * 0.92,
-                        height: max(geometry.size.height * 0.36, 44)
-                    )
-                    .offset(
-                        x: -geometry.size.width * 0.22,
-                        y: -geometry.size.height * 0.34
-                    )
-                    .blur(radius: 9)
+        let shape = RoundedRectangle(
+            cornerRadius: cornerRadius,
+            style: .continuous
+        )
+        let base = AidenteSurfaceTokens.color(level, scheme: colorScheme)
 
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(
-                            colorScheme == .dark ? 0.12 : 0.38
-                        ),
-                        AidenteTheme.sky.opacity(0.055),
-                        Color.clear,
-                        AidenteTheme.violet.opacity(0.045),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .blendMode(.plusLighter)
+        ZStack {
+            if usesBackdropMaterial {
+                if #available(macOS 26, *) {
+                    Color.clear
+                        .glassEffect(.regular, in: shape)
+                } else {
+                    AidenteBackdropMaterial()
+                }
+                shape.fill(AidenteSurfaceTokens.glassTint(scheme: colorScheme))
+                // macOS 26+ owns the highlight and refraction already; adding
+                // the drawn approximation there would double the glass.
+                if !AidenteReadability.supportsSystemMaterial {
+                    AidenteGlassOverlay(shape: shape, scheme: colorScheme)
+                }
+            } else {
+                shape.fill(base)
             }
         }
+        .clipShape(shape)
         .allowsHitTesting(false)
     }
 }
 
-struct AidenteChromeBar: View {
-    @Default(.interfaceMaterialStyle) private var materialStyle
-    @Environment(\.colorScheme) private var colorScheme
-
+struct AidenteWindowBackdrop: View {
     var body: some View {
-        ZStack {
-            if materialStyle == .liquidGlass {
-                AidenteVisualEffectView(
-                    material: .sidebar,
-                    blendingMode: .withinWindow
-                )
-                Color(
-                    red: 0.075,
-                    green: 0.085,
-                    blue: 0.10
-                )
-                .opacity(colorScheme == .dark ? 0.76 : 0.34)
-                AidenteLiquidGlassHighlights()
-            } else {
-                Color(
-                    red: 0.095,
-                    green: 0.09,
-                    blue: 0.085
-                )
-                .opacity(0.98)
-            }
-        }
+        AidenteLevelSurface(level: .window)
+            .ignoresSafeArea()
     }
 }
 
+struct AidenteChromeBar: View {
+    var body: some View {
+        AidenteLevelSurface(level: .chrome)
+    }
+}
+
+struct AidenteMaterialLayer: View {
+    var cornerRadius: CGFloat = 0
+
+    var body: some View {
+        AidenteLevelSurface(level: .card, cornerRadius: cornerRadius)
+    }
+}
+
+/// The settings window and its sheets cannot sample a backdrop. Force the
+/// capability flag here instead of relying on environment inheritance.
 struct AidenteSettingsBackground: View {
     var body: some View {
         AidenteWindowBackdrop()
+            .environment(\.aidenteCanSampleBackdrop, false)
     }
 }
 
@@ -315,7 +526,6 @@ struct AidenteSectionHeader: View {
 }
 
 struct AidenteCard<Content: View>: View {
-    @Default(.interfaceMaterialStyle) private var materialStyle
     @Environment(\.colorScheme) private var colorScheme
 
     let title: String
@@ -338,8 +548,6 @@ struct AidenteCard<Content: View>: View {
         self.content = content()
     }
 
-    private var tint: Color { colors.first ?? AidenteTheme.jade }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             AidenteSectionHeader(
@@ -359,37 +567,15 @@ struct AidenteCard<Content: View>: View {
         }
         .padding(16)
         .background {
-            AidenteMaterialLayer()
-                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+            AidenteMaterialLayer(cornerRadius: 15)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 15, style: .continuous)
                 .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(
-                                materialStyle == .liquidGlass
-                                    ? (colorScheme == .dark ? 0.24 : 0.78)
-                                    : (colorScheme == .dark ? 0.13 : 0.60)
-                            ),
-                            tint.opacity(0.13),
-                            .black.opacity(0.10),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
+                    AidenteSurfaceTokens.stroke(scheme: colorScheme),
                     lineWidth: 1
                 )
         }
-        .shadow(
-            color: .black.opacity(
-                materialStyle == .liquidGlass
-                    ? (colorScheme == .dark ? 0.28 : 0.12)
-                    : (colorScheme == .dark ? 0.22 : 0.10)
-            ),
-            radius: materialStyle == .liquidGlass ? 13 : 8,
-            y: materialStyle == .liquidGlass ? 5 : 3
-        )
     }
 }
 

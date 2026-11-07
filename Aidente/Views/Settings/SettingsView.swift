@@ -8,7 +8,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
     case charging = "Charging"
     case automation = "Automation"
-    case advanced = "Advanced"
     case diagnostics = "Diagnostics"
     case about = "About"
 
@@ -29,7 +28,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .dashboard: AidenteL10n.t("仪表盘")
         case .charging: AidenteL10n.t("充电管理")
         case .automation: AidenteL10n.t("计划与自动化")
-        case .advanced: AidenteL10n.t("高级")
         case .diagnostics: AidenteL10n.t("诊断")
         case .about: AidenteL10n.t("关于")
         }
@@ -45,8 +43,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
             return "battery.100.bolt"
         case .automation:
             return "calendar.badge.clock"
-        case .advanced:
-            return "slider.horizontal.3"
         case .diagnostics:
             return "waveform.badge.magnifyingglass"
         case .about:
@@ -60,7 +56,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .dashboard: AidenteTheme.dashboardColors
         case .charging: AidenteTheme.chargingColors
         case .automation: AidenteTheme.automationColors
-        case .advanced: AidenteTheme.advancedColors
         case .diagnostics: AidenteTheme.dashboardColors
         case .about: AidenteTheme.aboutColors
         }
@@ -69,6 +64,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @Default(.appLanguage) private var appLanguage
+    @Default(.appAppearance) private var appAppearance
+    @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var systemAppearanceMonitor = SystemAppearanceMonitor()
     @State private var selectedTab: SettingsTab
 
     private let capabilities: DeviceCapabilities
@@ -136,10 +134,9 @@ struct SettingsView: View {
                 }
                 .overlay(alignment: .bottom) {
                     Rectangle()
-                        .fill(.white.opacity(0.14))
+                        .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
                         .frame(height: 1)
                 }
-                .shadow(color: .black.opacity(0.32), radius: 10, y: 5)
                 .zIndex(1)
 
                 Group {
@@ -155,8 +152,6 @@ struct SettingsView: View {
                         )
                     case .automation:
                         AutomationSettingsView()
-                    case .advanced:
-                        AdvancedSettingsView()
                     case .diagnostics:
                         DiagnosticsSettingsView(diagnosticCenter: diagnosticCenter)
                     case .about:
@@ -166,12 +161,25 @@ struct SettingsView: View {
             }
         }
         .tint(AidenteTheme.jade)
+        .environment(\.aidenteCanSampleBackdrop, false)
         .frame(minWidth: 960, minHeight: 640)
+        .preferredColorScheme(resolvedPreferredScheme)
         .onAppear {
             updateWindowTitle()
         }
         .onChange(of: appLanguage) { _, _ in
             updateWindowTitle()
+        }
+    }
+
+    /// Always returns an explicit scheme: 「自动」resolves to the current system
+    /// appearance. Never nil — `.preferredColorScheme(nil)` is sticky in the
+    /// AppKit-hosted hierarchy and would not clear a previous override.
+    private var resolvedPreferredScheme: ColorScheme {
+        switch appAppearance {
+        case .light: return .light
+        case .dark: return .dark
+        case .auto: return systemAppearanceMonitor.isDark ? .dark : .light
         }
     }
 

@@ -7,16 +7,54 @@ struct DashboardSettingsView: View {
     @Default(.showPowerSource) var showPowerSource
     @Default(.showTimeTillDischarge) var showTimeTillDischarge
     @Default(.showUptime) var showUptime
-    @Default(.showBatteryMode) var showBatteryMode
     @Default(.showBatteryTemperature) var showBatteryTemperature
     @Default(.showBatteryCycleCount) var showBatteryCycleCount
     @Default(.showBatteryHealth) var showBatteryHealth
     @Default(.showInternalPower) var showInternalPower
     @Default(.showExternalPower) var showExternalPower
     @Default(.showPowerDistribution) var showPowerDistribution
+    @Default(.showCapacityHistory) var showCapacityHistory
+    @Default(.showEnergyAppRanking) var showEnergyAppRanking
+    @Default(.showCareActions) var showCareActions
+    @Default(.showAutomaticProtection) var showAutomaticProtection
 
     var body: some View {
         AidenteSettingsPage {
+            AidenteCard(
+                "面板模块",
+                subtitle: "选择仪表盘中显示的功能卡片。",
+                icon: "rectangle.stack.fill",
+                colors: AidenteTheme.dashboardColors
+            ) {
+                AidenteSettingToggle(
+                    "容量与寿命趋势",
+                    icon: "chart.xyaxis.line",
+                    colors: [AidenteTheme.jade, AidenteTheme.ocean],
+                    isOn: $showCapacityHistory
+                )
+                AidenteRowDivider()
+                AidenteSettingToggle(
+                    "当前耗电 App",
+                    icon: "bolt.horizontal.circle.fill",
+                    colors: [AidenteTheme.amber, AidenteTheme.coral],
+                    isOn: $showEnergyAppRanking
+                )
+                AidenteRowDivider()
+                AidenteSettingToggle(
+                    "快捷养护",
+                    icon: "leaf.fill",
+                    colors: [AidenteTheme.violet, AidenteTheme.pink],
+                    isOn: $showCareActions
+                )
+                AidenteRowDivider()
+                AidenteSettingToggle(
+                    "自动保护",
+                    icon: "shield.lefthalf.filled",
+                    colors: [AidenteTheme.ocean, AidenteTheme.violet],
+                    isOn: $showAutomaticProtection
+                )
+            }
+
             AidenteCard(
                 "状态信息",
                 subtitle: "选择菜单栏下拉面板中显示的系统与电池信息。",
@@ -31,13 +69,6 @@ struct DashboardSettingsView: View {
                 )
                 AidenteRowDivider()
                 AidenteSettingToggle(
-                    "剩余使用时间",
-                    icon: "hourglass.bottomhalf.filled",
-                    colors: AidenteTheme.automationColors,
-                    isOn: $showTimeTillDischarge
-                )
-                AidenteRowDivider()
-                AidenteSettingToggle(
                     "系统运行时间",
                     icon: "clock.fill",
                     colors: [AidenteTheme.violet, AidenteTheme.pink],
@@ -45,10 +76,10 @@ struct DashboardSettingsView: View {
                 )
                 AidenteRowDivider()
                 AidenteSettingToggle(
-                    "电池工作模式",
-                    icon: "bolt.horizontal.fill",
-                    colors: AidenteTheme.chargingColors,
-                    isOn: $showBatteryMode
+                    "电池剩余时间",
+                    icon: "hourglass.bottomhalf.filled",
+                    colors: AidenteTheme.automationColors,
+                    isOn: $showTimeTillDischarge
                 )
             }
 

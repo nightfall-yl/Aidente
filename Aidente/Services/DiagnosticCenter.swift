@@ -383,6 +383,7 @@ final class DiagnosticCenter {
     }
 
     private func makePreferencesReport() -> String {
+        let readability = readabilityResolution()
         let preferences: [String: Any] = [
             "manageCharging": Defaults[.manageCharging],
             "chargeLimit": Defaults[.chargeLimit],
@@ -394,7 +395,9 @@ final class DiagnosticCenter {
             "pauseDuringSleep": Defaults[.stopChargingWhileSleeping],
             "keepPausedAfterQuit": Defaults[.stopChargingWhenAppClosed],
             "useHardwarePercentage": Defaults[.useHardwarePercentage],
-            "interfaceMaterial": Defaults[.interfaceMaterialStyle].rawValue,
+            "readabilityStrategy": readability.strategy.rawValue,
+            "readabilitySource": readability.source.rawValue,
+            "forceOpaqueBackground": Defaults[.forceOpaqueBackground],
             "launchAtLogin": Defaults[.launchAtLogin],
         ]
 
@@ -405,6 +408,17 @@ final class DiagnosticCenter {
             return "Unable to encode selected preferences."
         }
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// Reports the app-wide readability policy. Per-container backdrop
+    /// capability is a rendering detail and is deliberately excluded.
+    private func readabilityResolution() -> AidenteReadabilityResolution {
+        AidenteReadability.resolve(
+            reduceTransparency: NSWorkspace.shared
+                .accessibilityDisplayShouldReduceTransparency,
+            forceOpaque: Defaults[.forceOpaqueBackground],
+            canSampleBackdrop: true
+        )
     }
 
     private func hardwareModel() -> String {
