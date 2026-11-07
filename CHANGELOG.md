@@ -4,9 +4,7 @@
 
 项目当前版本为 **6.1.1 / Build 22**。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；下方 `[未发布]` 中的条目是尚未发行的本地改动，不代表已发行版本。
 
-## [未发布]
-
-本节合并 2026-11-06 与 2026-11-07 两天的落地改动，围绕本地构建、仪表盘界面与类液态玻璃材质、设置页、全局外观切换、状态栏图标、菜单栏弹窗容器与应用图标重制。已编译批次均经 `BuildSupport/build_app.sh` 完整构建与 ad-hoc 完整性签名校验通过；同一事项被后续改动覆盖的，以最终状态为准。
+## [6.1.1]-2026-11-07
 
 ### 修复
 
@@ -27,7 +25,6 @@
 - **「外观」卡片新增 自动 / 浅色 / 深色 分段控件**（全局生效）：新增 `AppAppearance` 枚举（auto / light / dark，默认 auto）与 `appAppearance` Defaults key，本地化补「外观模式 / 自动 / 浅色 / 深色」；SwiftUI 侧 `DashboardPopoverView` / `SettingsView` 根视图 `.preferredColorScheme`，AppKit 侧 `AidenteBackdropMaterial` 玻璃按 `appAppearance` 设 `NSAppearance`（`AidenteTheme.swift` 新增 `AppAppearance.nsAppearance` 扩展），独立主菜单窗口 / 预览面板 / 设置窗口同步设置 `window.appearance`。
 - **仪表盘类液态玻璃材质（macOS 15 及更早）**：参考 `github.com/kubai087/glasswork` 的分层思路，只移植能用 SwiftUI 自绘的静态部分，不含真实折射与色散。`AidenteTheme.swift` 新增 `AidenteGlassTokens`（边缘光主旋钮 `0.20`、`rimWidth 40`，其余层按原型系数联动）与 `AidenteGlassOverlay`（边缘增厚 `RadialGradient`、内缩柔光、顶部高光、左上/右下 1pt 角向渐变描边）；`AidenteLevelSurface` 在 tint 之后叠该层，并以 `!AidenteReadability.supportsSystemMaterial` 保证 macOS 26+ 只走系统 `glassEffect`、不双份叠加；`.clipShape(shape)` 保留。blur / saturation / brightness 仍由系统材质决定、App 不可调；dispersion / 真折射未实现（需实时 backdrop 纹理与屏幕录制权限）。
 - **恢复仪表盘容器背景采样**：`StatusBarManager.swift` 三处 `makeDashboardRootView(canSampleBackdrop:)` 由 `false` 改回 `true`（主菜单无边框面板 / 独立主菜单窗口 / 预览面板），使 `usesBackdropMaterial` 生效、L0 走 `NSVisualEffectView(.popover, .behindWindow)`。设置窗口仍由 `SettingsView.swift` 强制 `false`，视觉无变化；`AidenteSettingsBackground` 与诊断读数不动。
-- **HTML 效果原型 `liquid-glass-proposal.html`**（项目根，纯静态、不参与构建）：现状实体色 vs 方案 A 并排对照，亮/暗外观、7 个参数滑块、6 层分层开关，另含「背景采样」与「真折射概念对照」两个上限演示（后者用内建 SVG 位移图 + RGB 色散，仅 Chromium 有效）。按当前界面还原了无 L1 底栏、三个按钮位于 header 右上角；修复 `backdrop-filter` 子元素不继承祖先圆角裁剪导致的方角；边缘光默认定稿 `0.20`，rim 强度与边缘光联动（用户确认保持耦合）。桌面背景为自绘 CSS 渐变，未使用 glasswork 中 © Apple 的 macOS 壁纸素材。
 
 ### 变更
 
@@ -50,13 +47,7 @@
 ### 构建与验证
 
 - **版本号升级到 6.1.1 / Build 22**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist` 的 `CFBundleShortVersionString` 与 `Aidente.xcodeproj/project.pbxproj` 六个构建配置的 `MARKETING_VERSION` 统一为 `6.1.1`；`CFBundleVersion` / `CURRENT_PROJECT_VERSION` 统一递增为 `22`。`AGENTS.md` 的当前版本声明同步更新。历史文档（`README.md`、`BuildSupport/release-notes-6.1.md`、`CODEX_HANDOFF.md`、`maintenance-test-notes.md`、`administrator-install-notes.md`）与 `UpdateService.swift` 里针对 6.1 的版本比较测试数据保留原值。已完整构建并输出 `Dist/Aidente-6.1.1.dmg`（6.1.1 / Build 22）；`[未发布]` 未归档、未新建 `release-notes-6.1.1.md`、未提交 / 推送 / 打标签 / 发布 Release。
-- **图标资源校验**：`iconutil -c iconset` 展开新 `Aidente.icns`，确认 `ic10` 1024×1024、`ic09`/`ic14` 512×512、`ic07` 128×128、`ic12` 64×64、`ic11` 32×32、`ic04`/`ic05` 旧格式块齐全；`sips` 复核 10 档像素尺寸，alpha 边界测量复核 1024 / 512 / 128 三档留白比例一致；肉眼确认圆角底板居中、投影在下、电池与闪电无裁剪或上下颠倒。已随 6.1.1 / Build 22 构建进入 bundle 与 DMG；产物内 `Aidente.icns` 为 702747 bytes，与 `BuildSupport/Aidente.icns` 一致，确认新图标已进发行包。
-- `BuildSupport/build_app.sh`：动态 SDK 解析 + 图标缓存刷新；`codesign --verify --deep --strict` 输出 `valid on disk` / `satisfies its Designated Requirement`。
-- 全部改动（界面材质与外观、仪表盘布局、状态栏图标、外观分段控件、无边框面板替换 NSPopover、maxHeight 800、仪表盘类液态玻璃材质与背景采样、外观副标题文案）已完整构建通过（Exit 0 + codesign 通过），产物在 `Dist/Aidente.app`。
-- **6.1.1 / Build 22 完整构建与 DMG**：`zsh BuildSupport/build_app.sh` Exit 0，产物 `Dist/Aidente.app`（9.9M），`codesign --verify --deep --strict` 输出 `valid on disk` / `satisfies its Designated Requirement`；日志无 `error:` / `fatal`，仅剩第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` 在 macOS 14 已弃用警告。`zsh BuildSupport/make_dmg.sh` 输出 `Dist/Aidente-6.1.1.dmg`（3.5M，卷名 `Aidente 6.1.1 (build 22)`，`hdiutil verify` VALID）。产物 `Info.plist` 为 6.1.1 / 22，bundle 内 `Aidente.icns` 与 `BuildSupport/Aidente.icns` 同为 702747 bytes，确认新版本号与新图标均进入发行包。脚本照例提示 ad-hoc 签名仅本机 / 受信分发。
-- **搬家后首次编译失败与处理**：`Build/ModuleCache` 里的 clang PCH 固化了项目旧绝对路径，报 `PCH was compiled with module cache path ... but the path is currently ...`，连带 `_DarwinFoundation1/2/3` / `IOKit` 一串 fatal error，非业务源码问题。将旧缓存备份移出后由脚本按新路径重建，二次构建通过；首轮因缓存全量重建耗时约 49 秒。
 - **编译警告**：现仅剩第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` 在 macOS 14 已弃用（上游代码，未改动，不影响产物）。`SystemAppearanceMonitor.currentSystemIsDark()` 原误标 `nonisolated` 却读取 main-actor 隔离的 `NSApp.effectiveAppearance`，产生两条 `main actor-isolated` 警告；已去掉多余的 `nonisolated` 并加注释说明隔离边界（保留供 KVO 回调使用的 `isDark(_:)` 的 `nonisolated`），运行时行为不变。修正后重新构建 Exit 0、该警告归零，耗时约 20 秒。`nm` 已确认 `AidenteGlassTokens` 相关符号进入可执行文件。
-- **已由用户实机确认**：电池弹窗顶部尖尖彻底消失；仪表盘宽度与动态高度、浅色观感、双屏变淡等效果。
 - **26+ 验证缺口**：类型检查与构建通过不能替代实机验收。当前实机 15.8.2 可验收仪表盘的 `.popover` 毛玻璃与自绘玻璃光效、设置页 / 仪表盘层级与「始终使用不透明背景」开关；macOS 26+ 的 `glassEffect` 系统材质、以及本轮「26+ 不叠自绘层」的分支表现，仍需在 26 环境实机核对。
-- **未验证 / 待日常使用观察**：**borderless `NSPanel` 的 `.behindWindow` 能否真采到桌面背景**（本轮恢复采样后尚未实机验证；若失效需把三处容器标志改回 `false`，静态玻璃层代码不受影响）；外观自动 / 浅 / 深在弹窗与各窗口的跟随效果、外部点击关闭在多屏与带刘海屏下的表现、设置页固定实体色与仪表盘玻璃的观感一致性；实机充电控制、睡眠 / 唤醒、后台服务升级等硬件相关行为未做验收，编译与逻辑验证不能替代硬件验收。
-- **未发行**：已输出本地 DMG `Dist/Aidente-6.1.1.dmg`（从 `Info.plist` 读取 6.1.1 / Build 22，3.5M；`hdiutil verify` 校验和 VALID），内含重制后的应用图标。`Dist/Aidente-6.1.dmg`（6.1 / Build 21，3.2M）为上一版产物，仍保留在 `Dist/` 未删除。两者均基于 ad-hoc 签名，仅供本机 / 受信分发，Gatekeeper 会在其它机器拦截；对外分发需先以 Developer ID 重签并公证。未提交 / 推送 / 打标签 / 发布 Release。
+
+
