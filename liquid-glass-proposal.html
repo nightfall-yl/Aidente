@@ -6,7 +6,7 @@
 <title>AIdente · 方案 A「液态玻璃观感」原型 · 仅演示，不改造代码</title>
 <style>
 /* ============================================================
-   基准色阶沿用 new-glass.html 的方案 A（与 AidenteTheme.swift 的
+   基准色阶沿用 gross-glass.html 的现行方案（与 AidenteTheme.swift 的
    AidenteSurfaceTokens 一致）：
    亮 L0 #F4F5F6 / L1 #F8F8F8 / L2 #FCFCFC
    暗 L0 #232326 / L1 #28282B / L2 #2D2D31
@@ -65,6 +65,8 @@ h3{font-size:14px;margin:20px 0 6px}
 p{margin:8px 0;font-size:13.5px;color:var(--doc2)}
 strong{color:var(--doc);font-weight:600}
 code{font-size:11.5px;background:var(--chip);padding:1px 5px;border-radius:4px;color:var(--chip-ink)}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+a:hover{opacity:.72}
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:14px}
 .tagline{display:inline-block;font-size:11px;color:var(--accent);background:var(--badge);
   padding:3px 9px;border-radius:6px;font-weight:600;margin-bottom:10px}
@@ -280,7 +282,7 @@ li strong{color:var(--doc)}
   <header style="margin-bottom:24px">
     <div class="eyebrow">AIdente · 方案 A 效果原型 · 2026-11-07</div>
     <h1>「液态玻璃观感」· 现状 vs 方案 A</h1>
-    <p class="lede">这是一份<strong>纯 HTML 静态原型，不改动任何 Swift 代码、不编译</strong>。左边是当前线上状态（<code>canSampleBackdrop=false</code> → 实体色 + 1pt 中性描边），右边是方案 A：在现有材质之上叠加 glasswork 六层里<strong>能用 SwiftUI 自绘的静态部分</strong>——边缘增厚、tint、三处边缘光、1pt 渐变描边、文字染色。默认保持实体底，因为这才是 A 方案的真实落地状态。</p>
+    <p class="lede">这是一份<strong>纯 HTML 静态原型，不改动任何 Swift 代码、不编译</strong>。左边是当前线上状态（<code>canSampleBackdrop=false</code> → 实体色 + 1pt 中性描边），右边是方案 A：在现有材质之上叠加 <a href="https://github.com/kubai087/glasswork" target="_blank" rel="noopener noreferrer">glasswork</a> 六层里<strong>能用 SwiftUI 自绘的静态部分</strong>——边缘增厚、tint、三处边缘光、1pt 渐变描边、文字染色。默认保持实体底，因为这才是 A 方案的真实落地状态。</p>
   </header>
 
   <h2>一 · 交互原型</h2>
@@ -431,7 +433,7 @@ li strong{color:var(--doc)}
       <li><strong>保持版本分支单一</strong>：<code>:318-323</code> 的 <code>#available(macOS 26, *)</code> 分支不能被覆盖，别让仿玻璃和系统 <code>glassEffect</code> 叠成两份；CHANGELOG.md:50 记的 26+ 实机验收缺口仍在。</li>
       <li><strong>去噪约定</strong>：项目已明确删阴影、只留 1pt 描边，所以 ① 体积阴影默认关闭。若要开，属于新增设计决策。</li>
       <li><strong>可读性</strong>：<code>AidenteReadability</code> 那套 opaque 回退与文字对比度承诺要重新验证，高光别压到 <code>.secondary</code> 灰字上。</li>
-      <li><strong>许可</strong>：glasswork 代码 MIT 可用，但其 <code>NOTICE</code> 明确 macOS 壁纸素材 © Apple 不在许可内。本原型桌面背景是<strong>自绘 CSS 渐变</strong>，未使用任何素材；移植时也只能搬算法。</li>
+      <li><strong>许可</strong>：<a href="https://github.com/kubai087/glasswork" target="_blank" rel="noopener noreferrer">glasswork</a>（<code>github.com/kubai087/glasswork</code>）代码 MIT 可用，但其 <code>NOTICE</code> 明确 macOS 壁纸素材 © Apple 不在许可内。本原型桌面背景是<strong>自绘 CSS 渐变</strong>，未使用任何素材；移植时也只能搬算法。</li>
     </ol>
     <div class="warnbox"><p>原型里的 <code>backdrop-filter</code> 是对 <code>NSVisualEffectView</code> 的近似，色值是按 alpha 叠加估算，不是像素级复刻；原生效果以实机为准。本文件不参与构建，也不写入 CHANGELOG。</p></div>
   </div>

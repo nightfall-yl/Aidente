@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AIdente · 可读性策略 · 完整方案与交互原型</title>
+<title>AIdente · 可读性策略 · 现行方案（6.1.1）与交互原型</title>
 <style>
 :root, html[data-appearance="light"] {
   --page: #EDEDF0; --doc: #1D1D1F; --doc2: #6E6E73; --paper: #FFFFFF;
   --line: #DCDCE1; --chip: #E7E7EC; --chip-ink: #3A3A3F;
-  --l0: #F6F6F6; --l1: #F9F9F9; --l2: #FBFBFB; --l3: #E9F6EF;
+  --l0: #F4F5F6; --l1: #F8F8F8; --l2: #FCFCFC; --l3: #E9F6EF;
   --ink: #1D1D1F; --ink2: #6E6E73; --stroke: rgba(0,0,0,.10);
   --accent: #0A84FF; --accent-soft: #E4F1FF; --jade: #0E8A4F;
   --shadow: 0 1px 3px rgba(0,0,0,.07); --winshadow: 0 12px 32px rgba(0,0,0,.11);
@@ -17,7 +17,7 @@
 html[data-appearance="dark"] {
   --page: #151517; --doc: #F5F5F7; --doc2: #98989D; --paper: #1D1D20;
   --line: #333338; --chip: #2B2B30; --chip-ink: #D6D6DB;
-  --l0: #1B1B1B; --l1: #202020; --l2: #252525; --l3: #1A2E24;
+  --l0: #232326; --l1: #28282B; --l2: #2D2D31; --l3: #1A2E24;
   --ink: #F5F5F7; --ink2: #98989D; --stroke: rgba(255,255,255,.10);
   --accent: #0A84FF; --accent-soft: #123049; --jade: #37D07A;
   --shadow: 0 1px 3px rgba(0,0,0,.32); --winshadow: 0 12px 32px rgba(0,0,0,.45);
@@ -143,10 +143,15 @@ li strong { color: var(--doc); }
 <div class="page">
 
   <header class="doc-head">
-    <div class="eyebrow">AIdente · 设计提案 · 2026-11-06</div>
+    <div class="eyebrow">AIdente · 设计提案 · 2026-11-06 / 2026-11-08 已按 6.1.1 落地状态核对</div>
     <h1>从「材质选择器」到「可读性策略」</h1>
-    <p class="lede">一份完整方案与可交互原型。核心：材质由 macOS 决定，app 只承诺可读性；窗口底、顶栏、卡片共用一套基线 + 固定层级偏移。下方原型可切换明暗、系统版本、系统开关与容器，实时查看层级色值与生效策略。</p>
+    <p class="lede">一份完整方案与可交互原型，现已落地。核心不变：材质由 macOS 决定，app 只承诺可读性；窗口底、顶栏、卡片共用一套基线 + 固定层级偏移（亮 <code>#F4F5F6 / #F8F8F8 / #FCFCFC</code>、暗 <code>#232326 / #28282B / #2D2D31</code>）。下方原型可切换明暗、系统版本、系统开关与容器，实时查看层级色值与生效策略。</p>
   </header>
+
+  <div class="panel" style="margin:0 0 22px;border-left:3px solid var(--accent)">
+    <span class="tagline">现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
+    <p>四档「界面材质」选择器已删除，设置页为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关；仪表盘三个容器 <code>canSampleBackdrop = true</code>，15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 用系统 <code>glassEffect(.regular)</code>；设置窗口仍为 <code>false</code>。仪表盘<strong>无 L1 底栏</strong>，三个按钮在 header 右上角。下方 01–10 节为现行方案说明与验收清单；定稿参数见 <code>liquid-glass-proposal.html</code>。</p>
+  </div>
 
   <!-- ================= 交互原型 ================= -->
   <h2>一 · 交互原型</h2>
@@ -278,7 +283,7 @@ li strong { color: var(--doc); }
     <div class="panel">
       <span class="tagline">01 变更摘要</span>
       <h3 style="margin-top:4px">一句话</h3>
-      <p>删除四档「界面材质」选择器，改为「跟随系统」单一默认 + 一个 app 内覆盖开关；把材质从用户选项降级为实现细节，把「可读性」提升为 app 的唯一承诺。</p>
+      <p>删除四档「界面材质」选择器，改为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关；把材质从用户选项降级为实现细节，把「可读性」提升为 app 的唯一承诺。<strong>本方案已于 6.1.1 / Build 22 落地</strong>：仪表盘三个容器恢复背景采样并叠加类液态玻璃静态层，macOS 26+ 改用系统 <code>glassEffect(.regular)</code>。</p>
       <div class="callout"><p><strong>结果：</strong>渲染路径从 4 档 × 2 外观 × 5 层级 × 2 容器 × 3 系统状态 ≈ 240 条，收敛为「1 个基线 + 5 个固定层级偏移 + 1 次整体变换」，约 12 个常量。</p></div>
     </div>
 
@@ -287,7 +292,7 @@ li strong { color: var(--doc); }
       <ol>
         <li><strong>四个不是四个主题。</strong> 它们只是「一根透明度轴上的三个刻度 + 一条版本兼容说明」。切换时其他视觉变量全不变，用户感受不到「换了主题」，只觉得「没变化」或「色差不对」。</li>
         <li><strong>维度混用。</strong> 前三档讲视觉效果，第四档讲工程策略；而 Liquid Glass 在 Apple 那边根本不是用户选项，是用 26 SDK 重编译自动获得的系统材质。</li>
-        <li><strong>设计承诺不可兑现。</strong> 玻璃需要背后有内容可折射。设置窗口是透明 NSWindow，behindWindow 采不到有效内容，「更明显的背景虚化」物理上做不到；修到最后只能变成固定近白，名字就成了谎话。</li>
+        <li><strong>设计承诺不可兑现。</strong> 玻璃需要背后有内容可折射。设置窗口是透明 NSWindow，behindWindow 采不到有效内容，「更明显的背景虚化」物理上做不到；修到最后只能变成固定近白，名字就成了谎话。（此结论只约束设置窗口：仪表盘改用 borderless NSPanel 后已恢复 <code>canSampleBackdrop = true</code>，见 05。）</li>
         <li><strong>层级各自实现材质。</strong> 窗口底带渐变、顶栏带整体透明度、卡片带半透明与三层高光 —— 每个容器各自抄一份数值，必然漂移。今晚的「中灰卡片 vs 近白窗口底（248 / 193，差 55 级）」就是结果。</li>
       </ol>
     </div>
@@ -326,8 +331,8 @@ li strong { color: var(--doc); }
       <span class="tagline">05 容器能力降级</span>
       <p>「跟随系统」不等于两端用同一套渲染。容器只声明一个能力标志：</p>
       <ul>
-        <li>仪表盘（NSPopover）：能采样背景内容。macOS 26+ 用系统材质；15 及更早用兼容材质。</li>
-        <li>设置窗口（透明 NSWindow）：不能采样背景内容。任何系统版本下都自动回退到实体近白基线。</li>
+        <li>仪表盘（borderless NSPanel / 独立主菜单窗口 / 预览面板）：<code>canSampleBackdrop = true</code>，已恢复背景采样。macOS 26+ 用系统 <code>glassEffect(.regular)</code>；15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（无真折射 / 色散）。</li>
+        <li>设置窗口（标准 titled NSWindow）：<code>canSampleBackdrop = false</code>，任何系统版本下都走固定中性色阶的实体基线（亮 <code>#F4F5F6</code> / 暗 <code>#232326</code>）。</li>
         <li>因此「玻璃虚化」不再作为一个可见选项存在，能力不足时静默降级，不向用户解释技术细节。</li>
       </ul>
     </div>
@@ -340,55 +345,35 @@ li strong { color: var(--doc); }
           <tr><td>1（最高）</td><td>系统「降低透明度」开启</td><td>整栈强制实体，忽略一切其他设置与容器能力</td></tr>
           <tr><td>2</td><td>app 内「始终使用不透明背景」开启</td><td>整栈实体，但系统开关关闭时可调回</td></tr>
           <tr><td>3</td><td>容器不能采样背景</td><td>该容器单独回退到实体基线</td></tr>
-          <tr><td>4（默认）</td><td>跟随系统</td><td>26+ 系统材质 / 旧系统兼容材质</td></tr>
+          <tr><td>4（默认）</td><td>跟随系统</td><td>26+ 系统 glassEffect / 15 及更早 .behindWindow + 自绘类液态玻璃层</td></tr>
         </tbody>
       </table>
       <p>「增强对比度」只加粗描边与分隔线，不改层级亮度差；「减少动态效果」影响过渡动画，不影响颜色。</p>
     </div>
 
     <div class="panel">
-      <span class="tagline">07 设置页信息架构</span>
-      <table>
-        <thead><tr><th style="width:26%">现在</th><th>改后</th></tr></thead>
-        <tbody>
-          <tr><td>卡片标题「界面材质」</td><td>「外观与可读性」</td></tr>
-          <tr><td>四档分段选择器（实体 / 毛玻璃 / 高斯柔化 / 液态玻璃）</td><td>一行状态说明「跟随系统 · 默认」+ 当前生效材质标签</td></tr>
-          <tr><td>每档一句副标题，维度不一</td><td>一句统一说明：材质由 macOS 决定，文字对比度始终优先</td></tr>
-          <tr><td>「macOS 26 / 27」版本标签</td><td>删除（版本适配是实现细节，不是用户需要知道的信息）</td></tr>
-          <tr><td>无</td><td>新增开关「始终使用不透明背景」，带一句系统开关优先级的说明</td></tr>
-        </tbody>
-      </table>
-      <p>文案统一改为描述「用户看到什么」。旧四档译名与版本说明从设置页移除，版本兼容信息可在「关于」页保留一行。</p>
+      <span class="tagline">07 设置页信息架构（现行 6.1.1）</span>
+      <ul>
+        <li>卡片标题「外观」：<strong>自动 / 浅色 / 深色</strong> 分段控件（全局生效）+「始终使用不透明背景」开关。</li>
+        <li>四档材质选择器与「macOS 26 / 27」版本标签已移除；版本适配是实现细节，不出现在设置页。</li>
+        <li>副标题统一为一句定稿文案：「macOS 26 以前的系统，仪表盘使用类液态玻璃材质；升级到 macOS 26+，自动使用系统液态玻璃材质。」</li>
+        <li>旧四档译名与版本说明已从设置页移除，版本兼容信息可在「关于」页保留一行。</li>
+      </ul>
     </div>
 
     <div class="panel">
       <span class="tagline">08 数据与迁移</span>
-      <p>采用<strong>方案 A：一次性迁移</strong>。现有偏好是已持久化的用户数据，直接删除会造成升级后外观突变。</p>
+      <p>已采用<strong>一次性迁移</strong>（<code>AidenteMigration.migrateMaterialPreferenceIfNeeded()</code>：旧 <code>interfaceMaterialStyle: solid</code> → <code>forceOpaqueBackground</code> 开启）。现有偏好是已持久化的用户数据，直接删除会造成升级后外观突变。</p>
       <ul>
         <li>首次启动时读取旧值：旧值为「清晰实体」→ 新开关设为开启；其余三档 → 关闭；无旧值 → 关闭。</li>
         <li>迁移只执行一次，写入标记后不再读取旧键；旧键保留一个版本周期以便回滚，之后清除。</li>
-        <li>诊断信息中的「界面材质」字段改为上报当前生效策略（跟随系统 / 不透明 / 能力降级），不再上报档位名。</li>
+        <li>诊断信息中的「界面材质」字段已改为上报当前生效策略（<code>readabilityStrategy</code> / <code>readabilitySource</code> / <code>forceOpaqueBackground</code>），不再上报档位名。</li>
         <li>迁移过程对用户无感，不弹提示、不重置其他偏好。</li>
       </ul>
     </div>
 
     <div class="panel">
-      <span class="tagline">09 实施步骤</span>
-      <ol>
-        <li>建立单一材质 token 源：两套外观值、五个层级偏移、一组实体降级值。</li>
-        <li>新增容器能力标志，替换现有的「两套 backdrop 实现」分支。</li>
-        <li>把窗口底、顶栏、卡片、强调卡统一接到同一个出口；移除各自内部的渐变、整体透明度与重复高光。</li>
-        <li>加入系统版本分支：26+ 使用系统材质，旧系统使用兼容材质，分支只出现在一处。</li>
-        <li>把「降低透明度」与「始终不透明」合并成整栈变换，四个层共用。</li>
-        <li>改造设置页 UI 与文案，移除四档选择器与版本标签。</li>
-        <li>实现旧偏好一次性迁移，并更新诊断字段。</li>
-        <li>清理不再使用的枚举、译名与容器参数。</li>
-        <li>按验收标准逐项截图核对，再更新变更记录。</li>
-      </ol>
-    </div>
-
-    <div class="panel">
-      <span class="tagline">10 验收标准</span>
+      <span class="tagline">09 验收标准（编译已通过，实机项见下）</span>
       <table>
         <thead><tr><th style="width:26%">检查项</th><th>通过条件</th></tr></thead>
         <tbody>
@@ -404,16 +389,16 @@ li strong { color: var(--doc); }
     </div>
 
     <div class="panel">
-      <span class="tagline">11 风险与边界</span>
+      <span class="tagline">10 风险与边界</span>
       <ul>
-        <li><strong>最大视觉变化：</strong>仪表盘不再透桌面壁纸，浅色整体更平、更接近设置页。这是「统一」的代价，需要重新验收仪表盘观感。</li>
-        <li><strong>26+ 验证缺口：</strong>当前构建 SDK 为 26.2，系统材质 API 可编译；但实机是 15.8.2，真正的系统材质效果只能在 26 环境上验收，不能用编译通过代替。</li>
+        <li><strong>已推翻的早期推断：</strong>早期方案曾假设「仪表盘不再透桌面壁纸」。现行方案把仪表盘三个容器的 <code>canSampleBackdrop</code> 恢复为 <code>true</code>，15 及更早走 <code>.behindWindow</code> + 自绘类液态玻璃层，26+ 走系统液态玻璃；因此视觉增量不再是「变平」，而是边缘增厚与三处高光。</li>
+        <li><strong>26+ 验证缺口（仍在）：</strong>系统材质 API 可编译，但实机是 15.8.2；<code>glassEffect(.regular)</code> 与「26+ 不叠自绘层」的分支只能在 26 环境实机核对。另 borderless NSPanel 的 <code>.behindWindow</code> 是否真采到桌面背景也尚未实机验证。</li>
         <li><strong>构建约束：</strong>部署目标仍是 macOS 14，版本分支必须做可用性门控；项目仍用 swiftc 直接构建，不引入新的包依赖。</li>
-        <li><strong>不做的事：</strong>不重绘 app 图标、不改状态栏图标、不加新主题色、不引入第三方材质库、不做 DMG、不定新版本号。</li>
+        <li><strong>早期「不做的事」已部分解除：</strong>应用图标已按 Apple 模板重制并补齐 1024 档、状态栏图标已重绘、版本已定为 6.1.1 / Build 22 并输出 <code>Dist/Aidente-6.1.1.dmg</code>；仍保持不加新主题色、不引入第三方材质库。未提交 / 推送 / 打标签 / 发 Release。</li>
       </ul>
     </div>
 
-    <div class="foot">本文件是设计提案与可交互原型，未改动任何产品代码，未执行构建。原型中的色值用于演示层级关系，实际落地以单一 token 源为准。</div>
+    <div class="foot">本文件保留 2026-11-06 以来的可读性策略说明与可交互原型，并已按 <strong>6.1.1 / Build 22</strong> 的真实落地状态更新色值与结论；实施已完成且完整编译、输出 DMG。定稿参数见 <code>liquid-glass-proposal.html</code>，实现以 <code>AidenteTheme.swift</code> 的单一 token 源为准。</div>
   </div>
 </div>
 
@@ -424,15 +409,15 @@ li strong { color: var(--doc); }
     os: "15", view: "both", rt: false, force: false, levels: false };
   var LEVELS = {
     light: [
-      { name: "L0 窗口底", hex: "#F6F6F6", rgb: 246, delta: "基线" },
-      { name: "L1 顶栏 / 底栏", hex: "#F9F9F9", rgb: 249, delta: "+3 / 255 ≈ 1.2%" },
-      { name: "L2 卡片", hex: "#FBFBFB", rgb: 251, delta: "+5 / 255 ≈ 2.0%" },
+      { name: "L0 窗口底", hex: "#F4F5F6", rgb: 244, delta: "基线" },
+      { name: "L1 顶栏", hex: "#F8F8F8", rgb: 248, delta: "+4 / 255 ≈ 1.6%" },
+      { name: "L2 卡片", hex: "#FCFCFC", rgb: 252, delta: "+8 / 255 ≈ 3.1%" },
       { name: "L3 强调卡", hex: "#E9F6EF", rgb: null, delta: "语义色，亮度不低于 L2" }
     ],
     dark: [
-      { name: "L0 窗口底", hex: "#1B1B1B", rgb: 27, delta: "基线" },
-      { name: "L1 顶栏 / 底栏", hex: "#202020", rgb: 32, delta: "+5 / 255 ≈ 2.0%" },
-      { name: "L2 卡片", hex: "#252525", rgb: 37, delta: "+10 / 255 ≈ 3.9%" },
+      { name: "L0 窗口底", hex: "#232326", rgb: 35, delta: "基线" },
+      { name: "L1 顶栏", hex: "#28282B", rgb: 40, delta: "+5 / 255 ≈ 2.0%" },
+      { name: "L2 卡片", hex: "#2D2D31", rgb: 45, delta: "+10 / 255 ≈ 3.9%" },
       { name: "L3 强调卡", hex: "#1A2E24", rgb: null, delta: "语义色，亮度不低于 L2" }
     ]
   };

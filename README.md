@@ -1,156 +1,112 @@
 # Aidente
 
-Aidente is an independent, open-source macOS menu bar app for Apple Silicon
-MacBooks. It monitors battery and power data and can manage low-level charging
-controls through an explicitly approved privileged helper.
+> 英文版见 [README_en.md](README_en.md)。
 
-Version 6.0.1 adds secure background updates from the official GitHub Releases
-page. Aidente checks stable releases after launch and every six hours, verifies
-the GitHub SHA-256 digest, app signature, bundle identity, version, and arm64
-architecture, then replaces the installed app through a rollback-capable helper.
+Aidente 是一款面向 Apple Silicon MacBook 的独立开源 macOS 菜单栏应用。它监测电池与供电数据，并可在用户明确授权的特权后台服务辅助下管理底层充电控制。
 
-This project does not contain AlDente Pro code, assets, activation logic, or
-modified binaries. It implements similar battery-care workflows from public
-behavior descriptions and GPL-compatible open-source foundations.
+6.0.1 起支持从官方 GitHub Releases 页面安全地进行后台更新：启动后以及此后每六小时检查稳定版，校验 GitHub 提供的 SHA-256 摘要、应用签名、bundle 标识、版本与 arm64 架构，再通过具备回滚能力的后台服务替换已安装的应用。
 
-## Version 6.1 (Build 21)
+本项目不包含 AlDente Pro 的代码、素材、激活逻辑或修改过的二进制文件。相关电池养护流程依据公开的行为描述与 GPL 兼容的开源基础独立实现。
 
-The menu-bar battery is horizontal with left-to-right fill. Dark digits and
-charging marks retain one
-color across the state-colored charge and pale gray-blue empty track. The item
-uses 20 points without digits and 26 points with digits inside, including one
-point of padding on each side. Combined power readouts still fit their wattage
-text. Light/dark rendering includes empty, half-full and full batteries, low
-power mode, disabled state colors, and three-digit wattages.
+## 版本 6.1.1（Build 22）
 
-- Firmware holds use the unrounded hardware capacity and round up once when
-  writing the whole-percent boundary. This fixes fractional capacity above the
-  old rounded-down boundary switching an attached MacBook to battery power.
-  Holding above a newly lowered target does not deliberately discharge toward
-  that target. Normal charging still stops at the configured limit.
-- Both held endpoints remain fixed across polling and charge-limit edits until
-  charging resumes or power is disconnected. Awake and sleep holds are stored
-  separately so a temporary sleep boundary cannot replace the awake interval.
-- Paused charging is verified with three fresh power samples and rechecked
-  every eight seconds. Sustained charging or discharging reports a control
-  failure; an accepted register write alone no longer confirms a successful hold.
-- Firmware interval diagnostics include raw capacity, applied endpoints,
-  activation and sleep state. Explicit discharge remains a separate user action.
+本版把界面改为跟随系统外观，并把材质收敛到单一绘制入口：材质由 macOS 决定，app 只保证文字可读性，不再提供多档材质选择器。macOS 26 以前的系统在仪表盘使用类液态玻璃观感（自绘边缘增厚、tint 与三处边缘光），升级到 macOS 26+ 后自动使用系统液态玻璃材质；系统开启「降低透明度」或 app 开启「始终使用不透明背景」时回退为实体底色。设置窗口是标准标题栏窗口，始终使用实体底色。
 
-Short observations on the affected machine showed zero battery power while
-the adapter supplied the system, including limit changes and sleep/wake
-transitions. Sustained sleep, full charge cycles and other firmware remain
-unverified. See [6.1 release notes](BuildSupport/release-notes-6.1.md).
+- 弃用 `NSPopover`，主菜单改为无边框 `NSPanel`，彻底去掉系统强加的顶部箭头；外部点击与再次点击状态栏图标都能可靠关闭，并修复快速连点导致面板不渲染或位置漂移。
+- 「外观」卡片新增 自动 / 浅色 / 深色 分段控件（全局生效），旧材质偏好一次性迁移；删除设置页「高级」标签页，原有功能并入「通用」。
+- 仪表盘新增四个功能卡片显示开关（容量与寿命趋势、当前耗电 App、快捷养护、自动保护），隐藏后面板高度自动收缩。此前这些开关只被零引用的旧菜单代码消费，实际面板并没有读取。
+- 状态栏电池图标按 macOS 15 单色 template 风格重绘（透明内部、`.primary` 描边与填充、右端凸起）；修复双屏时非活跃屏幕的菜单栏图标不变淡，以及反复重建后 Finder 图标缩略图陈旧。
+- 修复功率流图导线左右溢出与箭头未对齐；header 时间串上移，右上角刷新 / 设置 / 退出按钮改为 `.secondary` 灰字；仪表盘宽度 408 → 400、高度上限 720 → 800。
+- 应用图标按 Apple macOS 模板重制：主体收进 824×824 居中框、四边各留 100pt，补齐 `.icns` 缺失的 1024×1024 档，解决启动台里比其它 App「大一圈」的观感。
 
-## Version 6.0.2 (Build 20)
+本版另外修复了 Swift 6.2.4 搭配 macOS 15.x SDK 时 `@Observable` 宏展开失败（构建脚本改为动态解析 SDK），并清掉 `AidenteTheme.swift` 的两条 main actor 隔离警告。macOS 26+ 的系统材质分支尚未在 26 环境实机核对；本版为界面、图标与文档改动，未重新执行充电与睡眠 / 唤醒的硬件回归。详见 [6.1.1 发行说明](BuildSupport/release-notes-6.1.1.md)。
 
-- Narrow vertical menu-bar battery with bottom-up fill. Icon-only menu width
-  decreases from 33 to 19 points, or from 37 to 25 points with the percentage
-  inside. Combined battery/power mode sizes the item to the actual wattage text.
-- Charging and adapter control are one serialized, verified transaction. Holding
-  a charge limit requests that the adapter remain connected; firmware may still
-  draw battery power above the ceiling. Normal mode resumes 2 percentage
-  points below the limit; sailing mode retains its configured range.
-- Automatic discharge defaults to off. Explicitly saved preferences are preserved.
-  When enabled, it starts on power connection or a limit change only if more than
-  1 point above the limit, and does not restart for normal charging overshoot.
-- The privileged helper acknowledges system sleep after applying/readback of the
-  sleep policy, including when unplugged before sleep. Wake keeps the hold until
-  the app sends a fresh policy. A low-frequency watchdog repairs register drift
-  while the daemon is able to run; it does not poll during deep sleep.
-- Charging control uses an explicitly authorized local LaunchDaemon with pinned
-  client/helper identities. Updated app/helper binaries require renewed
-  administrator authorization. Background polling never prompts for a password.
-  Wake re-probes hardware capabilities and XPC failures no longer leave capability
-  loading hung.
-- Capability-based selection of old `CH0B/CH0C`, `CHTE`, and new firmware-managed
-  `bfF0/bfD0/bfE0` controls (not selection by macOS version number). The firmware
-  interval is applied proactively while charging. A hold uses the configured
-  ceiling or captures the current raw capacity if it is lower, without chasing
-  subsequent drops. New firmware may run from battery above that ceiling;
-  adapter-only power is not guaranteed. The original interval is saved and
-  restored when management is disabled. Failed writes are read back and rolled
-  back rather than reported as success.
-- Diagnostics include requested/applied adapter and charging state, plus power
-  event and hardware-key logs.
+## 版本 6.1（Build 21）
 
-Firmware-specific sleep persistence
-must still be checked on affected machines; this is not a blanket compatibility
-claim for all macOS 26/27 firmware.
+菜单栏电池恢复横向、从左向右填充。数字与充电标记统一为深色，覆盖状态色的已充电部分与浅灰蓝的空电量轨道，不再做文字反色。不带数字时占 20 点，内置数字时占 26 点，两侧各含 1 点留白；功率组合读数仍按瓦数文本自适应。浅色 / 深色外观覆盖空电量、半满、满电、低电量模式、停用状态配色与三位数瓦数。
 
-Newer firmware shipped with macOS 15.8/26.7 and macOS 27 betas may remove or
-restrict charging registers. Aidente reports the unsupported control instead of
-silently substituting adapter disconnection (which would cycle the battery).
-Re-registering the helper cannot grant Apple's private firmware entitlements.
+- 保留硬件电量的小数，只在首次写入暂停边界时向上取整。例如 54.66% 使用 55% 边界，避免旧的整数边界 54% 把接着电源的 MacBook 切到电池供电。超过新设定上限时保持当前电量，不会主动放电去追新目标；正常从低电量充电仍按设定上限停止。
+- 暂停期间冻结完整上下限，拖动上限与轮询不再反复改写；恢复充电或断开电源后重置。清醒与睡眠保持分别保存，临时睡眠策略不会覆盖清醒保持区间。
+- 插电暂停仍请求适配器连接。暂停确认使用三次新鲜的实际功率读数，随后每八秒复查；持续充电或放电时明确报告控制未生效，不再只凭寄存器写入成功就判定保持成立。
+- 增加固件区间诊断信息，包括原始电量、上下限、激活状态与睡眠状态。主动放电仍是单独的用户操作。
 
-## Requirements
+受影响机器在修复后的短时观察中，电池功率为 0 W、适配器持续供电，包含修改上限与睡眠 / 唤醒切换。持续合盖睡眠、完整充放电循环与其他机型固件尚未验证。参见 [6.1 发行说明](BuildSupport/release-notes-6.1.md)。
+
+## 版本 6.0.2（Build 20）
+
+- 窄竖向菜单栏电池，自下而上填充。纯图标时菜单宽度由 33 点降到 19 点，内置百分比时由 37 点降到 25 点。电池 / 功率模式组合显示会按实际瓦数文本调整宽度。
+- 充电与适配器控制合并为一次串行、带校验的事务。保持上限时会请求适配器保持连接；固件在上限之上仍可能从电池取电。普通模式在低于上限 2 个百分点时恢复充电，巡航模式保留其设定区间。
+- 自动放电默认关闭，用户显式保存的偏好会被保留。开启后仅在接通电源或修改上限、且电量高于上限 1 个百分点以上时启动；普通充电的过冲不会重新触发放电。
+- 特权后台服务在应用 / 回读睡眠策略后向系统确认睡眠，包括睡眠前已拔掉电源的情况。唤醒后保持原有策略，直到 app 下发新策略。低频看门狗在守护进程可运行时修复寄存器漂移，深度睡眠期间不轮询。
+- 充电控制使用经过明确授权的本地 LaunchDaemon，客户端与后台服务身份固定。app / 后台服务二进制更新后需要重新做管理员授权。后台轮询从不弹出密码框。唤醒时重新探测硬件能力，XPC 失败不再让能力加载卡住。
+- 按设备能力选择旧的 `CH0B/CH0C`、`CHTE` 与新的固件托管 `bfF0/bfD0/bfE0` 控制，而不是按 macOS 版本号判断。充电期间主动应用固件区间。保持使用设定上限，或在当前原始电量更低时取该值，不追随后续下降。新固件在上限之上可能由电池供电，不保证仅用适配器。关闭托管时保存并恢复原区间。写入失败会回读并回滚，而不是报告成功。
+- 诊断包含请求 / 实际生效的适配器与充电状态，以及电源事件和硬件键日志。
+
+特定固件的睡眠持久性仍需在受影响的机器上核实；这不是对所有 macOS 26/27 固件的兼容性承诺。
+
+macOS 15.8/26.7 与 macOS 27 测试版随附的新固件可能移除或限制充电寄存器。Aidente 会明确报告控制不受支持，而不是悄悄改用断开适配器（那会让电池反复充放）。重新注册后台服务也无法获得 Apple 的私有固件权限。
+
+## 系统要求
 
 - Apple Silicon MacBook
-- macOS 14 or later
-- Administrator approval for charge-control features
+- macOS 14 或更高版本
+- 使用充电控制功能需要管理员授权
 
-Monitoring works without the privileged helper. Unsupported controls are
-disabled rather than forced.
+不安装特权后台服务也可使用监测功能。不受支持的控制项会被停用，而不是强制执行。
 
-## Features
+## 功能
 
-- Configurable charge limit
-- Sailing range to avoid micro-charging
-- Automatic or one-time discharge
-- Top Up to 100%
-- Persistent multi-stage calibration:
-  - charge to 100%
-  - discharge to the configured low level
-  - recharge to 100%
-  - hold at full charge
-  - restore the saved charge limit
-- Heat protection with five-minute hysteresis
-- Hardware and macOS battery percentages
-- One-decimal battery-health estimate based on full versus design capacity
-- Design, current, and estimated full-charge capacity in mAh
-- Long-term capacity history from first run onward with one point per day
-- 30-day, one-year, and all-time capacity-history chart ranges
-- Battery health, cycle count, temperature, voltage, current, and power
-- Power-flow visualization
-- Live adapter and battery voltage/current readings inside the power-flow nodes
-- Compact active charger protocol/voltage/current/wattage display in the charge-limit card
-- Direct dashboard toggles for heat protection, sleep pause, and sailing
-- MagSafe LED states when supported
-- Pause charging while sleeping
-- Optional charging-state preservation after the app quits
-- Prevent sleep until the charge limit is reached
-- Scheduled charge limits, Top Up, calibration, pause, and discharge tasks
-- Login launch and customizable menu-bar/dashboard display
-- Follow-system language mode plus instant Chinese/English switching
-- Optional Liquid Glass appearance that adapts to macOS 26/27 system materials
-  and falls back to a compatible translucent effect on older macOS versions
-- Unicode-safe live energy app names sourced from macOS application metadata
-- Apple Shortcuts-compatible URL actions
-- Opt-in issue recording with a copyable support ID
-- One-click, locally generated diagnostic ZIP with privacy redaction
-- Optional crash-report collection and opt-in energy-app names
-- Bundled on-demand CLI with no additional resident process
-- Standalone dashboard on app reopen when the menu bar icon is hidden
-- Automatic and manual update checks against official stable GitHub Releases
-- One-click background download, verification, installation, and relaunch
-- Rollback to the previous app when replacement or relaunch fails
+- 可设定的充电上限
+- 巡航区间，减少频繁微量补电
+- 自动放电或一次性放电
+- 补电至 100%
+- 可断点续行的多阶段电池校准：
+  - 充至 100%
+  - 放电到设定的低电量
+  - 再充至 100%
+  - 满电保持
+  - 恢复原充电上限
+- 高温保护，带五分钟迟滞
+- 硬件电量与 macOS 电量
+- 按满充容量与设计容量估算、精确到一位小数的电池健康度
+- 以 mAh 显示设计容量、当前容量与估算满充容量
+- 自首次运行起长期记录容量历史，每天一个数据点
+- 容量历史图表支持 30 天、一年与全部时间范围
+- 电池健康、循环次数、温度、电压、电流与功率
+- 功率分配图
+- 功率分配图节点内实时显示适配器与电池的电压 / 电流
+- 充电上限卡片内紧凑显示当前充电器协议 / 电压 / 电流 / 功率
+- 仪表盘可直接开关高温保护、睡眠时暂停充电与巡航
+- 受支持机型上的 MagSafe 指示灯状态
+- 睡眠时暂停充电
+- 可选：退出 Aidente 后保持充电状态
+- 达到充电上限前阻止睡眠
+- 按计划执行充电上限、补电、校准、暂停与放电任务
+- 登录时启动，以及可自定义的菜单栏 / 仪表盘显示
+- 跟随系统语言，并可即时切换中文 / 英文
+- 可选的液态玻璃外观：在 macOS 26/27 上适配系统材质，在更旧的 macOS 上回退为兼容的半透明效果
+- 从 macOS 应用元数据读取当前耗电 App 名称，兼容 Unicode
+- 兼容 Apple 快捷指令的 URL 操作
+- 可选开启的问题记录，附带可复制的支持 ID
+- 一键在本地生成诊断 ZIP，自动做隐私脱敏
+- 可选的崩溃报告收集，以及需单独同意才包含的耗电 App 名称
+- 按需使用的内置 CLI，不额外常驻进程
+- 隐藏菜单栏图标后，重新打开 app 时显示独立仪表盘窗口
+- 对官方 GitHub Releases 稳定版进行自动与手动更新检查
+- 一键后台下载、校验、安装并重启应用
+- 替换或重启失败时回滚到上一个应用版本
 
-## Install
+## 安装
 
-Users upgrading from 6.0 must install 6.0.1 manually once because 6.0 did not
-yet contain the updater. Updates after 6.0.1 can be completed inside Aidente.
+从 6.0 升级的用户需要手动安装一次 6.0.1，因为 6.0 尚未内置更新器；6.0.1 之后可在 Aidente 内完成更新。
 
-Drag `Aidente.app` to `/Applications`, open it, then enable charge management in
-Settings → Charging, then authorize the administrator installation. After updating
-to 6.1, click Repair Control Service to authorize the new app/helper identity.
-See [administrator installation notes](administrator-install-notes.md).
+把 `Aidente.app` 拖入 `/Applications`，打开后在 设置 → 充电管理 中开启「管理充电」，再完成管理员授权安装。升级到 6.1 后，点击「修复控制服务」以授权新的 app / 后台服务身份。参见 [管理员安装说明](administrator-install-notes.md)。
 
-The distributed local build is ad-hoc signed, not Apple-notarized. If Finder
-blocks the first launch, right-click the app and choose Open.
+本地分发包为 ad-hoc 签名，未经 Apple 公证。若首次启动被 Finder 拦截，右键点击应用并选择「打开」。
 
-## Shortcuts URLs
+## 快捷指令 URL
 
-Use Shortcuts → Open URLs with one of:
+在「快捷指令」中使用「打开 URL」操作，传入以下之一：
 
 ```text
 aidente://set-limit?value=80
@@ -161,19 +117,17 @@ aidente://discharge?value=70
 aidente://resume
 ```
 
-## Diagnostics and CLI
+## 诊断与命令行工具
 
-Open Settings → Diagnostics to start an issue-recording session or export a
-diagnostic ZIP. The default package excludes energy-app names and intentionally
-does not collect account names, serial numbers, or network configuration.
+打开 设置 → 诊断，可开始问题记录会话或导出诊断 ZIP。默认包不含耗电 App 名称，也不会收集账户名、序列号或网络配置。
 
-The optional CLI is bundled at:
+可选的命令行工具位于：
 
 ```text
 /Applications/Aidente.app/Contents/Resources/aidente
 ```
 
-It can show status or trigger the same URL-based actions as the graphical app:
+它可以查看状态，或触发与图形界面相同的 URL 操作：
 
 ```text
 aidente status
@@ -184,35 +138,27 @@ aidente dashboard
 aidente diagnostics
 ```
 
-## Build from source
+## 从源码构建
 
-The repository includes fixed copies of its open-source dependencies so it can
-build without downloading packages:
+仓库内附有其开源依赖的固定副本，无需联网下载包即可构建：
 
 ```text
 chmod +x BuildSupport/build_app.sh
 BuildSupport/build_app.sh
 ```
 
-The output is `Dist/Aidente.app`.
+产物为 `Dist/Aidente.app`。
 
-Run `zsh BuildSupport/test_charging.sh` after building for hardware-free charging
-policy and ordered-write regression tests. Render the production icon at 3x with
-`Dist/Aidente.app/Contents/MacOS/Aidente --render-status-icons=/tmp/Aidente-icons.png`.
+构建后运行 `zsh BuildSupport/test_charging.sh`，可在不依赖硬件的情况下执行充电策略与有序写入的回归测试。用 `Dist/Aidente.app/Contents/MacOS/Aidente --render-status-icons=/tmp/Aidente-icons.png` 以 3 倍尺寸渲染生产状态栏图标。
 
-## Safety and uninstall
+## 安全说明与卸载
 
-Before uninstalling, turn off Manage Charging in Settings → Charging. This
-unregisters the privileged helper and restores the default charge, adapter, and
-MagSafe LED states.
+卸载前，请在 设置 → 充电管理 中关闭「管理充电」。这会注销特权后台服务，并恢复默认的充电、适配器与 MagSafe 指示灯状态。
 
-Low-level SMC controls are private interfaces and may change in future macOS
-versions. Use at your own risk and keep a charger available during calibration.
+底层 SMC 控制属于私有接口，未来的 macOS 版本可能变更。请自行承担使用风险，校准过程中保持充电器连接。
 
-## License and attribution
+## 许可与署名
 
-Aidente is licensed under GPL-3.0 because it is based on the GPL-3.0 Stasis
-project. See `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+Aidente 基于 GPL-3.0 的 Stasis 项目，因此同样采用 GPL-3.0 许可。参见 `LICENSE` 与 `THIRD_PARTY_NOTICES.md`。
 
-AlDente is a trademark of its respective owner. Aidente is independent and is
-not affiliated with, endorsed by, or distributed by AppHouseKitchen.
+AlDente 是其各自权利人的商标。Aidente 为独立项目，与 AppHouseKitchen 无关联，也未获其认可或由其分发。

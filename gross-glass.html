@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AIdente · 新玻璃方案（A + B）· 原型，含改版前对照</title>
+<title>AIdente · 毛玻璃档历史还原（gross glass）· 已对齐 6.1.1 现行方案</title>
 <style>
 :root, html[data-appearance="light"] {
   --page: #EDEDF0; --doc: #1D1D1F; --doc2: #6E6E73; --paper: #FFFFFF;
@@ -126,9 +126,7 @@ strong { color: var(--doc); font-weight: 600; }
 
 .win-chrome { padding: 13px 15px 12px; border-bottom: 1px solid var(--divider);
   box-shadow: var(--chrome-shadow); background: var(--l1); }
-.win-chrome.footer { border-bottom: 0; border-top: 1px solid var(--divider); padding: 10px 14px;
-  display: flex; justify-content: flex-end; gap: 8px; box-shadow: none; opacity: .72; }
-.win-chrome.footer i { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--stroke); display: block; }
+/* 现行方案（6.1.1 / Build 22）：仪表盘已删除 L1 底栏，旧 .footer 规则不再生成节点。 */
 .lights { display: flex; gap: 6px; margin-bottom: 12px; }
 .lights i { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .lights i:nth-child(1) { background: #FF5F57; } .lights i:nth-child(2) { background: #FEBC2E; }
@@ -213,7 +211,7 @@ li strong { color: var(--doc); }
 .callout p { margin: 0; }
 code { font-size: 11.5px; background: var(--chip); padding: 1px 5px; border-radius: 4px; color: var(--chip-ink); }
 .foot { margin-top: 46px; font-size: 11.5px; color: var(--doc2); border-top: 1px solid var(--line); padding-top: 16px; }
-/* ---------- 方案 A：去噪 + 保通透 ---------- */
+/* ---------- 现行方案（原方案 A）---------- */
 html[data-appearance="light"][data-plan="a"] {
   --l0-settings: #F4F5F6;          /* 玻璃平均落点：设置页自动实体 */
   --l1: #F8F8F8;
@@ -255,23 +253,28 @@ html[data-plan="a"] .card.dashboard {
   background: var(--l2-dash);
   border: 1px solid var(--l2-dash-stroke);
 }
-/* ③ 顶栏 / 页脚只留 1pt 分隔线，去掉整体 opacity 与阴影 */
+/* ③ 现行方案：仪表盘没有 L1 底栏（整层删除），header / 页脚透空，
+   L0 玻璃直接透上来，只留 1pt 中性分隔线；三个控件在 header 右上角。 */
 html[data-plan="a"] .win-chrome { box-shadow: none; }
-/* ③-B 仪表盘底栏不填背景色：L0 玻璃直接透上来，只留 1pt 顶边线。
-   这样底栏与仪表盘窗口底天然同色，不会用固定中性色去撞活的玻璃。 */
-html[data-plan="a"] .win-chrome.footer {
-  opacity: 1;
-  background: transparent;
-  border-top: 1px solid var(--divider);
-}
-/* ③-B2 L4 控件：只给三个页脚按钮加极淡半透明底，保证 1px 边框在彩色
-   玻璃上可辨；底栏本身仍然透空，不引入整条色带。 */
-html[data-plan="a"] .win-chrome.footer i {
-  background: var(--footer-control-fill);
-}
+html[data-plan="a"] .win-chrome.footer { display: none; }
 /* ④ 设置页容器不采样背景，玻璃只出现在仪表盘 L0 */
 html[data-plan="a"] .win-settings > .glass-base {
   -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* 现行方案：header 右上角三个控件 + 时间串（无 L1 底栏） */
+.dash-header { display: block; }
+.dash-header .hdr-row { display: flex; align-items: flex-start; gap: 8px; }
+.dash-header .hdr-row .title { flex: 1; }
+.hdr-actions { display: inline-flex; gap: 6px; align-self: center; }
+.hdr-actions i { width: 25px; height: 20px; border-radius: 6px; border: 1px solid var(--stroke);
+  background: var(--footer-control-fill, rgba(255,255,255,.24)); display: grid; place-items: center;
+  font-style: normal; font-size: 11px; color: var(--ink2); }
+.timestr { display: flex; justify-content: space-between; gap: 10px;
+  margin-top: 4px; font-size: 10px; color: var(--ink2); }
+/* 类液态玻璃层：AidenteGlassTokens（边缘光 .20、rim 40，实际 alpha = .20 × .55 ≈ .11） */
+html[data-plan="a"] .win-dashboard {
+  --glass-tint-a: .14; --glass-blur: 2px; --glass-sat: 180%; --glass-bright: 1.06;
+  --glass-rim-w: 40px; --glass-light-a: .20;
 }
 @media (max-width: 780px) { .page { padding: 24px 16px 60px; } .stage { flex-direction: column; } }
 </style>
@@ -280,15 +283,20 @@ html[data-plan="a"] .win-settings > .glass-base {
 <div class="page">
 
   <header class="doc-head">
-    <div class="eyebrow">AIdente · 改版前还原 · 2026-11-06</div>
-    <h1>「毛玻璃」档 · 原样 vs 方案 A</h1>
-    <p class="lede">同一个原型可切换两套基准：<strong>方案 A（去噪 + 保通透，默认）</strong>与<strong>改版前原样</strong>。前者保留仪表盘透桌面的玻璃，删掉自绘渐变、渐变描边与整体透明度，层级改用固定中性色阶，并按本轮 <strong>B</strong> 让仪表盘底栏透空、只留 1pt 顶边线；后者逐层还原「可读性策略」重构之前那版 <code>.glass</code> 毛玻璃档。控制条里可随时 A/B 对照，亮暗同样可切。</p>
+    <div class="eyebrow">AIdente · 毛玻璃档历史还原 · 2026-11-06 原型 / 2026-11-08 对齐现行方案</div>
+    <h1>「毛玻璃」档 · 改版前原样 vs 现行方案</h1>
+    <p class="lede">本页保留「可读性策略重构之前」那版 <code>.glass</code> 毛玻璃档的历史还原；另一侧已按 <strong>6.1.1 / Build 22 的真实落地状态</strong> 对齐：固定中性色阶（亮 <code>#F4F5F6 / #F8F8F8 / #FCFCFC</code>、暗 <code>#232326 / #28282B / #2D2D31</code>）、仪表盘恢复背景采样并叠加类液态玻璃层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20）、<strong>无 L1 底栏</strong>、刷新 / 设置 / 退出三个按钮位于 header 右上角、设置页仍固定实体色。定稿参数见 <code>liquid-glass-proposal.html</code>，实现见 <code>AidenteTheme.swift</code>。</p>
   </header>
+
+  <div class="panel" style="margin:0 0 22px;border-left:3px solid var(--accent)">
+    <span class="tagline">现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
+    <p>macOS 26+ 使用系统 <code>glassEffect(.regular)</code>；macOS 15 及更早使用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（不含真折射 / 色散）。仪表盘三个容器 <code>canSampleBackdrop = true</code>，设置窗口仍为 <code>false</code>；「外观」为 自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关，四档材质选择器已删除。下方表格中的「改版前」一列是<strong>历史快照</strong>，不代表当前实现。</p>
+  </div>
 
   <h2>一 · 交互原型</h2>
   <div class="controls">
     <div class="ctl"><span>方案</span><div class="seg" id="cPlan">
-      <button data-v="legacy">改版前 · 原样</button><button data-v="a" class="on">方案 A · 去噪</button></div></div>
+      <button data-v="legacy">改版前 · 原样</button><button data-v="a" class="on">现行方案 · 6.1.1</button></div></div>
     <div class="ctl"><span>外观</span><div class="seg" id="cAppearance">
       <button data-v="light" class="on">亮色</button><button data-v="dark">暗色</button></div></div>
     <div class="ctl"><span>查看</span><div class="seg" id="cView">
@@ -299,7 +307,7 @@ html[data-plan="a"] .win-settings > .glass-base {
       <div class="sw on" id="cDesktop"></div><span class="swlabel">桌面背景（看玻璃透不透）</span></div></div>
   </div>
 
-  <p class="fallback">默认显示方案 A。若上方切换无反应，可直接打开<a href="?theme=dark">暗色独立视图</a>、<a href="?plan=legacy">改版前原样</a>或<a href="?plan=legacy&theme=dark">原样 · 暗色</a>；这些链接不依赖脚本。</p>
+  <p class="fallback">默认显示现行方案（6.1.1 / Build 22）。若上方切换无反应，可直接打开<a href="?theme=dark">暗色独立视图</a>、<a href="?plan=legacy">改版前原样</a>或<a href="?plan=legacy&theme=dark">原样 · 暗色</a>；这些链接不依赖脚本。</p>
 
   <div class="desktop" id="desktop">
     <div class="blob"></div>
@@ -307,7 +315,7 @@ html[data-plan="a"] .win-settings > .glass-base {
 
       <!-- 设置窗口 -->
       <div class="winbox" id="boxSettings">
-        <div class="wincap"><span>设置窗口 · 透明 NSWindow</span><em id="capSettings">方案 A · 亮色</em></div>
+        <div class="wincap"><span>设置窗口 · 透明 NSWindow</span><em id="capSettings">现行方案 · 亮色</em></div>
         <div class="win win-settings" id="winSettings" data-level="L0">
           <div class="glass-base sampled"></div>
           <div class="glass-wash"></div>
@@ -354,13 +362,18 @@ html[data-plan="a"] .win-settings > .glass-base {
 
       <!-- 仪表盘 -->
       <div class="winbox" id="boxDashboard">
-        <div class="wincap"><span>仪表盘 · NSPopover</span><em id="capDashboard">方案 A · 亮色</em></div>
+        <div class="wincap"><span>仪表盘 · borderless NSPanel</span><em id="capDashboard">现行方案 · 亮色</em></div>
         <div class="win win-dashboard" id="winDashboard" data-level="L0">
           <div class="glass-base sampled"></div>
           <div class="glass-wash"></div>
           <span class="lvl">L0 窗口底</span>
 
-          <div class="dash-header"><b>电源已连接</b><b>85%</b><small>充电上限 80%</small></div>
+          <div class="dash-header">
+            <div class="hdr-row"><span class="title"><b>电源已连接</b></span>
+              <div class="hdr-actions"><i>↻</i><i>⚙</i><i>⏻</i></div></div>
+            <div class="timestr"><span>系统运行时间：3 天 12 小时</span>
+              <span>电池剩余时间：2 小时 18 分</span></div>
+          </div>
           <div class="divider"></div>
 
           <div class="win-body">
@@ -387,14 +400,14 @@ html[data-plan="a"] .win-settings > .glass-base {
             </div>
           </div>
 
-          <div class="win-chrome footer" data-level="L1"><span class="lvl">L1 底栏</span><i></i><i></i><i></i></div>
+          <!-- 现行方案：L1 底栏已删除，刷新 / 设置 / 退出三个按钮在上方 header 右上角 -->
         </div>
       </div>
     </div>
   </div>
 
   <div class="readout">
-    <h4>生效层级与色值（<span id="rPlan">方案 A</span> · <span id="rAppearance">亮色</span>）</h4>
+    <h4>生效层级与色值（<span id="rPlan">现行方案</span> · <span id="rAppearance">亮色</span>）</h4>
     <table>
       <thead><tr><th style="width:20%">层级</th><th style="width:40%">设置窗口</th><th>仪表盘</th></tr></thead>
       <tbody id="levelRows"></tbody>
@@ -413,12 +426,12 @@ html[data-plan="a"] .win-settings > .glass-base {
   </div>
 
   <div class="plan">
-    <h2>二 · 方案 A 与还原说明</h2>
+    <h2>二 · 现行方案与还原说明</h2>
     <div class="panel">
-      <span class="tagline">00 方案 A · 去噪 + 保通透</span>
+      <span class="tagline">00 现行方案 · 类液态玻璃 + 固定层级</span>
       <p>思路：<strong>材质只负责氛围，层级交给中性色阶。</strong>保留仪表盘透桌面这一点通透感，把所有为了「让层次看得见」而自绘的渐变、描边、阴影和整体透明度删掉。控制条切到「改版前 · 原样」可逐项对照。</p>
       <table>
-        <thead><tr><th style="width:18%">项</th><th style="width:34%">改版前原样</th><th style="width:30%">方案 A</th><th>解决什么</th></tr></thead>
+        <thead><tr><th style="width:18%">项</th><th style="width:34%">改版前原样</th><th style="width:30%">现行方案</th><th>解决什么</th></tr></thead>
         <tbody>
           <tr><td>窗口底渐变</td><td>公共对角渐变 <code>white .34 → jade .025 → black .025</code>；设置页另有垂直 <code>white .35 → black .02</code></td><td><strong>整段删除</strong>，只留均匀底色</td><td>同一卡片左右亮度漂移、正文对比度不稳</td></tr>
           <tr><td>卡片层级信号</td><td>底色 + 渐变描边 + 阴影 + 内部分隔线，四重</td><td>底色抬升 + <strong>1pt 中性描边</strong>，仅一个信号</td><td>「group 组黑框」的框感</td></tr>
@@ -430,13 +443,13 @@ html[data-plan="a"] .win-settings > .glass-base {
           <tr><td>次级文字</td><td>系统 <code>.secondary</code> 叠在半透明卡片上</td><td>卡片改实体后对比度可控，无需特判</td><td>浅色下低于 4.5:1 的风险</td></tr>
         </tbody>
       </table>
-      <div class="callout"><p><strong>刻意保留：</strong>仪表盘 L0 的玻璃模糊（这套 UI 最值钱的部分）、L3 强调卡的语义渐变（层级契约里唯一允许 tint 的层）、四档 Picker 的信息架构（A 只动观感，不动架构）、桌面背景与容器能力差异。把状态色收成竖条、把玻璃限制在 L0 属于<strong>上一轮优化案 B / C</strong>，不在这里。注意本页出现两个「方案 A / B」编号：本轮的 <strong>B = 底栏透空</strong>，上一轮的 <strong>B = 玻璃只铺窗口底</strong>，两者不是一回事。</p></div>
-      <p><strong>换算到代码是 8 处</strong>：删 <code>standardBackdrop</code> 的公共 <code>LinearGradient</code>；删 <code>lightSettingsBackdrop</code> 的 <code>.glass</code> 垂直渐变；<code>AidenteCard</code> 的 <code>strokeBorder(LinearGradient)</code> → 单色 1pt；<code>.shadow(...)</code> → 无；<code>AidenteChromeBar</code> 与页脚的 <code>.opacity()</code> → 只包背景；L0/L1/L2 换成本表的固定色值；<strong>仪表盘页脚背景改 <code>Color.clear</code>，只保留 1pt 顶边线</strong>；<strong>页脚按钮（L4）加极淡半透明底</strong>，明暗各一个常量。不改 <code>AidenteReadability</code>、不改偏好迁移、不改容器标志。</p>
+      <div class="callout"><p><strong>刻意保留：</strong>仪表盘 L0 的玻璃模糊（这套 UI 最值钱的部分）、L3 强调卡的语义渐变（层级契约里唯一允许 tint 的层）、已删除的四档 Picker（现为「外观」分段控件 + 不透明开关）、桌面背景与容器能力差异。把状态色收成竖条、把玻璃限制在 L0 属于<strong>上一轮优化案 B / C</strong>，不在这里。注意本页出现两个「方案 A / B」编号：本轮的 <strong>B = 底栏透空</strong>，上一轮的 <strong>B = 玻璃只铺窗口底</strong>，两者不是一回事。</p></div>
+      <p><strong>历史方案换算到代码是 8 处（现行实现已超出此范围，容器标志与偏好迁移均已改动）</strong>：删 <code>standardBackdrop</code> 的公共 <code>LinearGradient</code>；删 <code>lightSettingsBackdrop</code> 的 <code>.glass</code> 垂直渐变；<code>AidenteCard</code> 的 <code>strokeBorder(LinearGradient)</code> → 单色 1pt；<code>.shadow(...)</code> → 无；<code>AidenteChromeBar</code> 与页脚的 <code>.opacity()</code> → 只包背景；L0/L1/L2 换成本表的固定色值；<strong>仪表盘页脚背景改 <code>Color.clear</code>，只保留 1pt 顶边线</strong>；<strong>页脚按钮（L4）加极淡半透明底</strong>，明暗各一个常量。不改 <code>AidenteReadability</code>、不改偏好迁移、不改容器标志。</p>
     </div>
 
     <div class="panel">
       <span class="tagline">01 还原基准</span>
-      <p>「改版前」= <strong>可读性策略重构之前</strong>的工作区状态，即已经落地「浅色方案 B」「液态玻璃设计语言对齐」「Arcan 压边 + Reduce Transparency」「卡片近白化」之后、尚未删除四档选择器的那一版。不是 fork 原版 HEAD：原版浅色卡片走 <code>.regularMaterial</code>，而改版前已按当时那轮「方案 A」改成实体近白 <code>0.985</code>。<strong>注意区分：</strong>那轮的「方案 A」指卡片近白化，与本页「方案 A · 去噪 + 保通透」是两个不同方案，只是编号撞了。</p>
+      <p>「改版前」= <strong>可读性策略重构之前</strong>的工作区状态，即已经落地「浅色方案 B」「液态玻璃设计语言对齐」「Arcan 压边 + Reduce Transparency」「卡片近白化」之后、尚未删除四档选择器的那一版。不是 fork 原版 HEAD：原版浅色卡片走 <code>.regularMaterial</code>，而改版前已按当时那轮「方案 A」改成实体近白 <code>0.985</code>。<strong>注意区分：</strong>那轮的「方案 A」指卡片近白化，与本页现行方案（原「方案 A · 去噪 + 保通透」）是两个不同方案，只是编号撞了。</p>
       <p>本原型只还原 <strong>.glass 毛玻璃</strong> 一档；高斯柔化、液态玻璃的分支不在范围内。系统「降低透明度」按关闭处理。</p>
     </div>
 
@@ -472,24 +485,24 @@ html[data-plan="a"] .win-settings > .glass-base {
     <div class="panel">
       <span class="tagline">04 与改版后的差别</span>
       <ul>
-        <li><strong>材质层数：</strong>改版前窗口底带公共对角渐变、顶栏带整体 <code>.98</code> 与页脚 <code>.72</code>、卡片带渐变描边与半透明；改版后全部收敛成一组固定实体色值，无渐变、无模糊、无整体透明度。</li>
-        <li><strong>两端一致性：</strong>改版前亮色下设置页是实体近白、仪表盘是透桌面的玻璃；改版后两端同类层同值。</li>
-        <li><strong>用户可选项：</strong>改版前是四档分段选择器（本原型固定选中「毛玻璃」）；改版后是「跟随系统」+ 一个不透明覆盖开关。</li>
-        <li><strong>代价：</strong>改版后仪表盘不再透桌面壁纸，浅色整体更平。这正是上一轮方案里列为「最大视觉变化」的一条。</li>
+        <li><strong>材质层数：</strong>改版前窗口底带公共对角渐变、顶栏带整体 <code>.98</code> 与页脚 <code>.72</code>、卡片带渐变描边与半透明；现行方案收敛为一组固定中性色阶，卡片只留 1pt 中性描边，仪表盘 L0 另叠类液态玻璃静态层。</li>
+        <li><strong>两端一致性：</strong>改版前亮色下设置页是实体近白、仪表盘是透桌面的玻璃；现行方案两端同类层同值，差异只由容器能力标志（能否采样背景）决定。</li>
+        <li><strong>用户可选项：</strong>改版前是四档分段选择器（本原型固定选中「毛玻璃」）；现行方案已删除四档，改为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关。</li>
+        <li><strong>通透感：</strong>早期「改版后不再透桌面」的推断已被推翻：现行方案把仪表盘三个容器的 <code>canSampleBackdrop</code> 恢复为 <code>true</code>，15 及更早走 <code>.behindWindow</code> 毛玻璃 + 自绘玻璃层，26+ 走系统液态玻璃；设置窗口仍固定实体。</li>
       </ul>
     </div>
 
     <div class="panel">
       <span class="tagline">05 边界</span>
       <ul>
-        <li>本文件是<strong>视觉还原原型</strong>，不是产品代码；没有改动任何 Swift 文件，也没有重新构建 app。</li>
+        <li>本文件是<strong>历史还原 + 现行方案对照原型</strong>，不是产品代码；现行实现已在 <code>AidenteTheme.swift</code> / <code>StatusBarManager.swift</code> / <code>DashboardPopoverView.swift</code> 落地，并已完整编译、输出 <code>Dist/Aidente-6.1.1.dmg</code>（6.1.1 / Build 22）。</li>
         <li>CSS 的 <code>backdrop-filter</code> 只能近似系统材质：真实的 <code>NSVisualEffectView</code> 会随壁纸、外观、窗口活跃状态动态变化，透明 NSWindow 里还会退化成系统灰。</li>
         <li>卡片渐变描边用 <code>mask</code> 近似 SwiftUI 的 <code>strokeBorder(LinearGradient)</code>；数值按代码 alpha 估算，不追求逐像素一致。</li>
-        <li><strong>方案 A 的层级承诺有边界：</strong>L1 / L2 在两端是固定实体同值，差值恒定；仪表盘 L0 是玻璃，合成色随壁纸变化，所以「L−L0 恒定」只在设置页这条实体基线上严格成立。原型刻意用了彩色桌面把这个差异暴露出来 —— 若希望两端 L0 也一致，需要把玻璃不透明度提高，或改用上一轮优化案 B（玻璃只铺窗口底、卡片全实体）。本轮 B 只解决仪表盘内部的「底栏 vs 窗口底」，不动跨容器关系。</li>
+        <li><strong>方案 A 的层级承诺有边界：</strong>L1 / L2 在两端是固定实体同值，差值恒定；仪表盘 L0 是玻璃，合成色随壁纸变化，所以「L−L0 恒定」只在设置页这条实体基线上严格成立。原型刻意用了彩色桌面把这个差异暴露出来 —— 若希望两端 L0 也一致，需要把玻璃不透明度提高，或改用上一轮优化案 B（玻璃只铺窗口底、卡片全实体）。现行方案更进一步：仪表盘整条 L1 底栏已删除，三个按钮移到 header 右上角，并恢复三个容器的背景采样。</li>
       </ul>
     </div>
 
-    <div class="foot">对照文件：<code>readability-strategy.html</code>（改版后方案与原型）。本文件可用 <code>?theme=dark</code> 打开暗色独立视图、<code>?plan=legacy</code> 打开改版前原样，两个参数可叠加。</div>
+    <div class="foot">定稿参数见 <code>liquid-glass-proposal.html</code>；策略原型见 <code>readability-strategy.html</code>（均已对齐 6.1.1）。本文件可用 <code>?theme=dark</code> 打开暗色独立视图、<code>?plan=legacy</code> 打开改版前原样，两个参数可叠加。</div>
   </div>
 </div>
 
@@ -506,7 +519,7 @@ html[data-plan="a"] .win-settings > .glass-base {
 
   var CHANGES = {
     legacy: "原样，未做改动：窗口底渐变、卡片渐变描边与阴影、顶栏 / 页脚整体透明度全部保留。",
-    a: "删两段窗口底渐变；卡片改为底色 + 1pt 中性描边、去阴影与渐变描边；去整体 opacity（内容 alpha = 1）；L0–L2 改固定中性色阶；设置页自动实体并取玻璃平均落点；仪表盘 L0 玻璃保留；B 细化：仪表盘底栏透空，不填背景、只留 1pt 顶边线，与自身 L0 同色；L4 控件（页脚三个按钮）加极淡半透明底，保证在彩色玻璃上可辨。"
+    a: "现行 6.1.1：固定中性色阶 亮 #F4F5F6/#F8F8F8/#FCFCFC、暗 #232326/#28282B/#2D2D31；卡片只留 1pt 中性描边；仪表盘三容器 canSampleBackdrop = true，15 及更早走 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 走系统 glassEffect(.regular)；设置窗口仍为 false 走实体；删除 L1 底栏，刷新 / 设置 / 退出三个 25×20 控件移到 header 右上角；四档 Picker 换成外观分段控件 + 不透明开关。"
   };
 
   var DATA = {
@@ -540,26 +553,26 @@ html[data-plan="a"] .win-settings > .glass-base {
       light: {
         rows: [
           ["L0 窗口底", "#F4F5F6", "#F4F5F6 实体（玻璃平均落点），无渐变", "rgba(255,255,255,.62) + blur，无渐变", "仅仪表盘保留玻璃"],
-          ["L1 顶栏 / 底栏", "#F8F8F8", "设置页顶栏 #F8F8F8 + 1pt 分隔线，无阴影、无整体透明度", "底栏透空：无背景，仅 1pt 顶边线，L0 玻璃直接透上来", "仪表盘 L1 并入 L0"],
+          ["L1 顶栏", "#F8F8F8", "设置页顶栏 #F8F8F8 + 1pt 分隔线，无阴影、无整体透明度", "仪表盘已无 L1 底栏；三个按钮在 header 右上角", "仪表盘不设 L1 底栏"],
           ["L2 卡片", "#FCFCFC", "#FCFCFC 实体 + 1pt 中性描边，仅 1 个层级信号", "#FCFCFC 实体 + 1pt 中性描边", "两端同值"],
           ["L3 强调卡", "#E9F6EF", "—", "语义渐变按层级契约保留（L3 唯一允许 tint）", "不在 A 范围"]
         ],
-        consistency: "设置页 L1/L2 为固定实体（+4 / +8，/255，单调递增）；仪表盘 L1 底栏透空并入 L0，L2 卡片与设置页同值；仪表盘 L0 玻璃的合成色随桌面变化，不参与固定差值。",
-        material: "仪表盘 L0 用 NSVisualEffectView(.popover, .behindWindow)；设置页因透明 NSWindow 无法采样自动实体。两端都不叠自绘渐变。",
+        consistency: "设置页 L1/L2 为固定实体（+4 / +8，/255，单调递增）；仪表盘无 L1 底栏，L2 卡片与设置页同值；仪表盘 L0 为系统材质叠加类液态玻璃层，合成色随桌面变化，不参与固定差值。",
+        material: "仪表盘三容器 canSampleBackdrop = true：15 及更早用 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay 自绘静态层，26+ 用系统 glassEffect(.regular)；设置窗口仍为 false，走固定实体色阶。",
         sw: { a: "#F4F5F6", b: "#F8F8F8", c: "#FCFCFC", d: "#EDEFF2", f: "#FCFCFC" },
-        cap: "方案 A · 亮色"
+        cap: "现行方案 · 亮色"
       },
       dark: {
         rows: [
           ["L0 窗口底", "#232326", "#232326 实体，无渐变", "rgba(44,44,48,.80) + blur，无渐变", "仅仪表盘保留玻璃"],
-          ["L1 顶栏 / 底栏", "#28282B", "设置页顶栏 #28282B + 1pt 分隔线，无阴影、无整体透明度", "底栏透空：无背景，仅 1pt 顶边线，L0 玻璃直接透上来", "仪表盘 L1 并入 L0"],
+          ["L1 顶栏", "#28282B", "设置页顶栏 #28282B + 1pt 分隔线，无阴影、无整体透明度", "仪表盘已无 L1 底栏；三个按钮在 header 右上角", "仪表盘不设 L1 底栏"],
           ["L2 卡片", "#2D2D31", "#2D2D31 实体 + 1pt 中性描边，仅 1 个层级信号", "#2D2D31 实体 + 1pt 中性描边", "两端同值"],
           ["L3 强调卡", "#1D252E", "—", "语义渐变按层级契约保留（L3 唯一允许 tint）", "不在 A 范围"]
         ],
-        consistency: "设置页 L1/L2 为固定实体（+5 / +10，/255，单调递增）；仪表盘 L1 底栏透空并入 L0，L2 卡片与设置页同值；仪表盘 L0 玻璃的合成色随桌面变化，不参与固定差值。",
-        material: "仪表盘 L0 用 NSVisualEffectView(.popover, .behindWindow)；设置页自动实体，色值取暗色玻璃平均落点。",
+        consistency: "设置页 L1/L2 为固定实体（+5 / +10，/255，单调递增）；仪表盘无 L1 底栏，L2 卡片与设置页同值；仪表盘 L0 为系统材质叠加类液态玻璃层，合成色随桌面变化，不参与固定差值。",
+        material: "仪表盘三容器 canSampleBackdrop = true：15 及更早用 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay，26+ 用系统 glassEffect(.regular)；设置窗口仍为 false，走暗色固定实体色阶。",
         sw: { a: "#232326", b: "#28282B", c: "#2D2D31", d: "#2C2C30", f: "#2D2D31" },
-        cap: "方案 A · 暗色"
+        cap: "现行方案 · 暗色"
       }
     }
   };
@@ -617,7 +630,7 @@ html[data-plan="a"] .win-settings > .glass-base {
     var d = DATA[state.plan][state.appearance];
     var label = state.appearance === "dark" ? "暗色" : "亮色";
     document.getElementById("rPlan").textContent =
-      state.plan === "a" ? "方案 A · 去噪" : "改版前 · 原样";
+      state.plan === "a" ? "现行方案 · 6.1.1" : "改版前 · 原样";
     document.getElementById("rAppearance").textContent = label;
     document.getElementById("capSettings").textContent = d.cap;
     document.getElementById("capDashboard").textContent = d.cap;

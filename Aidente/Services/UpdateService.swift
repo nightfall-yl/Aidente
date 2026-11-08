@@ -218,10 +218,17 @@ final class UpdateService {
     private var automaticCheckTask: Task<Void, Never>?
     private var promptedVersions = Set<String>()
 
-    var currentVersion: String {
-        Bundle.main.object(
+    /// Nil when the running process has no usable Info.plist version (previews,
+    /// unit-test hosts, bare executables, or a malformed plist value).
+    private var verifiedBundleVersion: String? {
+        guard let value = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "6.0.1"
+        ) as? String else { return nil }
+        return Self.isStableNumericVersion(value) ? value : nil
+    }
+
+    var currentVersion: String {
+        verifiedBundleVersion ?? "development"
     }
 
     var availableRelease: AidenteUpdateRelease? {
@@ -470,12 +477,28 @@ final class UpdateService {
         }
 
         guard !isBusy else { return }
+
+        // A non-bundle host has no numeric version. Comparing against the
+        // "development" placeholder would parse it as 0 and report every
+        // release as newer, so skip the check instead of guessing.
+        guard let localVersion = verifiedBundleVersion else {
+            if manual {
+                let message = AidenteL10n.t(
+                    "无法读取当前应用版本，已跳过更新检查。",
+                    "The current app version is unavailable, so the update check was skipped."
+                )
+                phase = .failed(message)
+                presentErrorAlert(message)
+            }
+            return
+        }
+
         phase = .checking
 
         do {
             let release = try await fetchLatestRelease()
             lastCheckedAt = Date()
-            if Self.isVersion(release.version, newerThan: currentVersion) {
+            if Self.isVersion(release.version, newerThan: localVersion) {
                 phase = .available(release)
                 if manual || !promptedVersions.contains(release.version) {
                     presentUpdatePrompt(for: release)

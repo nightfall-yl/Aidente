@@ -197,6 +197,6 @@ struct AboutSettingsView: View {
     private var appVersion: String {
         Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "6.0.1"
+        ) as? String ?? "development"
     }
 }
