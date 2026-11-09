@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import Defaults
 import SwiftUI
 
@@ -10,6 +11,75 @@ enum DashboardLayout {
     static let width: CGFloat = 400
     static let maxHeight: CGFloat = 800
     static let dividerHeight: CGFloat = 1
+}
+
+/// The six cards that can be toggled and reordered from the dashboard itself.
+/// Raw values are persisted in `dashboardCardOrder`, so keep them stable;
+/// `allCases` doubles as the canonical order for newly added cards.
+private enum DashboardEditableCard: String, CaseIterable, Identifiable {
+    case colorEnergyFlow
+    case batteryHealth
+    case capacityHistory
+    case energyAppRanking
+    case careActions
+    case automaticProtection
+
+    var id: String { rawValue }
+
+    /// Reuse the existing wording so the dock and the card always agree in
+    /// both languages — no hand-written English labels here.
+    var title: String {
+        switch self {
+        case .colorEnergyFlow: AidenteL10n.t("彩色能量流")
+        case .batteryHealth: AidenteL10n.t("电池健康")
+        case .capacityHistory: AidenteL10n.t("容量与寿命趋势")
+        case .energyAppRanking: AidenteL10n.t("当前耗电 App")
+        case .careActions: AidenteL10n.t("快捷养护")
+        case .automaticProtection: AidenteL10n.t("自动保护")
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .colorEnergyFlow: "point.3.connected.trianglepath.dotted"
+        case .batteryHealth: "heart.text.square.fill"
+        case .capacityHistory: "chart.xyaxis.line"
+        case .energyAppRanking: "bolt.horizontal.circle.fill"
+        case .careActions: "leaf.fill"
+        case .automaticProtection: "shield.lefthalf.filled"
+        }
+    }
+}
+
+private enum DashboardFooterMetrics {
+    static let hoverHeight: CGFloat = 20
+    static let barHeight: CGFloat = 34
+    static let dockHeight: CGFloat = 46
+    /// Keep footer controls on the same 8pt continuous corner as the three
+    /// `ProtectionPill` buttons in the Automatic Protection card.
+    static let buttonCornerRadius: CGFloat = 8
+}
+
+/// Hit area shared by card-wide long-press (idle) and card-wide reorder drag
+/// (edit mode). The 14pt continuous corner matches `PopoverCardBackground`;
+/// the outer 2pt stays inert so the card edge cannot trigger either gesture.
+private enum DashboardCardHitArea {
+    static let cornerRadius: CGFloat = 14
+    static let edgeInset: CGFloat = 2
+}
+
+/// Card frames in the `dashboardCards` coordinate space. Reordering uses a
+/// plain DragGesture on a handle plus these frames, so it no longer depends on
+/// NSItemProvider / UTI matching or competes with buttons inside the cards.
+private struct DashboardCardFrameKey: PreferenceKey {
+    static let defaultValue: [DashboardEditableCard: CGRect] = [:]
+
+    static func reduce(
+        value: inout [DashboardEditableCard: CGRect],
+        nextValue: () -> [DashboardEditableCard: CGRect]
+    ) {
+        value.merge(nextValue()) { _, new in new }
+    }
 }
 
 private struct DashboardHeaderHeightKey: PreferenceKey {
@@ -33,7 +103,6 @@ struct DashboardPopoverView: View {
 
     @Default(.chargeLimit) private var chargeLimit
     @Default(.manageCharging) private var manageCharging
-    @Default(.showBatteryTemperature) private var showBatteryTemperature
     @Default(.enableHeatProtectionMode) private var heatProtectionEnabled
     @Default(.stopChargingWhileSleeping) private var sleepPauseEnabled
     @Default(.sailingMode) private var sailingModeEnabled
@@ -41,8 +110,6 @@ struct DashboardPopoverView: View {
     @Default(.showPowerSource) private var showPowerSource
     @Default(.showTimeTillDischarge) private var showTimeTillDischarge
     @Default(.showUptime) private var showUptime
-    @Default(.showBatteryCycleCount) private var showBatteryCycleCount
-    @Default(.showBatteryHealth) private var showBatteryHealth
     @Default(.showInternalPower) private var showInternalPower
     @Default(.showExternalPower) private var showExternalPower
     @Default(.showPowerDistribution) private var showPowerDistribution
@@ -50,6 +117,8 @@ struct DashboardPopoverView: View {
     @Default(.showEnergyAppRanking) private var showEnergyAppRanking
     @Default(.showCareActions) private var showCareActions
     @Default(.showAutomaticProtection) private var showAutomaticProtection
+    @Default(.showBatteryHealthCard) private var showBatteryHealthCard
+    @Default(.dashboardCardOrder) private var dashboardCardOrder
     @Default(.appAppearance) private var appAppearance
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var systemAppearanceMonitor = SystemAppearanceMonitor()
@@ -63,6 +132,11 @@ struct DashboardPopoverView: View {
     @State private var capacityHistoryRange: CapacityHistoryRange = .all
     @State private var headerHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
+    @State private var isEditingCards = false
+    @State private var isFooterHovering = false
+    @State private var draggingCard: DashboardEditableCard?
+    @State private var dropTarget: DashboardEditableCard?
+    @State private var cardFrames: [DashboardEditableCard: CGRect] = [:]
 
     /// Always explicit;「自动」resolves to the current system appearance (see
     /// SettingsView.resolvedPreferredScheme — nil is sticky in AppKit hosting).
@@ -74,16 +148,23 @@ struct DashboardPopoverView: View {
         }
     }
 
+    private var footerHeight: CGFloat {
+        guard isEditingCards else { return DashboardFooterMetrics.hoverHeight }
+        return DashboardFooterMetrics.barHeight
+            + (hiddenCards.isEmpty ? 0 : DashboardFooterMetrics.dockHeight)
+    }
+
     private var scrollHeight: CGFloat {
         let available =
             DashboardLayout.maxHeight
             - headerHeight
             - DashboardLayout.dividerHeight
+            - footerHeight
         return max(0, min(contentHeight, available))
     }
 
     private var totalHeight: CGFloat {
-        headerHeight + DashboardLayout.dividerHeight + scrollHeight
+        headerHeight + DashboardLayout.dividerHeight + scrollHeight + footerHeight
     }
 
     var body: some View {
@@ -107,16 +188,19 @@ struct DashboardPopoverView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 10) {
+                        // The hero is the only pinned card: always rendered and
+                        // never part of edit mode.
                         statusHero
-                        powerSummary
-                        batterySummary
-                        if showCapacityHistory { capacityHistory }
-                        if showEnergyAppRanking { energyAppRanking }
-                        if showCareActions { careActions }
-                        if showAutomaticProtection { automaticProtection }
+                        ForEach(visibleCards) { card in
+                            editableCard(card)
+                        }
                     }
+                    .coordinateSpace(name: "dashboardCards")
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
+                    .padding(.top, 11)
+                    // 2pt to the hover hint; keep the old 11pt in edit mode so
+                    // the dock is not glued to the last card.
+                    .padding(.bottom, isEditingCards ? 11 : 2)
                     .fixedSize(horizontal: false, vertical: true)
                     .background(GeometryReader { geo in
                         Color.clear.preference(
@@ -127,6 +211,9 @@ struct DashboardPopoverView: View {
                 }
                 .scrollIndicators(.never)
                 .frame(height: scrollHeight)
+
+                dashboardFooter
+                    .frame(height: footerHeight)
             }
         }
         .frame(width: DashboardLayout.width, height: totalHeight)
@@ -134,6 +221,7 @@ struct DashboardPopoverView: View {
         .tint(AidenteTheme.jade)
         .onPreferenceChange(DashboardHeaderHeightKey.self) { headerHeight = $0 }
         .onPreferenceChange(DashboardContentHeightKey.self) { contentHeight = $0 }
+        .onPreferenceChange(DashboardCardFrameKey.self) { cardFrames = $0 }
         .onChange(of: totalHeight) { _, newValue in
             guard newValue > 0 else { return }
             onHeightChange(newValue)
@@ -145,6 +233,355 @@ struct DashboardPopoverView: View {
             guard !isAdjustingChargeLimit else { return }
             chargeLimitDraft = Double(newValue)
         }
+    }
+
+    // MARK: - Editable dashboard cards
+
+    private var orderedCards: [DashboardEditableCard] {
+        var result: [DashboardEditableCard] = []
+        for raw in dashboardCardOrder.split(separator: ",") {
+            if let card = DashboardEditableCard(rawValue: String(raw)),
+               !result.contains(card) {
+                result.append(card)
+            }
+        }
+        // Insert newly added cards at their canonical position instead of
+        // appending: a saved 4-card order keeps its relative order and the
+        // battery card lands back where the metrics strip used to be.
+        let canonical = DashboardEditableCard.allCases
+        for card in canonical where !result.contains(card) {
+            let canonicalIndex = canonical.firstIndex(of: card) ?? 0
+            if let next = result.first(where: { candidate in
+                (canonical.firstIndex(of: candidate) ?? 0) > canonicalIndex
+            }), let insertAt = result.firstIndex(of: next) {
+                result.insert(card, at: insertAt)
+            } else {
+                result.append(card)
+            }
+        }
+        return result
+    }
+
+    private var visibleCards: [DashboardEditableCard] {
+        orderedCards.filter { isCardVisible($0) }
+    }
+
+    private var hiddenCards: [DashboardEditableCard] {
+        orderedCards.filter { !isCardVisible($0) }
+    }
+
+    private func isCardVisible(_ card: DashboardEditableCard) -> Bool {
+        switch card {
+        case .colorEnergyFlow: showPowerDistribution
+        case .batteryHealth: showBatteryHealthCard
+        case .capacityHistory: showCapacityHistory
+        case .energyAppRanking: showEnergyAppRanking
+        case .careActions: showCareActions
+        case .automaticProtection: showAutomaticProtection
+        }
+    }
+
+    private func setCardVisible(_ card: DashboardEditableCard, _ visible: Bool) {
+        switch card {
+        case .colorEnergyFlow: showPowerDistribution = visible
+        case .batteryHealth: showBatteryHealthCard = visible
+        case .capacityHistory: showCapacityHistory = visible
+        case .energyAppRanking: showEnergyAppRanking = visible
+        case .careActions: showCareActions = visible
+        case .automaticProtection: showAutomaticProtection = visible
+        }
+    }
+
+    private func enterCardEditMode() {
+        isFooterHovering = false
+        withAnimation(.easeInOut(duration: 0.18)) {
+            isEditingCards = true
+        }
+    }
+
+    @ViewBuilder
+    private func cardView(_ card: DashboardEditableCard) -> some View {
+        switch card {
+        case .colorEnergyFlow: powerSummary
+        case .batteryHealth: batterySummary
+        case .capacityHistory: capacityHistory
+        case .energyAppRanking: energyAppRanking
+        case .careActions: careActions
+        case .automaticProtection: automaticProtection
+        }
+    }
+
+    @ViewBuilder
+    private func editableCard(_ card: DashboardEditableCard) -> some View {
+        if isEditingCards {
+            cardView(card)
+                .opacity(draggingCard == card ? 0.6 : 1)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear.preference(
+                            key: DashboardCardFrameKey.self,
+                            value: [card: geo.frame(in: .named("dashboardCards"))]
+                        )
+                    }
+                }
+                // A transparent layer over the whole card owns the press, so
+                // buttons / pickers inside the card cannot steal the drag.
+                // The inset keeps the outer 2pt edge inert, matching the idle
+                // long-press below.
+                .overlay {
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(
+                            RoundedRectangle(
+                                cornerRadius: DashboardCardHitArea.cornerRadius,
+                                style: .continuous
+                            )
+                            .inset(by: DashboardCardHitArea.edgeInset)
+                        )
+                        .gesture(reorderGesture(card))
+                }
+                .overlay(alignment: .top) {
+                    if draggingCard != nil, draggingCard != card, dropTarget == card {
+                        Rectangle()
+                            .fill(AidenteTheme.ocean)
+                            .frame(height: 2)
+                            .allowsHitTesting(false)
+                    }
+                }
+                // Added last so the remove badge stays above the drag layer.
+                .overlay(alignment: .topLeading) { removeBadge(card) }
+        } else {
+            // Without an explicit content shape, transparent areas (the header
+            // Spacer, VStack spacing, the 13pt card padding) do not participate
+            // in hit testing, so a parent long-press only fires over real
+            // subviews. Shape the whole card instead, with a 2pt inert edge.
+            // Every non-pinned card goes through this branch.
+            cardView(card)
+                .contentShape(
+                    RoundedRectangle(
+                        cornerRadius: DashboardCardHitArea.cornerRadius,
+                        style: .continuous
+                    )
+                    .inset(by: DashboardCardHitArea.edgeInset)
+                )
+                .highPriorityGesture(
+                    LongPressGesture(minimumDuration: 0.5, maximumDistance: 24)
+                        .onEnded { _ in enterCardEditMode() }
+                )
+        }
+    }
+
+    private func removeBadge(_ card: DashboardEditableCard) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                setCardVisible(card, false)
+            }
+        } label: {
+            Image(systemName: "minus")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(AidenteTheme.coral))
+        }
+        .buttonStyle(.plain)
+        .offset(x: -7, y: -7)
+        .accessibilityLabel(
+            AidenteL10n.t("移出仪表盘", "Remove from dashboard")
+        )
+    }
+
+    /// Attached to the full-card transparent layer in edit mode. No handle:
+    /// pressing anywhere on the card and dragging reorders it.
+    private func reorderGesture(_ card: DashboardEditableCard) -> some Gesture {
+        DragGesture(minimumDistance: 6, coordinateSpace: .named("dashboardCards"))
+            .onChanged { value in
+                draggingCard = card
+                dropTarget = targetCard(at: value.location, excluding: card)
+            }
+            .onEnded { value in
+                if let target = targetCard(at: value.location, excluding: card) {
+                    commitReorder(card, onto: target)
+                }
+                resetDragState()
+            }
+    }
+
+    private func targetCard(
+        at point: CGPoint,
+        excluding card: DashboardEditableCard
+    ) -> DashboardEditableCard? {
+        for candidate in visibleCards where candidate != card {
+            if let frame = cardFrames[candidate], frame.contains(point) {
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    private func commitReorder(
+        _ dragged: DashboardEditableCard,
+        onto target: DashboardEditableCard
+    ) {
+        var order = orderedCards
+        guard let from = order.firstIndex(of: dragged),
+              let originalTargetIndex = order.firstIndex(of: target) else { return }
+        order.remove(at: from)
+        guard let targetIndex = order.firstIndex(of: target) else { return }
+        let insertAt = targetIndex + (from < originalTargetIndex ? 1 : 0)
+        order.insert(dragged, at: min(insertAt, order.count))
+        dashboardCardOrder = order.map(\.rawValue).joined(separator: ",")
+    }
+
+    private func resetDragState() {
+        draggingCard = nil
+        dropTarget = nil
+    }
+
+    // MARK: - Footer (hover hint / edit dock)
+
+    @ViewBuilder
+    private var dashboardFooter: some View {
+        if isEditingCards {
+            VStack(spacing: 0) {
+                if !hiddenCards.isEmpty { dockRow }
+                editingBar
+            }
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
+                    .frame(height: DashboardLayout.dividerHeight)
+            }
+        } else {
+            hoverHint
+        }
+    }
+
+    private var hoverHint: some View {
+        // Keep the hint vertically centred between the last card's bottom
+        // edge and the panel's bottom edge; `AidenteFooterHintSurface` still
+        // fills the whole 20pt hover strip via its own max-size frame.
+        ZStack {
+            if isFooterHovering {
+                AidenteFooterHintSurface()
+                    .transition(.opacity)
+                Text(AidenteL10n.t("长按进入编辑模式", "Long-press to enter edit mode"))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .transition(.opacity)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: DashboardFooterMetrics.hoverHeight)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isFooterHovering = hovering
+            }
+        }
+        .onLongPressGesture(
+            minimumDuration: 0.5,
+            maximumDistance: 24,
+            perform: enterCardEditMode
+        )
+    }
+
+    private var dockRow: some View {
+        GeometryReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(hiddenCards) { card in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                setCardVisible(card, true)
+                            }
+                        } label: {
+                            Label(card.title, systemImage: card.icon)
+                                .font(.system(size: 11, weight: .semibold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                            // Solid ocean is the leading colour of the hero
+                            // charge bar at 0%; the label stays white.
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(
+                                RoundedRectangle(
+                                    cornerRadius: DashboardFooterMetrics.buttonCornerRadius,
+                                    style: .continuous
+                                )
+                                .fill(AidenteTheme.ocean)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            AidenteL10n.t("添加到仪表盘：", "Add to dashboard: ") + card.title
+                        )
+                    }
+                }
+                // Let the row keep its intrinsic width: titles never collapse and
+                // the dock scrolls right instead of squeezing everything in.
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 14)
+                // When only a few capsules remain they are narrower than the
+                // panel: give the row a minimum width equal to the visible dock
+                // area so the capsules centre instead of pinning to the leading
+                // edge. Once they exceed that width the intrinsic width wins and
+                // the row scrolls right exactly as before.
+                // `alignment` only has an effect when the frame is larger than
+                // its content, so reserve vertical space too — otherwise the
+                // capsules stay pinned to the top of the 46pt dock row and all
+                // the leftover space collects underneath them.
+                .frame(
+                    minWidth: proxy.size.width,
+                    minHeight: proxy.size.height,
+                    alignment: .center
+                )
+            }
+        }
+        .frame(height: DashboardFooterMetrics.dockHeight)
+    }
+
+    private var editingBar: some View {
+        HStack(spacing: 8) {
+            Text(
+                hiddenCards.isEmpty
+                    ? AidenteL10n.t("通过拖放重新排列卡片。", "Drag to reorder cards.")
+                    : AidenteL10n.t(
+                        "通过拖放重新排列卡片，或点按上方图标添加。",
+                        "Drag to reorder cards, or click an icon above to add one."
+                    )
+            )
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+
+            Spacer(minLength: 6)
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    isEditingCards = false
+                    isFooterHovering = false
+                    resetDragState()
+                }
+            } label: {
+                Text(AidenteL10n.t("已完成", "Done"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background {
+                        RoundedRectangle(
+                            cornerRadius: DashboardFooterMetrics.buttonCornerRadius,
+                            style: .continuous
+                        )
+                        .fill(AidenteSurfaceTokens.controlFill(scheme: colorScheme))
+                    }
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: DashboardFooterMetrics.barHeight)
+        .padding(.horizontal, 14)
     }
 
     private var header: some View {
@@ -283,92 +720,79 @@ struct DashboardPopoverView: View {
         // dashboard, so .primary/.secondary resolve correctly on its surface.
     }
 
+    /// All three metrics are always on: the settings page no longer exposes
+    /// per-metric switches, so this card no longer reads those preferences.
     private var batterySummary: some View {
         let metrics: [(title: String, value: String, tint: Color, compact: Bool)] = [
-            showBatteryHealth
-                ? ("电池健康", viewModel.batteryHealthText, AidenteTheme.jade, false)
-                : nil,
-            showBatteryCycleCount
-                ? ("循环次数", viewModel.cycleCountText, AidenteTheme.violet, false)
-                : nil,
-            showBatteryTemperature
-                ? ("电池温度", viewModel.batteryTemperatureText, AidenteTheme.amber, false)
-                : nil,
+            ("电池健康", viewModel.batteryHealthText, AidenteTheme.jade, false),
+            ("循环次数", viewModel.cycleCountText, AidenteTheme.violet, false),
+            ("电池温度", viewModel.batteryTemperatureText, AidenteTheme.amber, false),
         ]
-        .compactMap { $0 }
 
-        return Group {
-            if !metrics.isEmpty {
-                PopoverCompactCard {
-                    HStack(spacing: 0) {
-                        ForEach(0..<metrics.count, id: \.self) { index in
-                            if index > 0 {
-                                CompactDivider()
-                            }
-                            let metric = metrics[index]
-                            CompactMetric(
-                                title: metric.title,
-                                value: metric.value,
-                                tint: metric.tint,
-                                compact: metric.compact
-                            )
-                        }
+        return PopoverCompactCard {
+            HStack(spacing: 0) {
+                ForEach(0..<metrics.count, id: \.self) { index in
+                    if index > 0 {
+                        CompactDivider()
                     }
+                    let metric = metrics[index]
+                    CompactMetric(
+                        title: metric.title,
+                        value: metric.value,
+                        tint: metric.tint,
+                        compact: metric.compact
+                    )
                 }
             }
         }
     }
 
     private var powerSummary: some View {
-        Group {
-            if showPowerDistribution {
-                PopoverCompactCard {
-                    VStack(spacing: 8) {
-                        HStack {
+        PopoverCompactCard {
+            VStack(spacing: 8) {
+                HStack {
+                    Label(
+                        AidenteL10n.t("彩色能量流"),
+                        systemImage: "point.3.connected.trianglepath.dotted"
+                    )
+                    .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    if showPowerSource {
+                        Text(viewModel.powerSourceText)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                CompactPowerFlowDiagram(
+                    powerSource: viewModel.powerSource,
+                    isCharging: viewModel.isCharging,
+                    adapterPower: viewModel.adapterPower,
+                    systemPower: viewModel.systemPower,
+                    batteryPower: viewModel.batteryPower,
+                    adapterElectricalText: viewModel.adapterElectricalText,
+                    batteryElectricalText: viewModel.batteryElectricalText
+                )
+
+                if showInternalPower || showExternalPower {
+                    HStack(spacing: 12) {
+                        if showInternalPower {
                             Label(
-                                AidenteL10n.t("实时功率分流"),
-                                systemImage: "point.3.connected.trianglepath.dotted"
+                                viewModel.internalInputText,
+                                systemImage: "battery.50percent"
                             )
-                                .font(.system(size: 13, weight: .semibold))
-                            Spacer()
-                            if showPowerSource {
-                                Text(viewModel.powerSourceText)
-                                    .font(.system(size: 10.5, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(.secondary)
                         }
-
-                        CompactPowerFlowDiagram(
-                            powerSource: viewModel.powerSource,
-                            isCharging: viewModel.isCharging,
-                            adapterPower: viewModel.adapterPower,
-                            systemPower: viewModel.systemPower,
-                            batteryPower: viewModel.batteryPower,
-                            adapterElectricalText: viewModel.adapterElectricalText,
-                            batteryElectricalText: viewModel.batteryElectricalText
-                        )
-
-                        if showInternalPower || showExternalPower {
-                            HStack(spacing: 12) {
-                                if showInternalPower {
-                                    Label(
-                                        viewModel.internalInputText,
-                                        systemImage: "battery.50percent"
-                                    )
-                                        .font(.system(size: 9.5, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                                if showExternalPower {
-                                    Label(
-                                        viewModel.externalInputText,
-                                        systemImage: "powerplug.fill"
-                                    )
-                                        .font(.system(size: 9.5, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer(minLength: 0)
-                            }
+                        if showExternalPower {
+                            Label(
+                                viewModel.externalInputText,
+                                systemImage: "powerplug.fill"
+                            )
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(.secondary)
                         }
+                        Spacer(minLength: 0)
                     }
                 }
             }

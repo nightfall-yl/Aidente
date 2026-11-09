@@ -80,7 +80,7 @@ private func printHelp() {
           aidente top-up                 临时充至 100%
           aidente discharge [20...100]   开始放电，可选目标电量
           aidente calibrate              开始电池校准
-          aidente dashboard              打开独立主菜单
+          aidente dashboard              打开独立仪表盘
           aidente diagnostics            打开诊断中心
           aidente help                   显示帮助
 
@@ -131,7 +131,7 @@ do {
         print("已请求开始电池校准")
     case "dashboard", "menu":
         try openAidenteURL("aidente://dashboard")
-        print("已打开 Aidente 主菜单")
+        print("已打开 Aidente 仪表盘")
     case "diagnostics", "diagnostic", "logs":
         try openAidenteURL("aidente://settings?tab=diagnostics")
         print("已打开 Aidente 诊断中心")

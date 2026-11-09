@@ -449,6 +449,39 @@ struct AidenteMaterialLayer: View {
     }
 }
 
+/// Hover-only hint band below the dashboard cards. The dashboard never draws
+/// this itself: the gradient and its hairline edge live here with the other
+/// painting outlets, so the fixed L0–L3 level scale stays measurable.
+struct AidenteFooterHintSurface: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var tintAlpha: Double {
+        colorScheme == .dark ? 0.16 : 0.09
+    }
+
+    private var edgeAlpha: Double {
+        colorScheme == .dark ? 0.34 : 0.25
+    }
+
+    var body: some View {
+        LinearGradient(
+            colors: [
+                Color.clear,
+                AidenteTheme.ocean.opacity(tintAlpha),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AidenteTheme.ocean.opacity(edgeAlpha))
+                .frame(height: 1)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// The settings window and its sheets cannot sample a backdrop. Force the
 /// capability flag here instead of relying on environment inheritance.
 struct AidenteSettingsBackground: View {

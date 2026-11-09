@@ -360,7 +360,7 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
             rootView: makeDashboardRootView(canSampleBackdrop: true)
         )
         let window = NSWindow(contentViewController: hostingController)
-        window.title = AidenteL10n.t("Aidente 主菜单", "Aidente Dashboard")
+        window.title = AidenteL10n.t("Aidente 仪表盘", "Aidente Dashboard")
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.appearance = appearanceForSetting
         window.setContentSize(NSSize(

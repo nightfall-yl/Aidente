@@ -211,10 +211,10 @@ li strong { color: var(--doc); }
           </div>
 
           <div class="card" data-level="L2"><span class="lvl">L2 卡片</span>
-            <div class="card-h"><div class="glyph v">▤</div><div><b>主菜单呼出</b><small>菜单栏图标被折叠时仍可打开完整主菜单</small></div></div>
+            <div class="card-h"><div class="glyph v">▤</div><div><b>访问仪表盘</b><small>菜单栏图标被折叠时仍可打开完整仪表盘</small></div></div>
             <div class="rule"></div>
-            <div class="note">双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立主菜单窗口。</div>
-            <div style="margin-top:10px"><span class="btn">打开主菜单</span></div>
+            <div class="note">双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。</div>
+            <div style="margin-top:10px"><span class="btn">打开仪表盘</span></div>
           </div>
         </div>
       </div>
@@ -331,7 +331,7 @@ li strong { color: var(--doc); }
       <span class="tagline">05 容器能力降级</span>
       <p>「跟随系统」不等于两端用同一套渲染。容器只声明一个能力标志：</p>
       <ul>
-        <li>仪表盘（borderless NSPanel / 独立主菜单窗口 / 预览面板）：<code>canSampleBackdrop = true</code>，已恢复背景采样。macOS 26+ 用系统 <code>glassEffect(.regular)</code>；15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（无真折射 / 色散）。</li>
+        <li>仪表盘（borderless NSPanel / 独立仪表盘窗口 / 预览面板）：<code>canSampleBackdrop = true</code>，已恢复背景采样。macOS 26+ 用系统 <code>glassEffect(.regular)</code>；15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（无真折射 / 色散）。</li>
         <li>设置窗口（标准 titled NSWindow）：<code>canSampleBackdrop = false</code>，任何系统版本下都走固定中性色阶的实体基线（亮 <code>#F4F5F6</code> / 暗 <code>#232326</code>）。</li>
         <li>因此「玻璃虚化」不再作为一个可见选项存在，能力不足时静默降级，不向用户解释技术细节。</li>
       </ul>

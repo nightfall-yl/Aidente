@@ -2,7 +2,38 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前版本为 **6.1.1 / Build 22**。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；下方 `[未发布]` 中的条目是尚未发行的本地改动，不代表已发行版本。
+项目当前版本为 **6.1.2 / Build 23**（`BuildSupport/Info.plist` 与 `Aidente.xcodeproj/project.pbxproj` 的版本号已升至 6.1.2 / 23）。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.2]-2026-11-09` 汇总本次发行的更新，已新建 `release-notes-6.1.2.md`。
+
+## [6.1.2]-2026-11-09
+
+### 新增
+
+- **仪表盘卡片长按编辑 + 底部 dock 显隐 + 整卡拖动排序**：仿 macOS 小组件编辑态。整张卡片任意位置长按 0.5 秒进入编辑态；已显示卡片左上角出现红色减号，点按移回 dock；底部 dock 以实色蓝「图标 + 名称」胶囊只列出未打开的卡片，点按即打开并即时从 dock 消失，dock 为空时整个胶囊区不渲染、不留占位。编辑态底部保留一行操作提示与「已完成」按钮；**六张**可编辑卡片在编辑态下任意位置按住即可拖动重排，无专属拖拽 icon，顺序持久化到 `dashboardCardOrder`（逗号分隔；已存偏好里缺失的卡按默认位置插入，不会被追加到末尾）。
+- **底部悬停引导 + hover 渐变带**：仪表盘底部 20pt 悬停热区，鼠标悬停时才显示「长按进入编辑模式」以及一条跟随出现的渐变带（正常态完全透明）；渐变带与文字一同 0.15s 淡入、一同消失。该热区同时支持长按进入，保证卡片全部移出后仍能回到编辑态。卡片底边到提示文字收至 **2pt**（编辑态仍保留 11pt，避免 dock 贴住卡片）；提示文字在 20pt 热区内垂直居中（`ZStack` 默认对齐），使最后一张卡片底边与面板底边视觉居中，渐变带仍铺满整个热区。所有新文案走 `AidenteL10n.t(_:_:)` 内联双语（中 / 英），未硬编码单一语言。
+- **「电池健康」纳入编辑体系**：`showBatteryHealthCard` 控制整张指标条显隐，与三个指标开关解耦。指标条三项（电池健康 / 循环次数 / 电池温度）恒显示，`showBatteryTemperature` 默认开启。
+- **「彩色能量流」纳入编辑体系**：`DashboardEditableCard.colorEnergyFlow` 是六张可编辑卡之一，默认顺序首位；显隐复用 `showPowerDistribution`，与其它卡片一样可长按编辑 / 拖动排序 / 进 dock。仪表盘卡片标题与 dock 一致，为「彩色能量流 / Color Energy Flow」；`powerSummary` 直接渲染 `PopoverCompactCard`，无外层显隐门控。
+- **dock 横向滚动与实色蓝胶囊**：胶囊保持「图标 + 完整标题」，不压缩、不截断；剩余胶囊不足以撑满面板时整行水平居中，超出时左对齐并向右横滑，46pt 行内垂直居中。胶囊为实色 `AidenteTheme.ocean`（`0.24, 0.56, 0.98`）配白色文字与图标，8pt 圆角与「自动保护」三个 `ProtectionPill` 一致。dock 高度固定 46pt，不影响面板高度计算。
+
+### 变更
+
+- **设置页-仪表盘**：长按编辑是卡片显隐的唯一入口，设置页不提供模块开关。页面为 访问仪表盘 → 状态信息 → 实时功率 三张卡；`DefaultsKeys.swift` 的 `showPowerDistribution` 等 key 保留，仪表盘仍读写。
+- **设置页卡片布局**：「访问仪表盘」卡片组（含 `AidenteNotice` 说明与「打开仪表盘」按钮，打开 `aidente://dashboard`）位于仪表盘 tab 第一个；「电源来源」开关位于「实时功率」组第一个。状态信息组为 系统运行时间 / 电池剩余时间，实时功率组为 电源来源 / 电池功率数据 / 适配器功率数据。
+- **仪表盘命名统一**：设置页卡片为「访问仪表盘」、按钮「打开仪表盘」，说明文案为「完整仪表盘 / 独立仪表盘窗口」，与 `AidenteL10n.swift` 的英文词条（`Dashboard Access` / `Open Dashboard` 等）语义一致。CLI 帮助与输出、独立窗口标题（`Aidente Dashboard`）、两张 HTML 原型、`README.md` 均使用仪表盘语义，无「主菜单」旧称。中文文案与字典 key 成对维护，英文模式不会退回中文原文。
+- **编辑态「已完成」按钮**：文字为 `.secondary` 灰，与右上角 `FooterButton` 图标一致；左右 padding 10pt、垂直 5pt、8pt 圆角，底色 `AidenteSurfaceTokens.controlFill(scheme:)`。
+- **`DashboardPopoverView.swift` 结构**：`ForEach(visibleCards)` 统一渲染六张可编辑卡；`DashboardEditableCard` / `DashboardFooterMetrics` / `DashboardCardFrameKey` / `DashboardCardHitArea` 集中管理顺序、尺寸与命中区；footer 高度计入 `scrollHeight` / `totalHeight`，避免 dock 撑破 800 上限。排序用 `DragGesture` + `GeometryReader` 上报卡片 frame 到 `dashboardCards` 坐标空间，松手按落点写回顺序、拖动中高亮落点；编辑态由覆盖整卡的透明层独占按压，减号在最上层可点，无专属拖拽 icon。
+- **dock 胶囊与「已完成」按钮圆角**：均为 `RoundedRectangle(cornerRadius: 8, style: .continuous)`，与「自动保护」三个 `ProtectionPill` 一致；取值收进 `DashboardFooterMetrics.buttonCornerRadius`。
+- **常驻卡边界与整卡手势**：只有 `statusHero`（含充电上限滑杆）常驻，完全不进入编辑态（无减号、不参与排序）。`PopoverCompactCard` 的 `content.padding(13).background` 不提供 `.contentShape`，卡片顶部的 `Spacer()` / `VStack spacing` / padding 空白需显式命中形状；`editableCard` 非编辑态与编辑态共用 `DashboardCardHitArea`（14pt 连续圆角、四边内缩 2pt，与 `PopoverCardBackground` 圆角一致）。除边缘 2pt 外，非编辑态整卡 `.highPriorityGesture(LongPressGesture(0.5s, maximumDistance: 24))` 任意位置长按可进编辑态；编辑态整卡透明层 + `DragGesture(minimumDistance: 6)` 任意位置按住即可拖。六张非常驻卡全部走 `editableCard`；底部 20pt hover 热区不受影响。
+- **hover 渐变带的绘制出口**：`AidenteTheme.swift` 的 `AidenteFooterHintSurface`（与 `AidenteChromeBar` / `AidenteMaterialLayer` 并列）只在 `if isFooterHovering` 里和文字一起出现：`clear → AidenteTheme.ocean.opacity(0.09 / 0.16)` 垂直渐变 + 底边 1pt 细线，`.allowsHitTesting(false)`，深浅色分别给 alpha；守单一绘制出口约定，L0–L3 固定色阶不变。`hoverHint` 为 `ZStack` 默认居中 + `.transition(.opacity)` + `onHover` 的 `withAnimation(0.15s)`；`LazyVStack` 下 padding 为 `isEditingCards ? 11 : 2`。渐变带与拖动落点高亮线为蓝色 `ocean`。
+- **dock 英文命名统一**：`DashboardEditableCard.title` 使用单参数 `AidenteL10n.t(_:)` 复用既有词条（`Color Energy Flow` / `Battery Health` / `Capacity & Health Trend` / `Top Energy Apps` / `Quick Care` / `Automatic Protection`），中英文下 dock 与卡片标题一致。
+- **dock 胶囊居中**：`dockRow` 外层 `GeometryReader` 取实际可见尺寸，内容 HStack 在 `.fixedSize(horizontal: true)` + `.padding(.horizontal, 14)` 之后补 `.frame(minWidth: proxy.size.width, minHeight: proxy.size.height, alignment: .center)`。`minWidth` 让胶囊不足撑满面板时整行水平居中、超出时固有宽度胜出并左对齐向右横滑；`minHeight` 让 46pt 行内胶囊垂直居中、上下留白对称。面板宽度 `DashboardLayout.width = 400`，中心与面板中心一致；`dockHeight = 46` 与 `footerHeight` 常量口径不变，不影响面板高度。
+- **「状态信息」副标题**：`DashboardSettingsView.swift:40` 为「选择仪表盘顶部显示的系统与电池时间信息。」，`AidenteL10n.swift:127` 英文值为 `Choose the system and battery readouts shown at the top of the dashboard.`。该卡只含 `showUptime` / `showTimeTillDischarge` 两个开关，对应 `DashboardPopoverView.swift:575-589` header 里的两行时间；卡片标题仍为「状态信息 / Status Information」。
+
+### 验证
+
+- 全量 `swiftc -typecheck`（`Aidente/**/*.swift`，不产出二进制）在早期改动中均 Exit 0；后续改动直接以完整构建 Exit 0 验证。`Aidente/DefaultsKeys.swift`、`Aidente/Views/DashboardPopoverView.swift`、`Aidente/Views/AidenteTheme.swift`、`Aidente/Views/Settings/GeneralSettingsView.swift`、`Aidente/Views/Settings/DashboardSettingsView.swift`、`Aidente/Views/Settings/ChargingSettingsView.swift` 均通过。
+- **预览构建（11-09，6.1.1 / 22）与发行构建（6.1.2 / 23）均通过**：`zsh BuildSupport/build_app.sh` 全部 Exit 0（预览日志 `/tmp/aidente-build-20261109{-1..9}.log`、发行日志 `/tmp/aidente-build-6.1.2.log`，单次约 22–24s）。`Dist/Aidente.app` 为 6.1.2 / Build 23，`codesign --verify --deep --strict` Exit 0（ad-hoc 签名，未公证）。最新产物字节核查：新串（`访问仪表盘`、`Aidente 仪表盘`、`选择仪表盘顶部显示的系统与电池时间信息。`、英文 `Choose the system and battery readouts shown at the top of the dashboard.`、`colorEnergyFlow`、`Color Energy Flow`、`Dashboard Access`、`Power Source`、`showBatteryHealthCard`、`dashboardCards`）均在；旧串（旧副标题、`dockGreen`、硬编码 `Capacity & Lifespan` / `Energy-Intensive Apps`）均为 0。`Aidente/` 下零警告，唯一警告来自第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。
+- **实机验收全部通过（无问题）**：本机（macOS 15.8.2）已核对上述仪表盘编辑态、dock 显隐/居中/横滑、整卡长按与拖动排序、hover 渐变带、命名统一、文案本地化与设置页迁移等全部改动。原待验收清单各项均通过——最大风险 `highPriorityGesture` 未吞掉卡片内 Picker / 四个养护按钮 / 三个保护按钮短按；「访问仪表盘」可打开独立窗口；六枚胶囊横滑、实色 `ocean` 配白字在深浅色下对比度与辨识度正常；「彩色能量流」移出后可从 dock 恢复且面板高度/滚动正常；编辑态整卡拖动落点与减号点击有效；hover 渐变带淡入淡出与 2pt↔11pt 切换面板高度无跳动；dock 仅剩 1–2 枚时居中、点掉一枚居中↔滚动切换无跳动或裁切；「已完成」padding 10pt 点击区够用；「状态信息」新副标题中英译文正确；dock 胶囊上下留白对称、与提示文字间距自然；六张非常驻卡任意位置（含标题行 Spacer/padding 空白）长按均进编辑态、边缘 2pt 不触发、容量卡 Picker 区域长按有效、Button/Picker 短按未被 contentShape 吞掉、实色蓝胶囊配白字可读性达标。
+- **发行打包**：`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.2.dmg`（卷名 `Aidente 6.1.2 (build 23)`，3.6M），`hdiutil verify` 结果为 VALID；`Dist/Aidente.app` 主二进制约 7.8M，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 一致。DMG 仍为 ad-hoc 签名，仅适合本机 / 受信分发；未提交 / 推送 / 打标签 / 发布 GitHub Release。
 
 ## [6.1.1]-2026-11-07
 
@@ -27,6 +58,7 @@
 - **恢复仪表盘容器背景采样**：`StatusBarManager.swift` 三处 `makeDashboardRootView(canSampleBackdrop:)` 由 `false` 改回 `true`（主菜单无边框面板 / 独立主菜单窗口 / 预览面板），使 `usesBackdropMaterial` 生效、L0 走 `NSVisualEffectView(.popover, .behindWindow)`。设置窗口仍由 `SettingsView.swift` 强制 `false`，视觉无变化；`AidenteSettingsBackground` 与诊断读数不动。
 
 ### 变更
+
 
 - **界面材质与外观**：材质由 macOS 决定，app 只承诺文字可读性，不再提供多档材质选择器；设置页为「外观」卡片（「自动 / 浅色 / 深色」分段控件 + 「始终使用不透明背景」开关），未恢复旧四档 Picker。
   - `Aidente/Views/AidenteTheme.swift`：`AidenteSurfaceTokens.color(_:scheme:)` 为固定中性色阶（亮 `#F4F5F6 / #F8F8F8 / #FCFCFC`，暗 `#232326 / #28282B / #2D2D31`，L1−L0、L2−L0 差值恒定）；`AidenteLevelSurface` 为唯一绘制入口，可采样背景且未被强制不透明时 L0 走真玻璃（macOS 26+ 用 `glassEffect(.regular)`，macOS 15 及更早用 `NSVisualEffectView(.popover, .behindWindow)` 叠加自绘玻璃近似层，见「新增」），设置窗口 / 系统「降低透明度」/ app「始终使用不透明背景」走实体；`glassTint` 亮 `white .14` / 暗 `rgb(30,30,34) .24`、`controlFill` 用于 L4 控件。
@@ -55,5 +87,3 @@
 - **编译警告**：现仅剩第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` 在 macOS 14 已弃用（上游代码，未改动，不影响产物）。`SystemAppearanceMonitor.currentSystemIsDark()` 原误标 `nonisolated` 却读取 main-actor 隔离的 `NSApp.effectiveAppearance`，产生两条 `main actor-isolated` 警告；已去掉多余的 `nonisolated` 并加注释说明隔离边界（保留供 KVO 回调使用的 `isDark(_:)` 的 `nonisolated`），运行时行为不变。修正后重新构建 Exit 0、该警告归零，耗时约 20 秒。`nm` 已确认 `AidenteGlassTokens` 相关符号进入可执行文件。
 - **2026-11-08 完整构建与重出 DMG（收口本轮全部源码改动）**：`zsh BuildSupport/build_app.sh` Exit 0，日志中 `error:` 计数为 0，仅剩上游 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` 弃用警告；`codesign --verify --deep --strict` 通过。产物 `Dist/Aidente.app` 的 `Info.plist` 为 6.1.1 / 22，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 完全一致（702747 字节），体积 9.9M；`strings` 已确认本轮新增的 gate 提示文案进入可执行文件。`zsh BuildSupport/make_dmg.sh` Exit 0，重新生成 `Dist/Aidente-6.1.1.dmg`（3.5M，卷名 `Aidente 6.1.1 (build 22)`），`hdiutil verify` 结果为 VALID。上方各条中「本轮未编译 / 未重出 DMG」均为写该条当时的状态：三份 HTML 与 README / 发行说明不进入 bundle，两处 Swift 源码改动（硬编码兜底清理、更新检查 gate）已随本次构建进入产物。DMG 仍为 ad-hoc 签名，仅适合本机 / 受信分发；未提交 / 推送 / 打标签 / 发布 Release。
 - **26+ 验证缺口**：类型检查与构建通过不能替代实机验收。当前实机 15.8.2 可验收仪表盘的 `.popover` 毛玻璃与自绘玻璃光效、设置页 / 仪表盘层级与「始终使用不透明背景」开关；macOS 26+ 的 `glassEffect` 系统材质、以及本轮「26+ 不叠自绘层」的分支表现，仍需在 26 环境实机核对。
-
-

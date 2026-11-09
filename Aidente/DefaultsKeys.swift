@@ -147,7 +147,7 @@ extension Defaults.Keys {
     static let showTimeTillDischarge = Key<Bool>("showTimeTillDischarge", default: true)
     static let showBatteryCycleCount = Key<Bool>("showBatteryCycleCount", default: true)
     static let showBatteryHealth = Key<Bool>("showBatteryHealth", default: true)
-    static let showBatteryTemperature = Key<Bool>("showBatteryTemperature", default: false)
+    static let showBatteryTemperature = Key<Bool>("showBatteryTemperature", default: true)
     static let showPowerSource = Key<Bool>("showPowerSource", default: false)
     static let showUptime = Key<Bool>("showUptime", default: true)
     static let showBatteryMode = Key<Bool>("showBatteryMode", default: true)
@@ -158,6 +158,16 @@ extension Defaults.Keys {
     static let showEnergyAppRanking = Key<Bool>("showEnergyAppRanking", default: true)
     static let showCareActions = Key<Bool>("showCareActions", default: true)
     static let showAutomaticProtection = Key<Bool>("showAutomaticProtection", default: true)
+    /// Controls the whole battery-metrics card; the three `showBattery*` keys
+    /// above describe individual metrics and are all on by default.
+    static let showBatteryHealthCard = Key<Bool>("showBatteryHealthCard", default: true)
+    /// Comma-separated order of the six editable dashboard cards. Missing
+    /// identifiers are inserted at their default positions, so adding a card
+    /// does not move it to the end for users with a saved order.
+    static let dashboardCardOrder = Key<String>(
+        "dashboardCardOrder",
+        default: "colorEnergyFlow,batteryHealth,capacityHistory,energyAppRanking,careActions,automaticProtection"
+    )
 
     // Charging
     static let manageCharging = Key<Bool>("manageCharging", default: false)
