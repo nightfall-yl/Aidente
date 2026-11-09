@@ -181,6 +181,7 @@ struct DashboardPopoverView: View {
                             value: geo.size.height
                         )
                     })
+                    .zIndex(1)
 
                 Rectangle()
                     .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
@@ -586,16 +587,16 @@ struct DashboardPopoverView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
                 Text(viewModel.batteryModeText)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
 
                 Spacer()
 
                 HStack(spacing: 6) {
-                    FooterButton(icon: "arrow.clockwise") { viewModel.refresh() }
-                    FooterButton(icon: "gearshape.fill") { onOpenSettings(.general) }
-                    FooterButton(icon: "power") { onQuit() }
+                    HeaderButton(icon: "arrow.clockwise", label: AidenteL10n.t("刷新")) { viewModel.refresh() }
+                    HeaderButton(icon: "gearshape.fill", label: AidenteL10n.t("设置")) { onOpenSettings(.general) }
+                    HeaderButton(icon: "power", label: AidenteL10n.t("退出")) { onQuit() }
                 }
             }
 
@@ -1830,10 +1831,12 @@ private struct ProtectionPill: View {
     }
 }
 
-private struct FooterButton: View {
+private struct HeaderButton: View {
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovering = false
 
     let icon: String
+    let label: String
     let action: () -> Void
 
     var body: some View {
@@ -1855,5 +1858,28 @@ private struct FooterButton: View {
                 }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(label))
+        .overlay(alignment: .top) {
+            if isHovering {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color(white: 0.16, opacity: 0.96))
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+                    .offset(y: 30)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
+        }
     }
 }
