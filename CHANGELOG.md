@@ -2,7 +2,7 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前版本为 **6.1.3 / Build 24**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.3]-2026-11-10` 汇总 2026-11-10 当天全部改动（上午的设置页重构 + 下午的设置页审查整改与配色重排），`release-notes-6.1.3.md` 已同步更新。
+项目当前版本为 **6.1.3 / Build 24**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.3]-2026-11-10` 汇总 2026-11-10 全部改动（设置页重构 + 审查整改与配色重排），`release-notes-6.1.3.md` 已同步更新。
 
 ## [6.1.3]-2026-11-10
 
@@ -46,6 +46,7 @@
 - `zsh BuildSupport/build_app.sh` Exit 0（ad-hoc 签名，`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），日志 `/tmp/aidente-build-6.1.3.log`，产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.3 / 24**；唯一警告仍为第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。**本次构建与当前源码一致**：覆盖设置页重构与文案修订、标题栏 1pt 贯穿线、标题区随内容滚动、左右标题区统一、导航项整行命中、第一个导航项与第一张卡片上边距对齐、「修复控制服务」橙红 `aboutColors`、窗口标题栏遮罩、「重新检查授权」改为后台服务状态检查、左侧标题区主徽章替换、移除「实时功率」设置卡与弹窗三处读数、hero 状态「正在充电」改名「充电中」；标题栏加高 28→38 pt 与分段控件紧凑靠右两处已回退、不在产物内。视觉效果待实机验收。
 - **充电回归**：`zsh BuildSupport/test_charging.sh` Exit 0：**PASS: 138 charging, sleep, firmware, rollback and readback checks**（含 `test_charging.sh` SDK 对齐修复后恢复可跑；重构后复跑仍全过）。
 - **发行打包（含同日全部改动重出）**：`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.3.dmg`（3.7M，卷名 `Aidente 6.1.3`），`hdiutil verify` 结果为 VALID。脚本从 bundle 的 `Info.plist` 读版本，输出 `Aidente 6.1.3 (build 24)`；DMG 沿用 ad-hoc 完整性签名，仅适合本机 / 受信分发。
+- **提交状态**：本节所述全部改动已提交并推送至 `origin/main`（"Bump to 6.1.3 and add charger info provider, permissions settings, and settings redesign"）。
 
 ## [6.1.2]-2026-11-09
 
@@ -77,7 +78,7 @@
 - 全量 `swiftc -typecheck`（`Aidente/**/*.swift`，不产出二进制）在早期改动中均 Exit 0；后续改动直接以完整构建 Exit 0 验证。`Aidente/DefaultsKeys.swift`、`Aidente/Views/DashboardPopoverView.swift`、`Aidente/Views/AidenteTheme.swift`、`Aidente/Views/Settings/GeneralSettingsView.swift`、`Aidente/Views/Settings/DashboardSettingsView.swift`、`Aidente/Views/Settings/ChargingSettingsView.swift` 均通过。
 - **预览构建（11-09，6.1.1 / 22）与发行构建（6.1.2 / 23）均通过**：`zsh BuildSupport/build_app.sh` 全部 Exit 0（预览日志 `/tmp/aidente-build-20261109{-1..9}.log`、发行日志 `/tmp/aidente-build-6.1.2.log`，单次约 22–24s）。`Dist/Aidente.app` 为 6.1.2 / Build 23，`codesign --verify --deep --strict` Exit 0（ad-hoc 签名，未公证）。最新产物字节核查：新串（`访问仪表盘`、`Aidente 仪表盘`、`选择仪表盘顶部显示的系统与电池时间信息。`、英文 `Choose the system and battery readouts shown at the top of the dashboard.`、`colorEnergyFlow`、`Color Energy Flow`、`Dashboard Access`、`Power Source`、`showBatteryHealthCard`、`dashboardCards`）均在；旧串（旧副标题、`dockGreen`、硬编码 `Capacity & Lifespan` / `Energy-Intensive Apps`）均为 0。`Aidente/` 下零警告，唯一警告来自第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。
 - **实机验收全部通过（无问题）**：本机（macOS 15.8.2）已核对上述仪表盘编辑态、dock 显隐/居中/横滑、整卡长按与拖动排序、hover 渐变带、命名统一、文案本地化与设置页迁移等全部改动。原待验收清单各项均通过——最大风险 `highPriorityGesture` 未吞掉卡片内 Picker / 四个养护按钮 / 三个保护按钮短按；「访问仪表盘」可打开独立窗口；六枚胶囊横滑、实色 `ocean` 配白字在深浅色下对比度与辨识度正常；「彩色能量流」移出后可从 dock 恢复且面板高度/滚动正常；编辑态整卡拖动落点与减号点击有效；hover 渐变带淡入淡出与 2pt↔11pt 切换面板高度无跳动；dock 仅剩 1–2 枚时居中、点掉一枚居中↔滚动切换无跳动或裁切；「已完成」padding 10pt 点击区够用；「状态信息」新副标题中英译文正确；dock 胶囊上下留白对称、与提示文字间距自然；六张非常驻卡任意位置（含标题行 Spacer/padding 空白）长按均进编辑态、边缘 2pt 不触发、容量卡 Picker 区域长按有效、Button/Picker 短按未被 contentShape 吞掉、实色蓝胶囊配白字可读性达标。
-- **发行打包**：`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.2.dmg`（卷名 `Aidente 6.1.2 (build 23)`，3.6M），`hdiutil verify` 结果为 VALID；`Dist/Aidente.app` 主二进制约 7.8M，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 一致。DMG 仍为 ad-hoc 签名，仅适合本机 / 受信分发；未提交 / 推送 / 打标签 / 发布 GitHub Release。
+- **发行打包**：`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.2.dmg`（卷名 `Aidente 6.1.2 (build 23)`，3.6M），`hdiutil verify` 结果为 VALID；`Dist/Aidente.app` 主二进制约 7.8M，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 一致。DMG 仍为 ad-hoc 签名，仅适合本机 / 受信分发。
 
 ## [6.1.1]-2026-11-07
 
