@@ -4,8 +4,6 @@ import os.log
 import smc_power
 
 struct ChargingSettingsView: View {
-    @Default(.appLanguage) private var appLanguage
-
     @Default(.manageCharging) var manageCharging
     @Default(.chargeLimit) var chargeLimit
     @Default(.sailingMode) var sailingMode
@@ -18,9 +16,10 @@ struct ChargingSettingsView: View {
     @Default(.heatProtectionMagSafeLEDState) var heatProtectionMagSafeLEDState
     @Default(.stopChargingWhenAppClosed) var stopChargingWhenAppClosed
     @Default(.stopChargingWhileSleeping) var stopChargingWhileSleeping
+    @Default(.useHardwarePercentage) var useHardwarePercentage
     @Default(.calibrationLowLevel) var calibrationLowLevel
     @Default(.calibrationHoldMinutes) var calibrationHoldMinutes
-    @State private var helperManager = ChargingHelperManager.shared
+    private let helperManager = ChargingHelperManager.shared
     @State private var installError: String?
 
     private let capabilities: DeviceCapabilities
@@ -80,24 +79,6 @@ struct ChargingSettingsView: View {
                         ? 0.50 : 1
                 )
 
-                if helperManager.helperStatus == .requiresApproval {
-                    AidenteNotice(
-                        text: "请前往“系统设置 → 通用 → 登录项与扩展”批准 Aidente，然后返回这里重新检查。",
-                        icon: "person.badge.shield.checkmark.fill",
-                        colors: AidenteTheme.automationColors
-                    )
-
-                    Button {
-                        checkApprovalStatus()
-                    } label: {
-                        Label(
-                            AidenteL10n.t("重新检查授权"),
-                            systemImage: "arrow.clockwise.circle.fill"
-                        )
-                    }
-                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.generalColors))
-                }
-
                 if helperManager.isRunningFromDiskImage {
                     AidenteNotice(
                         text: "当前正从安装磁盘映像运行，后台控制服务无法可靠启动。请退出 Aidente，将应用拖入“应用程序”文件夹后重新打开。",
@@ -138,33 +119,265 @@ struct ChargingSettingsView: View {
                         icon: "target",
                         colors: AidenteTheme.chargingColors
                     ) {
-                        HStack(spacing: 9) {
-                            Slider(
-                                value: Binding(
-                                    get: { Double(chargeLimit) },
-                                    set: { chargeLimit = Int($0) }
-                                ),
-                                in: 50...100,
-                                step: 5
-                            )
-                            .frame(width: 190)
-
-                            Text("\(chargeLimit)%")
-                                .font(.headline.monospacedDigit())
-                                .foregroundStyle(AidenteTheme.jade)
-                                .frame(width: 48, alignment: .trailing)
-                        }
+                        InlineSliderRow(
+                            value: chargeLimit,
+                            range: 20...100,
+                            step: 5,
+                            suffix: "%",
+                            sliderWidth: 190,
+                            valueWidth: 48,
+                            accent: true
+                        ) { chargeLimit = $0 }
                     }
                 }
             }
 
+            AidenteCard(
+                "电量读取方式",
+                subtitle: "选择 Aidente 用于充电上限、巡航和校准的电量数据。",
+                icon: "cpu.fill",
+                colors: AidenteTheme.generalColors
+            ) {
+                AidenteSettingToggle(
+                    "使用硬件电量百分比",
+                    subtitle: "直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值",
+                    icon: "battery.100.bolt",
+                    colors: AidenteTheme.generalColors,
+                    isOn: $useHardwarePercentage
+                )
+
+                AidenteNotice(
+                    text: "硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。",
+                    icon: "info.circle.fill",
+                    colors: AidenteTheme.generalColors
+                )
+            }
+
             if manageCharging {
                 AidenteCard(
-                    "快捷操作",
-                    subtitle: "执行一次性操作，不会改动你保存的充电上限。",
-                    icon: "bolt.circle.fill",
-                    colors: AidenteTheme.automationColors
+                    "自动放电",
+                    subtitle: AidenteL10n.t("接入电源或降低上限时，若高出目标超过 1%，主动放电至目标；默认关闭。", "When connecting power or lowering the limit, discharge if more than 1% above target. Off by default."),
+                    icon: "arrow.down.circle.fill",
+                    colors: AidenteTheme.chargingColors
                 ) {
+                    AidenteSettingToggle(
+                        "启用自动放电",
+                        subtitle: "到达目标后自动恢复适配器供电",
+                        icon: "battery.25percent",
+                        colors: AidenteTheme.chargingColors,
+                        isOn: $automaticDischarge
+                    )
+                    .disabled(!hasAdapterControl)
+                    .opacity(hasAdapterControl ? 1 : 0.5)
+
+                    if !hasAdapterControl {
+                        AidenteNotice(text: "当前设备不支持适配器控制。")
+                    }
+                }
+
+                AidenteCard(
+                    "睡眠与退出行为",
+                    subtitle: "决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。",
+                    icon: "moon.stars.fill",
+                    colors: AidenteTheme.advancedColors
+                ) {
+                    AidenteSettingToggle(
+                        "达到上限前阻止睡眠",
+                        icon: "moon.zzz.fill",
+                        colors: AidenteTheme.advancedColors,
+                        isOn: $disableSleepUntilChargeLimit
+                    )
+                    .disabled(!hasChargingControl)
+                    .opacity(hasChargingControl ? 1 : 0.5)
+
+                    AidenteRowDivider()
+                    AidenteSettingToggle(
+                        "睡眠时暂停充电",
+                        icon: "bed.double.fill",
+                        colors: [AidenteTheme.ocean, AidenteTheme.violet],
+                        isOn: $stopChargingWhileSleeping
+                    )
+                    .disabled(!hasChargingControl)
+                    .opacity(hasChargingControl ? 1 : 0.5)
+
+                    AidenteRowDivider()
+                    AidenteSettingToggle(
+                        "退出 Aidente 后保持暂停",
+                        subtitle: "适合快速用户切换或临时退出应用",
+                        icon: "door.left.hand.closed",
+                        colors: [AidenteTheme.coral, AidenteTheme.amber],
+                        isOn: $stopChargingWhenAppClosed
+                    )
+                    .disabled(!hasChargingControl)
+                    .opacity(hasChargingControl ? 1 : 0.5)
+                }
+
+                AidenteCard(
+                    "电池校准",
+                    subtitle: "充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。",
+                    icon: "arrow.triangle.2.circlepath.circle.fill",
+                    colors: AidenteTheme.dashboardColors
+                ) {
+                    AidenteControlRow(
+                        "放电目标",
+                        icon: "arrow.down.to.line.compact",
+                        colors: AidenteTheme.dashboardColors
+                    ) {
+                        InlineSliderRow(
+                            value: calibrationLowLevel,
+                            range: 5...20,
+                            step: 1,
+                            suffix: "%",
+                            sliderWidth: 170
+                        ) { calibrationLowLevel = $0 }
+                    }
+
+                    AidenteRowDivider()
+
+                    AidenteControlRow(
+                        "满电保持时间",
+                        icon: "timer",
+                        colors: AidenteTheme.automationColors
+                    ) {
+                        Stepper(
+                            AidenteL10n.t(
+                                "\(calibrationHoldMinutes) 分钟",
+                                "\(calibrationHoldMinutes) min"
+                            ),
+                            value: $calibrationHoldMinutes,
+                            in: 15...120,
+                            step: 15
+                        )
+                    }
+                }
+
+                AidenteCard(
+                    "巡航模式",
+                    subtitle: "允许电量在上限附近自然浮动，减少频繁微量补电。",
+                    icon: "sailboat.fill",
+                    colors: AidenteTheme.generalColors
+                ) {
+                    AidenteSettingToggle(
+                        "启用巡航模式",
+                        icon: "water.waves",
+                        colors: AidenteTheme.generalColors,
+                        isOn: $sailingMode
+                    )
+                    .disabled(!hasChargingControl)
+                    .opacity(hasChargingControl ? 1 : 0.5)
+
+                    if sailingMode {
+                        AidenteRowDivider()
+                        AidenteControlRow(
+                            "低于上限多少时恢复充电",
+                            icon: "arrow.down.right",
+                            colors: AidenteTheme.generalColors
+                        ) {
+                            InlineSliderRow(
+                                value: sailingModeLimit,
+                                range: 1...20,
+                                step: 1,
+                                suffix: "%",
+                                sliderWidth: 150,
+                                valueWidth: 44
+                            ) { sailingModeLimit = $0 }
+                        }
+
+                        AidenteControlRow(
+                            "恢复充电电量",
+                            icon: "play.circle.fill",
+                            colors: AidenteTheme.chargingColors
+                        ) {
+                            Text("\(sailingResumePercentage)%")
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(AidenteTheme.jade)
+                        }
+                    }
+                }
+
+                AidenteCard(
+                    "高温保护",
+                    subtitle: "温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。",
+                    icon: "thermometer.high",
+                    colors: [AidenteTheme.amber, AidenteTheme.coral]
+                ) {
+                    AidenteSettingToggle(
+                        "启用高温保护",
+                        icon: "flame.fill",
+                        colors: [AidenteTheme.amber, AidenteTheme.coral],
+                        isOn: $enableHeatProtectionMode
+                    )
+                    .disabled(!hasChargingControl)
+                    .opacity(hasChargingControl ? 1 : 0.5)
+
+                    if enableHeatProtectionMode {
+                        AidenteRowDivider()
+                        AidenteControlRow(
+                            "温度上限",
+                            icon: "thermometer.medium",
+                            colors: [AidenteTheme.amber, AidenteTheme.coral]
+                        ) {
+                            InlineSliderRow(
+                                value: heatProtectionLimit,
+                                range: 30...50,
+                                step: 1,
+                                suffix: "°C",
+                                sliderWidth: 160,
+                                valueWidth: 50
+                            ) { heatProtectionLimit = $0 }
+                        }
+                    }
+                }
+
+                if hasMagSafe {
+                    AidenteCard(
+                        "MagSafe 指示灯",
+                        subtitle: "在受支持机型上用颜色显示充电、暂停和保护状态。",
+                        icon: "lightbulb.led.fill",
+                        colors: AidenteTheme.automationColors
+                    ) {
+                        AidenteSettingToggle(
+                            "由 Aidente 控制指示灯",
+                            icon: "lightbulb.fill",
+                            colors: AidenteTheme.automationColors,
+                            isOn: $manageMagSafeLED
+                        )
+                        .disabled(!capabilities.magsafeLEDControl)
+                        .opacity(capabilities.magsafeLEDControl ? 1 : 0.5)
+
+                        if manageMagSafeLED && enableHeatProtectionMode {
+                            AidenteRowDivider()
+                            AidenteControlRow(
+                                "高温保护时的灯光",
+                                icon: "lightspectrum.horizontal",
+                                colors: AidenteTheme.automationColors
+                            ) {
+                                Picker("", selection: $heatProtectionMagSafeLEDState) {
+                                    Text(AidenteL10n.t("关闭")).tag(MagSafeLEDState.off)
+                                    Text(AidenteL10n.t("绿色")).tag(MagSafeLEDState.green)
+                                    Text(AidenteL10n.t("橙色")).tag(MagSafeLEDState.orange)
+                                    Text(AidenteL10n.t("橙色慢闪"))
+                                        .tag(MagSafeLEDState.blinkOrangeSlow)
+                                    Text(AidenteL10n.t("橙色快闪"))
+                                        .tag(MagSafeLEDState.blinkOrangeFast)
+                                }
+                                .labelsHidden()
+                                .frame(width: 140)
+                            }
+                        }
+
+                        if !capabilities.magsafeLEDControl {
+                            AidenteNotice(text: "当前设备不支持 MagSafe 指示灯控制。")
+                        }
+                    }
+                }
+
+            AidenteCard(
+                "快捷操作",
+                subtitle: "执行一次性操作，不会改动你保存的充电上限。",
+                icon: "bolt.circle.fill",
+                colors: AidenteTheme.chargingColors
+            ) {
                     AidenteInsetPanel {
                         HStack {
                             Text(AidenteL10n.t("当前状态"))
@@ -188,27 +401,6 @@ struct ChargingSettingsView: View {
                                     .font(.headline)
                             }
                         }
-                    }
-
-                    if let controlError = chargeManager.controlError {
-                        AidenteNotice(
-                            text: controlError,
-                            icon: "exclamationmark.shield.fill",
-                            colors: [AidenteTheme.coral, AidenteTheme.amber]
-                        )
-
-                        Button {
-                            repairControlService()
-                        } label: {
-                            Label(
-                                AidenteL10n.t("修复控制服务"),
-                                systemImage: "wrench.and.screwdriver.fill"
-                            )
-                        }
-                        .buttonStyle(
-                            AidenteActionButtonStyle(colors: AidenteTheme.automationColors)
-                        )
-                        .disabled(helperManager.isRunningFromDiskImage)
                     }
 
                     HStack(spacing: 10) {
@@ -267,235 +459,6 @@ struct ChargingSettingsView: View {
                         )
                     }
                 }
-
-                AidenteCard(
-                    "自动放电",
-                    subtitle: AidenteL10n.t("接入电源或降低上限时，若高出目标超过 1%，主动放电至目标；默认关闭。", "When connecting power or lowering the limit, discharge if more than 1% above target. Off by default."),
-                    icon: "arrow.down.circle.fill",
-                    colors: AidenteTheme.generalColors
-                ) {
-                    AidenteSettingToggle(
-                        "启用自动放电",
-                        subtitle: "到达目标后自动恢复适配器供电",
-                        icon: "battery.25percent",
-                        colors: AidenteTheme.generalColors,
-                        isOn: $automaticDischarge
-                    )
-                    .disabled(!hasAdapterControl)
-                    .opacity(hasAdapterControl ? 1 : 0.5)
-
-                    if !hasAdapterControl {
-                        AidenteNotice(text: "当前设备不支持适配器控制。")
-                    }
-                }
-
-                AidenteCard(
-                    "睡眠与退出行为",
-                    subtitle: "决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。",
-                    icon: "moon.stars.fill",
-                    colors: AidenteTheme.advancedColors
-                ) {
-                    AidenteSettingToggle(
-                        "达到上限前阻止睡眠",
-                        icon: "moon.zzz.fill",
-                        colors: AidenteTheme.advancedColors,
-                        isOn: $disableSleepUntilChargeLimit
-                    )
-                    AidenteRowDivider()
-                    AidenteSettingToggle(
-                        "睡眠时暂停充电",
-                        icon: "bed.double.fill",
-                        colors: [AidenteTheme.ocean, AidenteTheme.violet],
-                        isOn: $stopChargingWhileSleeping
-                    )
-                    AidenteRowDivider()
-                    AidenteSettingToggle(
-                        "退出 Aidente 后保持暂停",
-                        subtitle: "适合快速用户切换或临时退出应用",
-                        icon: "door.left.hand.closed",
-                        colors: [AidenteTheme.coral, AidenteTheme.amber],
-                        isOn: $stopChargingWhenAppClosed
-                    )
-                }
-
-                AidenteCard(
-                    "电池校准",
-                    subtitle: "充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。",
-                    icon: "arrow.triangle.2.circlepath.circle.fill",
-                    colors: AidenteTheme.dashboardColors
-                ) {
-                    AidenteControlRow(
-                        "放电目标",
-                        icon: "arrow.down.to.line.compact",
-                        colors: AidenteTheme.dashboardColors
-                    ) {
-                        HStack(spacing: 9) {
-                            Slider(
-                                value: Binding(
-                                    get: { Double(calibrationLowLevel) },
-                                    set: { calibrationLowLevel = Int($0) }
-                                ),
-                                in: 5...20,
-                                step: 1
-                            )
-                            .frame(width: 170)
-                            Text("\(calibrationLowLevel)%")
-                                .monospacedDigit()
-                                .frame(width: 45, alignment: .trailing)
-                        }
-                    }
-
-                    AidenteRowDivider()
-
-                    AidenteControlRow(
-                        "满电保持时间",
-                        icon: "timer",
-                        colors: AidenteTheme.automationColors
-                    ) {
-                        Stepper(
-                            AidenteL10n.t(
-                                "\(calibrationHoldMinutes) 分钟",
-                                "\(calibrationHoldMinutes) min"
-                            ),
-                            value: $calibrationHoldMinutes,
-                            in: 15...120,
-                            step: 15
-                        )
-                    }
-                }
-
-                AidenteCard(
-                    "巡航模式",
-                    subtitle: "允许电量在上限附近自然浮动，减少频繁微量补电。",
-                    icon: "sailboat.fill",
-                    colors: AidenteTheme.generalColors
-                ) {
-                    AidenteSettingToggle(
-                        "启用巡航模式",
-                        icon: "water.waves",
-                        colors: AidenteTheme.generalColors,
-                        isOn: $sailingMode
-                    )
-                    .disabled(!hasChargingControl)
-                    .opacity(hasChargingControl ? 1 : 0.5)
-
-                    if sailingMode {
-                        AidenteRowDivider()
-                        AidenteControlRow(
-                            "低于上限多少时恢复充电",
-                            icon: "arrow.down.right",
-                            colors: AidenteTheme.generalColors
-                        ) {
-                            HStack(spacing: 9) {
-                                Slider(
-                                    value: Binding(
-                                        get: { Double(sailingModeLimit) },
-                                        set: { sailingModeLimit = Int($0) }
-                                    ),
-                                    in: 1...20,
-                                    step: 1
-                                )
-                                .frame(width: 150)
-                                Text("\(sailingModeLimit)%")
-                                    .monospacedDigit()
-                                    .frame(width: 44, alignment: .trailing)
-                            }
-                        }
-
-                        AidenteControlRow(
-                            "恢复充电电量",
-                            icon: "play.circle.fill",
-                            colors: AidenteTheme.chargingColors
-                        ) {
-                            Text("\(sailingResumePercentage)%")
-                                .font(.headline.monospacedDigit())
-                                .foregroundStyle(AidenteTheme.jade)
-                        }
-                    }
-                }
-
-                AidenteCard(
-                    "高温保护",
-                    subtitle: "温度超过阈值时暂停充电，并通过五分钟迟滞避免频繁切换。",
-                    icon: "thermometer.high",
-                    colors: [AidenteTheme.amber, AidenteTheme.coral]
-                ) {
-                    AidenteSettingToggle(
-                        "启用高温保护",
-                        icon: "flame.fill",
-                        colors: [AidenteTheme.amber, AidenteTheme.coral],
-                        isOn: $enableHeatProtectionMode
-                    )
-                    .disabled(!hasChargingControl)
-                    .opacity(hasChargingControl ? 1 : 0.5)
-
-                    if enableHeatProtectionMode {
-                        AidenteRowDivider()
-                        AidenteControlRow(
-                            "温度上限",
-                            icon: "thermometer.medium",
-                            colors: [AidenteTheme.amber, AidenteTheme.coral]
-                        ) {
-                            HStack(spacing: 9) {
-                                Slider(
-                                    value: Binding(
-                                        get: { Double(heatProtectionLimit) },
-                                        set: { heatProtectionLimit = Int($0) }
-                                    ),
-                                    in: 30...50,
-                                    step: 1
-                                )
-                                .frame(width: 160)
-                                Text("\(heatProtectionLimit)°C")
-                                    .monospacedDigit()
-                                    .frame(width: 50, alignment: .trailing)
-                            }
-                        }
-                    }
-                }
-
-                if hasMagSafe {
-                    AidenteCard(
-                        "MagSafe 指示灯",
-                        subtitle: "在受支持机型上用颜色显示充电、暂停和保护状态。",
-                        icon: "lightbulb.led.fill",
-                        colors: AidenteTheme.automationColors
-                    ) {
-                        AidenteSettingToggle(
-                            "由 Aidente 控制指示灯",
-                            icon: "lightbulb.fill",
-                            colors: AidenteTheme.automationColors,
-                            isOn: $manageMagSafeLED
-                        )
-                        .disabled(!capabilities.magsafeLEDControl)
-                        .opacity(capabilities.magsafeLEDControl ? 1 : 0.5)
-
-                        if manageMagSafeLED && enableHeatProtectionMode {
-                            AidenteRowDivider()
-                            AidenteControlRow(
-                                "高温保护时的灯光",
-                                icon: "lightspectrum.horizontal",
-                                colors: AidenteTheme.automationColors
-                            ) {
-                                Picker("", selection: $heatProtectionMagSafeLEDState) {
-                                    Text(AidenteL10n.t("关闭")).tag(MagSafeLEDState.off)
-                                    Text(AidenteL10n.t("绿色")).tag(MagSafeLEDState.green)
-                                    Text(AidenteL10n.t("橙色")).tag(MagSafeLEDState.orange)
-                                    Text(AidenteL10n.t("橙色慢闪"))
-                                        .tag(MagSafeLEDState.blinkOrangeSlow)
-                                    Text(AidenteL10n.t("橙色快闪"))
-                                        .tag(MagSafeLEDState.blinkOrangeFast)
-                                }
-                                .labelsHidden()
-                                .frame(width: 140)
-                            }
-                        }
-
-                        if !capabilities.magsafeLEDControl {
-                            AidenteNotice(text: "当前设备不支持 MagSafe 指示灯控制。")
-                        }
-                    }
-                }
             }
         }
         .animation(.default, value: manageCharging)
@@ -503,19 +466,7 @@ struct ChargingSettingsView: View {
         .animation(.default, value: enableHeatProtectionMode)
         .animation(.default, value: manageMagSafeLED)
         .animation(.default, value: helperManager.helperStatus)
-        .alert(
-            AidenteL10n.t("无法启用充电控制服务"),
-            isPresented: Binding(
-                get: { installError != nil },
-                set: { if !$0 { installError = nil } }
-            )
-        ) {
-            Button(AidenteL10n.t("好")) { installError = nil }
-        } message: {
-            if let installError {
-                Text(installError)
-            }
-        }
+        .aidenteInstallErrorAlert($installError)
     }
 
     private func toggleManageCharging(_ enabled: Bool) {
@@ -533,26 +484,37 @@ struct ChargingSettingsView: View {
             }
         }
     }
+}
 
-    private func checkApprovalStatus() {
-        helperManager.refreshStatus()
-        if helperManager.helperStatus == .installed {
-            toggleManageCharging(true)
-        }
-    }
+/// Slider + trailing value readout, shared by the four numeric controls on
+/// the charging page (charge limit, calibration target, sailing range, heat
+/// limit). `accent` reproduces the charge-limit row's highlighted readout.
+private struct InlineSliderRow: View {
+    let value: Int
+    let range: ClosedRange<Double>
+    let step: Double
+    let suffix: String
+    var sliderWidth: CGFloat = 170
+    var valueWidth: CGFloat = 45
+    var accent: Bool = false
+    let onChange: (Int) -> Void
 
-    private func repairControlService() {
-        Task {
-            do {
-                try await helperManager.repair()
-                if helperManager.helperStatus == .installed {
-                    manageCharging = true
-                    chargeManager.retryControlAfterRepair()
-                }
-            } catch {
-                logger.error("Failed to repair charging helper: \(error)")
-                installError = error.localizedDescription
-            }
+    var body: some View {
+        HStack(spacing: 9) {
+            Slider(
+                value: Binding(
+                    get: { Double(value) },
+                    set: { onChange(Int($0)) }
+                ),
+                in: range,
+                step: step
+            )
+            .frame(width: sliderWidth)
+
+            Text("\(value)\(suffix)")
+                .font(accent ? .headline.monospacedDigit() : .body.monospacedDigit())
+                .foregroundStyle(accent ? AidenteTheme.jade : Color.primary)
+                .frame(width: valueWidth, alignment: .trailing)
         }
     }
 }

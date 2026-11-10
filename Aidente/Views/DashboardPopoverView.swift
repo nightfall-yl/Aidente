@@ -107,11 +107,8 @@ struct DashboardPopoverView: View {
     @Default(.stopChargingWhileSleeping) private var sleepPauseEnabled
     @Default(.sailingMode) private var sailingModeEnabled
     @Default(.appLanguage) private var appLanguage
-    @Default(.showPowerSource) private var showPowerSource
     @Default(.showTimeTillDischarge) private var showTimeTillDischarge
     @Default(.showUptime) private var showUptime
-    @Default(.showInternalPower) private var showInternalPower
-    @Default(.showExternalPower) private var showExternalPower
     @Default(.showPowerDistribution) private var showPowerDistribution
     @Default(.showCapacityHistory) private var showCapacityHistory
     @Default(.showEnergyAppRanking) private var showEnergyAppRanking
@@ -758,11 +755,13 @@ struct DashboardPopoverView: View {
                     )
                     .font(.system(size: 13, weight: .semibold))
                     Spacer()
-                    if showPowerSource {
-                        Text(viewModel.powerSourceText)
-                            .font(.system(size: 10.5, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
+                    // 充电器统一显示名：左边缘钉在「卡片内右界 − 135pt」（红线处），从那里左对齐。
+                    // 数值越小越靠右，越大越靠左。
+                    Text(viewModel.chargerDisplayName)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(width: 135, alignment: .leading)
                 }
 
                 CompactPowerFlowDiagram(
@@ -774,28 +773,6 @@ struct DashboardPopoverView: View {
                     adapterElectricalText: viewModel.adapterElectricalText,
                     batteryElectricalText: viewModel.batteryElectricalText
                 )
-
-                if showInternalPower || showExternalPower {
-                    HStack(spacing: 12) {
-                        if showInternalPower {
-                            Label(
-                                viewModel.internalInputText,
-                                systemImage: "battery.50percent"
-                            )
-                            .font(.system(size: 9.5, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        }
-                        if showExternalPower {
-                            Label(
-                                viewModel.externalInputText,
-                                systemImage: "powerplug.fill"
-                            )
-                            .font(.system(size: 9.5, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
             }
         }
     }
@@ -1000,14 +977,14 @@ struct DashboardPopoverView: View {
 
                 HStack(spacing: 7) {
                     ProtectionPill(
-                        title: "高温",
-                        isEnabled: heatProtectionEnabled,
-                        action: { heatProtectionEnabled.toggle() }
-                    )
-                    ProtectionPill(
                         title: "睡眠暂停",
                         isEnabled: sleepPauseEnabled,
                         action: { sleepPauseEnabled.toggle() }
+                    )
+                    ProtectionPill(
+                        title: "高温保护",
+                        isEnabled: heatProtectionEnabled,
+                        action: { heatProtectionEnabled.toggle() }
                     )
                     ProtectionPill(
                         title: "巡航",

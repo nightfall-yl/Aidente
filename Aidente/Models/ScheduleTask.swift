@@ -8,6 +8,7 @@ enum ScheduleActionKind: String, Codable, CaseIterable, Identifiable {
     case topUp
     case pauseCharging
     case dischargeTo
+    case resumeCharging
 
     var id: String { rawValue }
 
@@ -18,6 +19,7 @@ enum ScheduleActionKind: String, Codable, CaseIterable, Identifiable {
         case .topUp: AidenteL10n.t("临时充至 100%")
         case .pauseCharging: AidenteL10n.t("暂停充电")
         case .dischargeTo: AidenteL10n.t("放电至")
+        case .resumeCharging: AidenteL10n.t("恢复充电")
         }
     }
 

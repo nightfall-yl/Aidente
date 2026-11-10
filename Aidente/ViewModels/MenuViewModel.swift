@@ -29,6 +29,7 @@ class MenuViewModel {
     var batteryCapacityHistory: [BatteryCapacitySample] = []
     var batteryHistoryTrackingText: String = AidenteL10n.t("每日记录 · 今天开始")
     var adapterSpecificationText: String = "—"
+    var chargerDisplayName: String = AidenteL10n.t("未连接电源", "No Power Source")
 
     var displayPercentage: Int = 0
     var chargingMode: ChargingMode = .discharging
@@ -181,6 +182,7 @@ class MenuViewModel {
             useHardware
             ? metrics.hardwareBatteryPercentage : metrics.batteryPercentage
         displayPercentage = percentage
+        chargerDisplayName = ChargerInfoProvider.displayName(adapter: adapter)
         batteryPercentageText = "\(percentage)%"
 
         let derivedPowerSource = derivePowerSource(battery: metrics, adapter: adapter)

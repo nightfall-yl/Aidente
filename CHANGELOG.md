@@ -2,7 +2,50 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前版本为 **6.1.2 / Build 23**（`BuildSupport/Info.plist` 与 `Aidente.xcodeproj/project.pbxproj` 的版本号已升至 6.1.2 / 23）。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.2]-2026-11-09` 汇总本次发行的更新，已新建 `release-notes-6.1.2.md`。
+项目当前版本为 **6.1.3 / Build 24**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.3]-2026-11-10` 汇总 2026-11-10 当天全部改动（上午的设置页重构 + 下午的设置页审查整改与配色重排），`release-notes-6.1.3.md` 已同步更新。
+
+## [6.1.3]-2026-11-10
+
+
+### 变更
+
+- **设置页重构为 macOS 系统设置风格**：`SettingsView.swift` 由分段 Picker 改为左侧 236pt 侧栏 + 右侧详情（`HStack` + 贯穿 `Divider()`），选中项为 80% 系统蓝；新增 `permissions` tab 与 `PermissionsSettingsView.swift`（重新检查授权、修复控制服务），充电管理里的授权提示与修复按钮迁入该页；「访问仪表盘」移到仪表盘 tab 末尾、「快捷操作」移到充电管理 tab 末尾。各页新增 `detailSubtitle` 中英双语说明；`settings-redesign-prototype.html` 为对应原型。
+- **设置文案修订**：「登录时启动 Aidente」副标题改为「登录后自动启动，并在菜单栏显示图标」；「菜单栏实时读数」副标题改为「在电量、功率或两者同时显示之间切换。」；「高温保护」副标题改为「温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。」，三条英文词条同步进 `AidenteL10n.swift`。
+- **设置页标题栏底边补 1pt 分隔线**：窗口使用 `.fullSizeContentView` + 透明标题栏，系统不绘制标题栏分隔线，标题栏与内容之间缺一条贯穿整窗的横线，竖线看起来像凭空长出。`SettingsView.swift` 的主 `HStack` 增加 `.overlay(alignment: .top)`，用 `AidenteSurfaceTokens.stroke(scheme:)` 画 1pt 贯穿线（深浅色自动适配）；详情页标题下的 `Divider().padding(.horizontal, 20)` 保持只在右侧，竖线仍贯穿全高。
+- **详情区标题随内容一起滚动**：`SettingsView.swift` 的 `detailPane` 改为外层 `ScrollView { VStack { 页标题 + 副标题 + Divider + 分页内容 } }`；`AidenteTheme.swift` 的 `AidenteSettingsPage` 去掉自带的 `ScrollView`（避免嵌套滚动），只保留 `LazyVStack` + 740 宽居中容器。7 个设置分页由外层 ScrollView 统一承接；标题栏那条 1pt 线仍在 `HStack` 上保持固定。
+- **左右标题区统一规格**：`SettingsView.swift` 左侧栏标题区（徽章 + Aidente + 电池养护控制台）改为与右侧详情页标题区（徽章 + 页标题 + 副标题）一致：徽章 34 pt（去掉 `cornerRadius: 8`，与右侧同用默认圆角）、标题 20 pt bold、副标题 12 pt secondary、HStack spacing 11；上下 padding 同为 16 / 12，两侧内容等高、垂直中心落在同一水平线。侧栏 7 个导航项的尺寸、间距、顺序一律不动；水平 padding 仍为左 12 / 右 20。
+- **侧栏导航项整行可点击**：`SettingsView.swift` 的 `sidebarRow` 使用 `.buttonStyle(.plain)` 时，末尾 `Spacer()` 与未选中项的 `Color.clear` 背景不参与命中测试，只有图标和文字可点。在 `.background(...)` 之后加 `.contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))`，把整行（含 padding 与右侧空白）纳入命中区域，形状与选中高亮一致；行间 4 pt 间隙保持不动。
+- **第一个导航项与第一张卡片上边距对齐**：`SettingsView.swift` 侧栏 `ScrollView` 内的 `VStack` 增加 `.padding(.top, 21)`（右侧标题区之后还有 1pt `Divider()` 与 `AidenteSettingsPage` 顶部 20pt padding）。左右标题区高度本就相同，因此「通用」行与第一张卡片顶边落在同一水平线；7 个导航项整体下移 21pt，彼此间距与顺序不变。
+- **「修复控制服务」改用橙红色**：`PermissionsSettingsView.swift` 里「修复控制服务」卡片的图标徽章、`AidenteNotice`、按钮样式三处颜色由 `AidenteTheme.chargingColors`（绿 `jade/mint`）改为 `AidenteTheme.aboutColors`（`[coral, amber]` ≈ `#FA574D → #FF972E`），取自仪表盘 hero「充电控制未生效」的错误态橙红；静态数组不随深浅色切换，未新增主题常量。「重新检查授权」卡片仍为蓝色 `generalColors`。
+- **窗口标题栏遮罩（滚动截断）**：`SettingsView.swift` 在 `ZStack` 最上层加一层独立标题栏遮罩（`AidenteChromeBar()` 不透明 chrome 材质，高 28 pt = 系统隐藏标题的标题栏高度），向上偏移 28 pt 覆盖到窗口顶部；1pt 贯穿线移到遮罩底边。滚动时卡片被遮罩截断/遮住，不再压在标题栏前面，与原型 `.titlebar`（chrome 底 + `border-bottom`）一致；遮罩 `allowsHitTesting(false)` 不挡交互。
+- **「重新检查授权」改为真实的状态检查**：原按钮调用 `ChargingHelperManager.refreshStatus()`（只判断 `LocalControlInstaller.installedMatchesCurrentApp()`，与「登录项与扩展」批准无关），服务未安装时点击无任何反馈。`PermissionsSettingsView.swift` 将该卡改为「检查后台服务状态」：点击后刷新并在卡内显示结果（已安装且身份匹配 → 绿色勾选；未安装 / 不匹配 → 橙红警示并引导使用「修复控制服务」），未点击时显示中性说明；按钮改为「检查状态」。新增文案全部走 `AidenteL10n.t(_:_:)` 中英双语。移除已无用的 `checkApprovalStatus()` 与 `toggleManageCharging(_:)`；`repairControlService()` 及底层服务逻辑不变。
+- **左侧标题区主徽章换成电池 + 闪电**：`SettingsView.swift:174-185` 侧栏标题区的徽章由 `bolt.heart.fill` + `[jade, mint]` 改为「关于」页同款 `battery.100percent.bolt` + `[jade, mint, gold]`（参照 `AboutSettingsView.swift`），尺寸仍为 34 pt、其余布局不动。`AidenteIconBadge` 只取 `colors.first` 作底色/描边、`colors.last` 作图标色，因此中间 `mint` 不参与绘制，效果是绿色半透明圆角底 + 绿色细描边 + 橙黄色电池闪电；未新增图像资源，`BuildSupport/Aidente.icns` 是完整应用图标（深蓝底），与设置页小徽章不是同一图形。
+- **移除「实时功率」设置卡与弹窗对应三处读数**：`DashboardSettingsView.swift` 删除「实时功率」整张卡（电源来源 / 电池功率数据 / 适配器功率数据三个开关）及对应的三条 `@Default` 属性，仪表盘 tab 现只剩「状态信息」+「访问仪表盘」两张卡。`DashboardPopoverView.swift` 的 `powerSummary`（彩色能量流）同步删掉标题右侧的电源来源文字、底部两行电气读数 Label（分别由 `showPowerSource` / `showInternalPower` / `showExternalPower` 控制）及三条 `@Default` 属性，卡片只保留标题 + `CompactPowerFlowDiagram` 分流图；分流图节点内的电压/电流小字属于图本身、不受这三个开关控制，保留不动。`DefaultsKeys.swift` 的三个 key 与 `AidenteL10n.swift` 的对应词条**保留**：零引用的旧 `MenuBuilder.swift` 仍在编译范围内并引用它们，删掉会破坏构建；已保存的用户偏好从此不再被真实 UI 读取，但不会报错。
+- **hero 状态「正在充电」改名「充电中」**：`ChargeManager.swift:44` 的 `ChargeOperationStatus.charging.title` 由单参数 `AidenteL10n.t("正在充电")` 改为内联双语 `AidenteL10n.t("充电中", "Charging")`，英文模式仍是 `Charging`、显示无变化。没有直接改 `AidenteL10n.swift:225` 的字典词条——header 标题（`MenuViewModel.swift:211`）与状态栏图标无障碍描述（`BatteryIndicatorView.swift:101`）共用它，header 保持「正在充电」，与 hero 形成区分。`operationStatusTitle` 的其它复用点（快捷养护卡右上角 `DashboardPopoverView.swift:913`、设置页充电管理 `ChargingSettingsView.swift:398`、诊断包 `DiagnosticCenter.swift:366`）中文同步变为「充电中」。
+- **左侧标题区主徽章改为 App 图标**：`SettingsView.swift` 侧栏标题区原先的 `AidenteIconBadge`（先是 `bolt.heart.fill`、后改 `battery.100percent.bolt` + `[jade, mint, gold]`）替换为运行中 Aidente 的 App 图标 `Image(nsImage: NSApp.applicationIconImage)`，尺寸仍为 34 pt、其余布局（spacing 11、padding 16/12、20pt bold 标题、12pt 副标题）不动。不再使用 SF Symbol 近似，直接呈现完整应用图标（深蓝圆角底 + 绿色电池 + 橙黄闪电）。
+- **`ChargerInfoProvider` 充电器统一显示名（并入 `IOKitService` 数据流）**：新建 `Aidente/Services/ChargerInfoProvider.swift`，仅保留 `displayName(adapter: AdapterMetrics)` 一个纯函数，把 `AdapterMetrics` 里的制造商 / 是否 Apple / 功率 / PD 协议信息翻译成本地化显示名（五态统一使用「电源适配器」一词，英文 "Power Adapter"）。原先独立的 `ACChargerInfo` 结构与 `read()` IOKit 读取逻辑已删除——`AdapterMetrics`（`Models/BatteryMetrics.swift`）新增 `manufacturer` / `isApple` 两个字段，由 `IOKitService.getAdapterSpecification()` 从同一份 `AppleSmartBattery.AdapterDetails` 读取、随插拔事件（`kIOGeneralInterest`）刷新，彻底消除与 `IOKitService` 的重复读取。
+- **充电器显示名接入仪表盘「彩色能量流」标题右侧**：`DashboardPopoverView.swift` 的 `powerSummary` 标题 `HStack` 在 `Spacer()` 之后、`Label("彩色能量流")` 右侧新增 `Text(viewModel.chargerDisplayName)`（10.5pt medium、`.secondary` 灰字、居右）。`MenuViewModel` 新增 `chargerDisplayName` 属性，在 `updateFormattedValues` 里由 `ChargerInfoProvider.displayName(adapter:)` 计算；随 IOKit 流与语言切换自动更新，视图不再自行读取 IOKit。
+- **设置页左右头部中心线对齐**：`SettingsView.swift` 左右侧栏标题区与详情头部新增共享常量 `headerContentHeight = 46`（`.frame(height:)` 固定内容高度），侧栏 App 图标（34pt 布局帧）与详情页 34pt 徽章几何中心同落在 y = 16 + 23 = 39pt 的水平线上；此前详情页标题+副标题文字列（约 41pt）高于徽章使头部自然变高、徽章下沉错位。侧栏导航行 `.padding(.top, 21)` 的首行对齐逻辑不动。
+- **「计划与自动化」整改**：① `ScheduleActionKind` 新增 `.resumeCharging`「恢复充电」动作（`ChargeManager.executeScheduledTask` 走 `resumeNormalManagement()`），补齐与快捷指令 `aidente://resume` 的能力对齐；② 新建任务弹窗滑杆按动作区分——充电上限 20–100、放电目标 20–80，切换动作时 `onChange` 自动 clamp；③ DatePicker 加 `in: Date()...` 只能选未来时间；④ 快捷指令卡改为 6 条「等宽 URL + 灰色说明」逐行展示；⑤ 任务行日期格式化 locale 跟随语言（en_US / zh_CN，原硬编码 zh_CN）；⑥ 任务行开关 Toggle 移至行尾（macOS 惯例）；⑦ 副标题补「或恢复充电」，词条同步。
+- **「通用」页整改**：① 「使用硬件电量百分比」开关 + Notice 从「菜单栏实时读数」卡迁出，在「充电管理」页新增独立「电量读取方式」卡（始终可见）；② 「充电状态变化时通知」副标题动态化——总开关禁用时显示「已被“关闭全部通知”停用」（新增词条 "Disabled by Turn Off All Notifications"）。
+- **「仪表盘」页整改**：① tab 副标题改为「配置仪表盘顶部的时间信息与打开方式」（原副标题名不副实：面板显示项开关在仪表盘内部、本页无功率监测设置）；② 「访问仪表盘」卡提示补「面板显示项可在仪表盘内配置」。
+- **「权限管理」页整改**：① 修复按钮加 `helperManager.isBusy` 防护（忙时禁用 + 文字/图标切「正在修复…」），杜绝连点重复触发管理员弹窗；② 修复 Task 结束后自动 `refreshStatus()` 并置 `hasCheckedStatus = true`，状态卡即时转绿、无需手动复查。`aboutColors` 橙红强调色为用户刻意设计，保留。
+- **「诊断」页整改**：① `statusMessage` / `errorMessage` 两个 Notice 从「导出诊断包」卡内移至页面级——复制编号、复制 CLI 路径、停止记录、导出完成的反馈不再跨卡错位；② 错误 Notice 改 `[coral, amber]` 警示色。
+- **「关于」页整改**：① 「Aidente」Hero 卡整体删除（用户判定无实质作用），页内剩 软件更新 + 法律与开源 两卡；② `legalBlock` 三个标题补 `AidenteL10n.t()`，修英文漏翻；③ 法律卡新增「查看第三方声明」按钮（打开内置 `THIRD_PARTY_NOTICES.md`），抽公共 `openBundledDocument(named:extension:)`。
+- **「充电管理」页整改**：① 充电上限滑杆 `50...100` → `20...100`，与计划任务创建界面及调度器内部 clamp 域对齐，低于 50% 的调度任务不再被滑杆静默改写；② 「睡眠与退出行为」卡三个开关补 `.disabled(!hasChargingControl)` + 置灰。
+- **设置页配色重排（三原则）**：① 侧栏 7 tab + 每页首卡 = tab 身份色——`AidenteTheme` 新增 `permissionColors = [ocean, violet]`（权限管理不再与通用撞蓝），诊断 tab/首卡 → `advancedColors`（不再与仪表盘撞紫粉）；② 第二张卡起卡色跟功能语义；③ **相邻卡不得同色**：外观卡→紫粉、访问仪表盘卡→蓝、快捷指令卡→紫粉、电量读取方式卡→蓝、自动放电卡→绿、快捷操作卡→绿；卡内 Notice/按钮/行徽章颜色同步对齐。改后各页节奏：通用 蓝→紫→蓝→绿→橙，仪表盘 紫→蓝，充电 绿→蓝→绿→靛→紫→蓝→珊瑚→橙→绿，权限 蓝紫→珊瑚，自动化 橙→紫，诊断 靛→蓝→靛→紫粉，关于 珊瑚→橙→珊瑚。
+- **「软件更新」卡去重**：idle 态不渲染状态面板——原「等待检查更新 / 更新来源：GitHub 正式发行版」与卡副标题、「自动检查更新」toggle 三重重复；点「检查更新」后面板才出现。
+- **修英文漏翻**：「自动检查更新」副标题词典 key 缺句尾句号导致 `AidenteL10n.t()` 匹配失败、英文界面回退显示中文；补带句号词条。批量核对设置页全部句号结尾直译字面量，仅此一处失配。
+- **语言选项**：中文界面下语言 Picker 的「English」显示为「英语」（`AppLanguage.english.title` 改 `AidenteL10n.t("英语", "English")`）。
+- **代码整理（不影响功能）**：① `ChargingSettingsView` 抽私有 `InlineSliderRow`，四处「Slider + 数值读数」行合一（Double 域，视觉不变）；② `AidenteTheme` 新增 `aidenteInstallErrorAlert` ViewModifier，充电/权限两页错误 alert 去重；③ 三处 `@State` 持有的共享单例（`ChargingHelperManager.shared` ×2、`ScheduleStore.shared`）改 `private let`；④ `ShortcutCommand` 列表静态化（URL + 词条 key 常量，翻译保留渲染时解析，切语言不受影响）；⑤ `ScheduleActionKind.icon/colors` 移至 `AidenteTheme.swift`，删除设置页五处未使用的 `@Default(.appLanguage)` 死声明（`SettingsView` / `GeneralSettingsView` 的为语言切换刷新机制，保留）。
+- **`test_charging.sh` SDK 选择与 `build_app.sh` 对齐**：脚本优先硬编码 `MacOSX15.5.sdk`，而 `build_app.sh` 已改为 `xcrun` 动态取最新 SDK（macosx26.2），产物模块与测试加载不匹配、回归无法编译。改为同样 `xcrun` 优先、15.5 兜底。
+
+### 验证
+
+- **版本号升级到 6.1.3 / Build 24**：`BuildSupport/Info.plist` 与 `BuildSupport/ReaderInfo.plist` 的 `CFBundleShortVersionString` / `CFBundleVersion`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` 与六处 `CURRENT_PROJECT_VERSION`、`AGENTS.md` 的当前版本声明已同步。`[未发布]` 归档为 `[6.1.3]-2026-11-10`，新建 `BuildSupport/release-notes-6.1.3.md`；历史发行说明、`settings-redesign-prototype.html` 与 `UpdateService.swift` 里针对旧版本的比较测试数据保留原值。
+- `zsh BuildSupport/build_app.sh` Exit 0（ad-hoc 签名，`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），日志 `/tmp/aidente-build-6.1.3.log`，产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.3 / 24**；唯一警告仍为第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。**本次构建与当前源码一致**：覆盖设置页重构与文案修订、标题栏 1pt 贯穿线、标题区随内容滚动、左右标题区统一、导航项整行命中、第一个导航项与第一张卡片上边距对齐、「修复控制服务」橙红 `aboutColors`、窗口标题栏遮罩、「重新检查授权」改为后台服务状态检查、左侧标题区主徽章替换、移除「实时功率」设置卡与弹窗三处读数、hero 状态「正在充电」改名「充电中」；标题栏加高 28→38 pt 与分段控件紧凑靠右两处已回退、不在产物内。视觉效果待实机验收。
+- **充电回归**：`zsh BuildSupport/test_charging.sh` Exit 0：**PASS: 138 charging, sleep, firmware, rollback and readback checks**（含 `test_charging.sh` SDK 对齐修复后恢复可跑；重构后复跑仍全过）。
+- **发行打包（含同日全部改动重出）**：`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.3.dmg`（3.7M，卷名 `Aidente 6.1.3`），`hdiutil verify` 结果为 VALID。脚本从 bundle 的 `Info.plist` 读版本，输出 `Aidente 6.1.3 (build 24)`；DMG 沿用 ad-hoc 完整性签名，仅适合本机 / 受信分发。
 
 ## [6.1.2]-2026-11-09
 
@@ -57,7 +100,6 @@
 - **「外观」卡片新增 自动 / 浅色 / 深色 分段控件**（全局生效）：新增 `AppAppearance` 枚举（auto / light / dark，默认 auto）与 `appAppearance` Defaults key，本地化补「外观模式 / 自动 / 浅色 / 深色」；SwiftUI 侧 `DashboardPopoverView` / `SettingsView` 根视图 `.preferredColorScheme`，AppKit 侧 `AidenteBackdropMaterial` 玻璃按 `appAppearance` 设 `NSAppearance`（`AidenteTheme.swift` 新增 `AppAppearance.nsAppearance` 扩展），独立主菜单窗口 / 预览面板 / 设置窗口同步设置 `window.appearance`。
 - **仪表盘类液态玻璃材质（macOS 15 及更早）**：参考 `github.com/kubai087/glasswork` 的分层思路，只移植能用 SwiftUI 自绘的静态部分，不含真实折射与色散。`AidenteTheme.swift` 新增 `AidenteGlassTokens`（边缘光主旋钮 `0.20`、`rimWidth 40`，其余层按原型系数联动）与 `AidenteGlassOverlay`（边缘增厚 `RadialGradient`、内缩柔光、顶部高光、左上/右下 1pt 角向渐变描边）；`AidenteLevelSurface` 在 tint 之后叠该层，并以 `!AidenteReadability.supportsSystemMaterial` 保证 macOS 26+ 只走系统 `glassEffect`、不双份叠加；`.clipShape(shape)` 保留。blur / saturation / brightness 仍由系统材质决定、App 不可调；dispersion / 真折射未实现（需实时 backdrop 纹理与屏幕录制权限）。
 - **恢复仪表盘容器背景采样**：`StatusBarManager.swift` 三处 `makeDashboardRootView(canSampleBackdrop:)` 由 `false` 改回 `true`（主菜单无边框面板 / 独立主菜单窗口 / 预览面板），使 `usesBackdropMaterial` 生效、L0 走 `NSVisualEffectView(.popover, .behindWindow)`。设置窗口仍由 `SettingsView.swift` 强制 `false`，视觉无变化；`AidenteSettingsBackground` 与诊断读数不动。
-
 
 ### 变更
 

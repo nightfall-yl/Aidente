@@ -2,7 +2,6 @@ import Defaults
 import SwiftUI
 
 struct DiagnosticsSettingsView: View {
-    @Default(.appLanguage) private var appLanguage
     @Bindable var diagnosticCenter: DiagnosticCenter
 
     var body: some View {
@@ -11,7 +10,7 @@ struct DiagnosticsSettingsView: View {
                 "问题记录",
                 subtitle: "复现异常时记录关键电池与充电控制状态，最长持续两小时。",
                 icon: "waveform.badge.magnifyingglass",
-                colors: AidenteTheme.dashboardColors
+                colors: AidenteTheme.advancedColors
             ) {
                 AidenteInsetPanel {
                     HStack(spacing: 12) {
@@ -167,22 +166,6 @@ struct DiagnosticsSettingsView: View {
 
                     Spacer()
                 }
-
-                if let statusMessage = diagnosticCenter.statusMessage {
-                    AidenteNotice(
-                        text: statusMessage,
-                        icon: "checkmark.circle.fill",
-                        colors: AidenteTheme.generalColors
-                    )
-                }
-
-                if let errorMessage = diagnosticCenter.errorMessage {
-                    AidenteNotice(
-                        text: errorMessage,
-                        icon: "xmark.octagon.fill",
-                        colors: AidenteTheme.chargingColors
-                    )
-                }
             }
 
             AidenteCard(
@@ -235,6 +218,25 @@ struct DiagnosticsSettingsView: View {
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                 }
+            }
+
+            // Page-level feedback: statusMessage is shared by recording,
+            // copy actions, and exports, so the notice lives below all cards
+            // instead of inside the export card.
+            if let statusMessage = diagnosticCenter.statusMessage {
+                AidenteNotice(
+                    text: statusMessage,
+                    icon: "checkmark.circle.fill",
+                    colors: AidenteTheme.generalColors
+                )
+            }
+
+            if let errorMessage = diagnosticCenter.errorMessage {
+                AidenteNotice(
+                    text: errorMessage,
+                    icon: "xmark.octagon.fill",
+                    colors: [AidenteTheme.coral, AidenteTheme.amber]
+                )
             }
         }
     }

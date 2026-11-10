@@ -10,7 +10,6 @@ struct GeneralSettingsView: View {
     @Default(.disableNotifications) var disableNotifications
     @Default(.showChargingStatusChangedNotification) var showChargingStatusChangedNotification
     @Default(.forceOpaqueBackground) var forceOpaqueBackground
-    @Default(.useHardwarePercentage) var useHardwarePercentage
     @Default(.appAppearance) var appAppearance
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -80,7 +79,7 @@ struct GeneralSettingsView: View {
             ) {
                 AidenteSettingToggle(
                     "登录时启动 Aidente",
-                    subtitle: "登录当前账户后自动显示菜单栏图标",
+                    subtitle: "登录后自动启动，并在菜单栏显示图标",
                     icon: "arrow.up.forward.app.fill",
                     colors: AidenteTheme.generalColors,
                     isOn: $launchAtLogin
@@ -89,7 +88,7 @@ struct GeneralSettingsView: View {
 
             AidenteCard(
                 "菜单栏实时读数",
-                subtitle: "在电量、当前系统功率或两者同时显示之间切换。",
+                subtitle: "在电量、功率或两者同时显示之间切换。",
                 icon: "gauge.with.dots.needle.67percent",
                 colors: AidenteTheme.chargingColors
             ) {
@@ -127,24 +126,8 @@ struct GeneralSettingsView: View {
                     "使用颜色显示电池状态",
                     subtitle: "充电、接通电源、低电量使用不同颜色",
                     icon: "paintpalette.fill",
-                    colors: AidenteTheme.dashboardColors,
-                    isOn: $showBatteryStateInStatusIcon
-                )
-
-                AidenteRowDivider()
-
-                AidenteSettingToggle(
-                    "使用硬件电量百分比",
-                    subtitle: "直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值",
-                    icon: "cpu.fill",
                     colors: AidenteTheme.chargingColors,
-                    isOn: $useHardwarePercentage
-                )
-
-                AidenteNotice(
-                    text: "硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。",
-                    icon: "info.circle.fill",
-                    colors: AidenteTheme.chargingColors
+                    isOn: $showBatteryStateInStatusIcon
                 )
             }
 
@@ -165,7 +148,14 @@ struct GeneralSettingsView: View {
 
                 AidenteSettingToggle(
                     "充电状态变化时通知",
-                    subtitle: "暂停或恢复充电时发送系统通知",
+                    // Explain why the row is grayed out while the master
+                    // switch suppresses notifications.
+                    subtitle: disableNotifications
+                        ? AidenteL10n.t(
+                            "已被“关闭全部通知”停用",
+                            "Disabled by Turn Off All Notifications"
+                        )
+                        : AidenteL10n.t("暂停或恢复充电时发送系统通知"),
                     icon: "bolt.badge.clock.fill",
                     colors: AidenteTheme.automationColors,
                     isOn: $showChargingStatusChangedNotification

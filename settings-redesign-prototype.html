@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aidente 设置 · macOS 风格重排原型</title>
+<style>
+  :root {
+    --window: #f4f5f6;
+    --chrome: #f8f8f8;
+    --card: #fcfcfc;
+    --stroke: rgba(0, 0, 0, 0.09);
+    --stroke-strong: rgba(0, 0, 0, 0.14);
+    --text: #1d1d1f;
+    --text-2: #6e6e73;
+    --text-3: #8e8e93;
+    --hover: rgba(0, 0, 0, 0.05);
+    --sel-bg: rgba(0, 122, 255, 0.80);
+    --sel-text: #ffffff;
+    --field: #ffffff;
+    --jade: #2ed680;
+    --accent: #2ed680;
+    --search-bg: rgba(0, 0, 0, 0.06);
+    --shadow: none;
+    color-scheme: light;
+  }
+  .dark {
+    --window: #232326;
+    --chrome: #28282b;
+    --card: #2d2d31;
+    --stroke: rgba(255, 255, 255, 0.10);
+    --stroke-strong: rgba(255, 255, 255, 0.18);
+    --text: #f2f2f7;
+    --text-2: #98989f;
+    --text-3: #76767b;
+    --hover: rgba(255, 255, 255, 0.06);
+    --sel-bg: rgba(10, 132, 255, 0.80);
+    --sel-text: #ffffff;
+    --field: #3a3a3e;
+    --jade: #2ed680;
+    --accent: #2ed680;
+    --search-bg: rgba(255, 255, 255, 0.08);
+  }
+
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body {
+    margin: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+      "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    background: #d9dadc;
+  }
+
+  /* macOS window shell */
+  .window {
+    width: 980px; height: 660px; margin: 28px auto;
+    background: var(--window);
+    border-radius: 12px;
+    border: 1px solid var(--stroke-strong);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .titlebar {
+    height: 38px; flex: 0 0 38px;
+    display: flex; align-items: center;
+    padding: 0 14px; gap: 8px;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--stroke);
+    position: relative;
+  }
+  .traffic { width: 12px; height: 12px; border-radius: 50%; }
+  .t-r { background: #ff5f57; } .t-y { background: #febc2e; } .t-g { background: #28c840; }
+  .titlebar .tt {
+    position: absolute; left: 0; right: 0; text-align: center;
+    font-size: 13px; font-weight: 600; color: var(--text-2);
+    pointer-events: none;
+  }
+  .theme-toggle {
+    margin-left: auto; position: relative; z-index: 2;
+    font-size: 11px; padding: 3px 9px; border-radius: 6px;
+    border: 1px solid var(--stroke); background: var(--field); color: var(--text-2);
+    cursor: pointer;
+  }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+  .vdiv { width: 1px; background: var(--stroke); align-self: stretch; }
+  .hdiv { height: 1px; background: var(--stroke); margin: 14px 0 18px; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 236px; flex: 0 0 236px;
+    background: var(--chrome);
+    display: flex; flex-direction: column;
+    padding: 10px 10px 0;
+    overflow: hidden;
+  }
+  .side-head {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px 12px;
+  }
+  .app-badge {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--jade), #66ebad);
+    display: grid; place-items: center; flex: 0 0 34px;
+  }
+  .app-badge svg { width: 18px; height: 18px; color: #0c3d27; }
+  .side-head .name { font-size: 14px; font-weight: 700; }
+  .side-head .ver { font-size: 11px; color: var(--text-3); }
+
+  .nav { flex: 1; overflow-y: auto; padding-bottom: 10px; }
+  .nav::-webkit-scrollbar { width: 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; margin: 5px 0; border-radius: 7px;
+    cursor: pointer; color: var(--text); font-size: 13px;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--hover); }
+  .nav-item.active { background: var(--sel-bg); color: var(--sel-text); font-weight: 600; }
+  .nav-icon {
+    width: 22px; height: 22px; border-radius: 6px; flex: 0 0 22px;
+    display: grid; place-items: center;
+  }
+  .nav-icon svg { width: 14px; height: 14px; color: #fff; }
+
+  /* Detail */
+  .detail {
+    flex: 1; min-width: 0; overflow-y: auto;
+    padding: 26px 30px 40px;
+  }
+  .detail::-webkit-scrollbar { width: 10px; }
+  .detail::-webkit-scrollbar-thumb { background: var(--stroke-strong); border-radius: 6px; border: 3px solid var(--window); }
+  .page-title {
+    font-size: 22px; font-weight: 700; margin: 0 0 2px;
+  }
+  .page-sub { font-size: 12.5px; color: var(--text-2); margin-bottom: 20px; }
+
+  .cards { max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    padding: 16px 16px 6px;
+  }
+  .card-head { display: flex; align-items: center; gap: 11px; padding-bottom: 14px; }
+  .card-icon {
+    width: 32px; height: 32px; border-radius: 8px; flex: 0 0 32px;
+    display: grid; place-items: center;
+  }
+  .card-icon svg { width: 18px; height: 18px; color: #fff; }
+  .card-title { font-size: 14px; font-weight: 600; }
+  .card-sub { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
+  .card-divider { height: 1px; background: var(--stroke); margin: 0 -16px 6px; }
+
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; min-height: 30px;
+  }
+  .row .r-label { font-size: 13px; flex: 0 0 auto; }
+  .row .r-sub { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+  .row .r-main { flex: 1; min-width: 0; }
+  .row .r-control { flex: 0 0 auto; display: flex; align-items: center; }
+  .row-stack .r-main { flex: 1; }
+  .row-text { font-size: 12px; color: var(--text-2); line-height: 1.5; padding: 8px 0 11px; }
+
+  .divider { height: 1px; background: var(--stroke); margin: 0 -16px; }
+
+  /* Toggle */
+  .toggle {
+    width: 38px; height: 22px; border-radius: 12px;
+    background: #c7c7cc; position: relative; cursor: pointer; transition: background .15s;
+    flex: 0 0 38px;
+  }
+  .dark .toggle { background: #4a4a4e; }
+  .toggle.on { background: #3d8ffa; }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Segmented */
+  .segmented {
+    display: inline-flex; background: var(--search-bg); border-radius: 7px; padding: 2px;
+    gap: 2px;
+  }
+  .seg {
+    font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer;
+    color: var(--text-2); white-space: nowrap;
+  }
+  .seg.on { background: var(--field); color: var(--text); font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  /* Slider */
+  .slider-wrap { display: flex; align-items: center; gap: 10px; }
+  .slider { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px;
+    background: var(--stroke-strong); width: 180px; outline: none; }
+  .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; border: 1px solid var(--stroke-strong);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); cursor: pointer; }
+  .slider-val { font-size: 13px; font-weight: 600; color: var(--accent); width: 46px; text-align: right; }
+
+  /* Button */
+  .btn {
+    font-size: 12.5px; padding: 5px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid transparent; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn svg { width: 13px; height: 13px; }
+  .btn-primary { background: var(--accent); color: #0c3d27; }
+  .btn-ghost { background: var(--field); border-color: var(--stroke); color: var(--text); }
+
+  /* Notice */
+  .notice {
+    display: flex; gap: 9px; padding: 10px 12px; border-radius: 9px;
+    font-size: 11.5px; line-height: 1.45; margin: 6px 0 10px;
+    background: var(--search-bg); color: var(--text-2);
+  }
+  .notice svg { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 1px; }
+
+  /* Inset panel */
+  .inset {
+    background: var(--search-bg); border-radius: 9px; padding: 12px 13px;
+    margin: 6px 0 10px; font-size: 12px; color: var(--text-2); line-height: 1.6;
+  }
+  .inset.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+
+  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--jade); flex: 0 0 8px; }
+  .status-line { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
+  .pill { font-size: 10.5px; font-weight: 700; color: var(--accent); background: rgba(46,214,128,.14);
+    padding: 3px 8px; border-radius: 20px; }
+
+  .hint { font-size: 10.5px; color: var(--text-3); }
+</style>
+</head>
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <div class="traffic t-r"></div>
+      <div class="traffic t-y"></div>
+      <div class="traffic t-g"></div>
+      <div class="tt">Aidente 设置</div>
+      <button class="theme-toggle" id="themeBtn">深色 / 浅色</button>
+    </div>
+    <div class="body">
+      <aside class="sidebar">
+        <div class="side-head">
+          <div class="app-badge" id="appBadge"></div>
+          <div>
+            <div class="name">Aidente</div>
+          </div>
+        </div>
+        <nav class="nav" id="nav"></nav>
+      </aside>
+      <div class="vdiv"></div>
+      <main class="detail" id="detail"></main>
+    </div>
+  </div>
+
+<script>
+/* ---------- icon paths (lucide-style) ---------- */
+const ICON = {
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  gauge: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  battery: '<path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-3"/><path d="M9 7H8a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1"/><path d="m11 7-3 5h4l-3 5"/><line x1="22" x2="22" y1="11" y2="13"/>',
+  calendar: '<path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.25V14"/><path d="M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>',
+  waveform: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  lang: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+  brush: '<path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>',
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  signal: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  terminal: '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+};
+const svg = (k, cls) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
+
+/* ---------- palette (mirrors AidenteTheme) ---------- */
+const C = {
+  general:    ['#3d8ffa', '#5cbdff'],
+  dashboard:  ['#8c6bfa', '#e661db'],
+  charging:   ['#2ed680', '#66ebad'],
+  automation: ['#ff972e', '#ffc245'],
+  diagnostics:['#8c6bfa', '#e661db'],
+  about:      ['#fa574d', '#ff972e'],
+};
+const grad = (k) => `linear-gradient(135deg, ${C[k][0]}, ${C[k][1]})`;
+
+/* ---------- icon badge helper ---------- */
+function badge(k, colors, size) {
+  return `<span class="nav-icon" style="background:${grad(colors)}">${svg(k)}</span>`;
+}
+
+/* ---------- data: tabs + cards ---------- */
+const TABS = [
+  { id:'general',   title:'通用',         icon:'gear',      colors:'general' },
+  { id:'dashboard', title:'仪表盘',       icon:'gauge',     colors:'dashboard' },
+  { id:'charging',  title:'充电管理',     icon:'battery',   colors:'charging' },
+  { id:'permissions',title:'权限管理',    icon:'shield',    colors:'general' },
+  { id:'automation',title:'计划与自动化', icon:'calendar',  colors:'automation' },
+  { id:'diagnostics',title:'诊断',        icon:'waveform',  colors:'diagnostics' },
+  { id:'about',     title:'关于',         icon:'heart',     colors:'about', sep:true },
+];
+
+const PAGES = {
+  general: {
+    sub: '语言、外观、启动与通知等全局基础偏好。',
+    cards: [
+      { title:'语言', sub:'切换菜单栏和设置界面的显示语言。', icon:'lang', colors:'general', rows:[
+        rSeg(['跟随系统','中文','English'], 0),
+      ]},
+      { title:'外观', sub:'选择浅色、深色或由系统自动切换。', icon:'brush', colors:'dashboard', rows:[
+        rSeg(['自动','浅色','深色'], 0),
+        rDiv(),
+        rToggle('始终使用不透明背景', '系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。', false, 'dashboard'),
+      ]},
+      { title:'启动', sub:'让电池保护在登录后自动开始工作。', icon:'power', colors:'general', rows:[
+        rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general'),
+      ]},
+      { title:'菜单栏实时读数', sub:'在电量、功率或两者同时显示之间切换。', icon:'signal', colors:'charging', rows:[
+        rSeg(['电量','功率','电量 + 功率'], 0),
+        rDiv(),
+        rToggle('使用颜色显示电池状态', '充电、接通电源、低电量使用不同颜色。', true, 'dashboard'),
+        rDiv(),
+        rToggle('使用硬件电量百分比', '直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值。', false, 'charging'),
+        rNotice('硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。', 'info', 'charging'),
+      ]},
+      { title:'通知', sub:'控制 Aidente 何时向你报告充电状态。', icon:'bell', colors:'automation', rows:[
+        rToggle('关闭全部通知', '', false, 'about'),
+        rDiv(),
+        rToggle('充电状态变化时通知', '暂停或恢复充电时发送系统通知。', true, 'automation'),
+      ]},
+    ]
+  },
+  dashboard: {
+    sub: '选择仪表盘显示的状态信息，并设置如何打开完整仪表盘。',
+    cards: [
+      { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'dashboard', rows:[
+        rToggle('系统运行时间', '', true, 'dashboard'),
+        rDiv(),
+        rToggle('电池剩余时间', '', true, 'automation'),
+      ]},
+      { title:'访问仪表盘', sub:'菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。', icon:'signal', colors:'dashboard', rows:[
+        rNotice('双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。', 'info', 'dashboard'),
+        rBtn('打开仪表盘', 'primary', 'dashboard'),
+      ]},
+    ]
+  },
+  charging: {
+    sub: '设定充电上限、巡航与高温保护，养护电池。',
+    cards: [
+      { title:'充电管理', sub:'限制最高充电量，减少电池长期处于满电状态的时间。', icon:'battery', colors:'charging', rows:[
+        rToggle('管理充电', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging'),
+        rControl('充电上限', '达到上限后由适配器供电，下降 2% 后补电。', rSlider(80, 50, 100, '%')),
+      ]},
+      { title:'自动放电', sub:'接入电源或降低上限时，若高出目标超过 1%，主动放电至目标。', icon:'plug', colors:'general', rows:[
+        rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'general'),
+      ]},
+      { title:'睡眠与退出行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'dashboard', rows:[
+        rToggle('达到上限前阻止睡眠', '', false, 'dashboard'),
+        rDiv(),
+        rToggle('睡眠时暂停充电', '', true, 'general'),
+        rDiv(),
+        rToggle('退出 Aidente 后保持暂停', '适合快速用户切换或临时退出应用。', false, 'about'),
+      ]},
+      { title:'电池校准', sub:'充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。', icon:'gauge', colors:'dashboard', rows:[
+        rControl('放电目标', '', rSlider(15, 5, 20, '%')),
+        rDiv(),
+        rControl('满电保持时间', '', rStepper('60 分钟')),
+      ]},
+      { title:'巡航模式', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'general', rows:[
+        rToggle('启用巡航模式', '', false, 'general'),
+      ]},
+      { title:'高温保护', sub:'温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。', icon:'bolt', colors:'about', rows:[
+        rToggle('启用高温保护', '', false, 'about'),
+      ]},
+      { title:'快捷操作', sub:'执行一次性操作，不会改动你保存的充电上限。', icon:'bolt', colors:'automation', rows:[
+        rInset('<div class="status-line"><span class="badge-dot"></span>正在以 80% 上限管理充电</div>'),
+        rBtnRow([['临时充至 100%','primary','automation'],['开始校准','dashboard'],['暂停充电','about']]),
+      ]},
+    ]
+  },
+  automation: {
+    sub: '按计划自动执行充电任务，或接入快捷指令。',
+    cards: [
+      { title:'计划任务', sub:'按设定时间自动调整上限、补电、校准、暂停或放电。错过的任务可在 Mac 唤醒后补做。', icon:'calendar', colors:'automation', rows:[
+        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
+          +grad('automation')+'">'+svg('bolt')+'</span><div><div style="font-weight:600;color:var(--text)">临时充至 100%</div>'
+          +'<div style="font-size:11px">11月10日 09:00 · 每周一</div></div><span class="seg on" style="margin-left:auto">开</span></div>'),
+        rBtn('添加计划任务', 'primary', 'automation'),
+      ]},
+      { title:'Apple 快捷指令', sub:'在「快捷指令」中使用「打开 URL」操作，即可控制 Aidente。', icon:'terminal', colors:'dashboard', rows:[
+        rInset('aidente://set-limit?value=80<br>aidente://top-up<br>aidente://calibrate<br>aidente://pause<br>aidente://discharge?value=70<br>aidente://resume', true),
+      ]},
+    ]
+  },
+  diagnostics: {
+    sub: '记录问题、导出诊断包，并查看隐私与命令行。',
+    cards: [
+      { title:'问题记录', sub:'复现异常时记录关键电池与充电控制状态，最长持续两小时。', icon:'waveform', colors:'dashboard', rows:[
+        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
+          +grad('charging')+'">'+svg('bolt')+'</span><div><div style="font-weight:600;color:var(--text)">诊断记录未启动</div>'
+          +'<div style="font-size:11px">平时不会增加高频采样或后台负担</div></div></div>'),
+        rBtnRow([['开始问题记录','primary','dashboard'],['复制编号','ghost','general']]),
+      ]},
+      { title:'导出诊断包', sub:'只在你确认后生成本地 ZIP，Aidente 不会自动上传。', icon:'download', colors:'general', rows:[
+        rToggle('包含最近的崩溃报告', '最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏。', true, 'dashboard'),
+        rDiv(),
+        rToggle('包含耗电 App 名称', '默认关闭；开启后仅记录导出时的 App 名称与活动估算。', false, 'charging'),
+        rInset('导出内容预览<br>• Aidente 统一日志（最近 1 小时或本次记录）<br>• 软件、macOS、机型与后台服务状态<br>• 电池、适配器及充电控制快照<br>• 用户名、路径、网络地址、序列号自动脱敏'),
+        rBtnRow([['导出诊断包','primary','general']]),
+      ]},
+      { title:'隐私保护', sub:'诊断信息始终由用户决定是否生成和发送。', icon:'shield', colors:'dashboard', rows:[
+        rNotice('Aidente 不会自动上传日志。诊断包默认不含耗电 App 名称，也不主动收集账户名、设备序列号或网络配置。发送前可以先解压检查。', 'shield', 'dashboard'),
+      ]},
+      { title:'可选 CLI', sub:'高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。', icon:'terminal', colors:'dashboard', rows:[
+        rInset('aidente status<br>aidente limit 80<br>aidente pause · aidente resume<br>aidente diagnostics', true),
+        rBtnRow([['复制 CLI 完整路径','ghost','dashboard']]),
+      ]},
+    ]
+  },
+  permissions: {
+    sub: '查看并重发控制服务的系统授权。',
+    cards: [
+      { title:'重新检查授权', sub:'当 Aidente 未在「系统设置 → 通用 → 登录项与扩展」中获批准时，重新检测授权状态。', icon:'shield', colors:'general', rows:[
+        rNotice('请前往「系统设置 → 通用 → 登录项与扩展」批准 Aidente，然后点击下方按钮重新检查。', 'shield', 'general'),
+        rBtn('重新检查授权', 'primary', 'general'),
+      ]},
+      { title:'修复控制服务', sub:'升级后主程序或后台控制程序改变、身份不匹配导致控制失效时，重新登记授权。', icon:'shield', colors:'about', rows:[
+        rNotice('后台控制服务身份不匹配或已损坏。点击修复将重新通过 macOS 管理员授权安装服务，无需开发者账号。', 'info', 'about'),
+        rBtn('修复控制服务', 'primary', 'about'),
+      ]},
+    ]
+  },
+  about: {
+    sub: '软件更新、版本信息与法律开源声明。',
+    cards: [
+      { title:'Aidente', sub:'为 Apple 芯片 MacBook 打造的独立电池养护工具', icon:'bolt', colors:'charging', rows:[] },
+      { title:'软件更新', sub:'从 Aidente 官方 GitHub 发行版安全获取更新。', icon:'download', colors:'automation', rows:[
+        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
+          +grad('automation')+'">'+svg('check')+'</span><div><div style="font-weight:600;color:var(--text)">已是最新版本</div>'
+          +'<div style="font-size:11px">v6.1.3</div></div></div>'),
+        rToggle('自动检查更新', '启动后检查，并每隔六小时检查一次正式发行版。', true, 'automation'),
+        rDiv(),
+        rBtnRow([['检查更新','primary','charging'],['查看 GitHub 发行版','ghost','dashboard']]),
+      ]},
+      { title:'法律与开源', sub:'开源许可、商标与安全声明。', icon:'shield', colors:'about', rows:[
+        rText('<b>安全说明</b><br>Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭「管理充电」，恢复系统默认充电状态。'),
+        rDiv(),
+        rText('<b>商标声明</b><br>Aidente 是独立项目，与 AppHouseKitchen 不存在隶属、授权或分发关系。AlDente 是其各自权利人的商标。'),
+        rDiv(),
+        rText('<b>开放源代码</b><br>Aidente 是基于开源 Stasis 项目修改的 GPL-3.0 软件，并使用 SMCKit 与 Defaults 开源组件。'),
+        rBtn('查看开源许可证', 'ghost', 'dashboard'),
+      ]},
+    ]
+  },
+};
+
+/* ---------- row renderers ---------- */
+function rToggle(label, sub, on, colors) {
+  return { t:'toggle', label, sub, on, colors };
+}
+function rSeg(opts, sel) { return { t:'seg', opts, sel }; }
+function rControl(label, sub, control) { return { t:'control', label, sub, control }; }
+function rSlider(val, min, max, suf) { return { t:'slider', val, min, max, suf }; }
+function rStepper(txt) { return { t:'stepper', txt }; }
+function rDiv() { return { t:'div' }; }
+function rNotice(text, icon, colors) { return { t:'notice', text, icon, colors }; }
+function rInset(html, mono) { return { t:'inset', html, mono }; }
+function rText(text) { return { t:'text', text }; }
+function rBtn(label, kind, colors) { return { t:'btn', label, kind, colors }; }
+function rBtnRow(list) { return { t:'btnrow', list }; }
+
+/* ---------- render ---------- */
+function renderRow(r) {
+  switch (r.t) {
+    case 'toggle':
+      return `<div class="row"><div class="r-main"><div class="r-label">${r.label}</div>${r.sub?`<div class="r-sub">${r.sub}</div>`:''}</div><div class="r-control"><div class="toggle ${r.on?'on':''}" data-toggle></div></div></div>`;
+    case 'seg':
+      return `<div class="row"><div class="r-main"><div class="r-label">${r.opts[0]}</div></div><div class="r-control"><div class="segmented">${r.opts.map((o,i)=>`<span class="seg ${i===r.sel?'on':''}" data-seg>${o}</span>`).join('')}</div></div></div>`;
+    case 'control':
+      return `<div class="row"><div class="r-main"><div class="r-label">${r.label}</div>${r.sub?`<div class="r-sub">${r.sub}</div>`:''}</div><div class="r-control">${renderControl(r.control)}</div></div>`;
+    case 'slider':
+      return `<div class="slider-wrap"><input class="slider" type="range" min="${r.min}" max="${r.max}" value="${r.val}"><span class="slider-val">${r.val}${r.suf}</span></div>`;
+    case 'stepper':
+      return `<span style="font-size:13px;color:var(--text)">${r.txt}</span>`;
+    case 'div':
+      return `<div class="divider"></div>`;
+    case 'notice':
+      return `<div class="notice">${svg(r.icon)}<div>${r.text}</div></div>`;
+    case 'inset':
+      return `<div class="inset ${r.mono?'mono':''}">${r.html}</div>`;
+    case 'text':
+      return `<div class="row-text">${r.text}</div>`;
+    case 'btn':
+      return `<div style="padding:6px 0 12px"><span class="btn btn-${r.kind}">${svg('bolt')}${r.label}</span></div>`;
+    case 'btnrow':
+      return `<div style="display:flex;gap:10px;padding:6px 0 12px">${r.list.map(([l,k,c])=>`<span class="btn btn-${k}">${svg('bolt')}${l}</span>`).join('')}</div>`;
+  }
+  return '';
+}
+function renderControl(c) {
+  if (c.t === 'slider') {
+    return `<div class="slider-wrap"><input class="slider" type="range" min="${c.min}" max="${c.max}" value="${c.val}"><span class="slider-val">${c.val}${c.suf}</span></div>`;
+  }
+  if (c.t === 'stepper') return `<span style="font-size:13px;color:var(--text)">${c.txt}</span>`;
+  return '';
+}
+
+function renderCard(card) {
+  return `<div class="card">
+    <div class="card-head">
+      <span class="card-icon" style="background:${grad(card.colors)}">${svg(card.icon)}</span>
+      <div><div class="card-title">${card.title}</div>${card.sub?`<div class="card-sub">${card.sub}</div>`:''}</div>
+    </div>
+    ${card.rows.length ? '<div class="card-divider"></div>' : ''}
+    ${card.rows.map(renderRow).join('')}
+  </div>`;
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map((t, i) => {
+    return `<div class="nav-item ${i===0?'active':''}" data-tab="${t.id}">${badge(t.icon, t.colors)}<span>${t.title}</span></div>`;
+  }).join('');
+  nav.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => selectTab(el.dataset.tab));
+  });
+}
+
+function selectTab(id) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === id));
+  const page = PAGES[id];
+  const tab = TABS.find(t => t.id === id);
+  const detail = document.getElementById('detail');
+  detail.innerHTML = `<div class="page-title">${tab.title}</div><div class="page-sub">${page.sub}</div><div class="hdiv"></div><div class="cards">${page.cards.map(renderCard).join('')}</div>`;
+  bindInteractions();
+}
+
+function bindInteractions() {
+  // toggles
+  document.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('on'));
+  });
+  // segmented
+  document.querySelectorAll('.segmented').forEach(group => {
+    group.querySelectorAll('[data-seg]').forEach(seg => {
+      seg.addEventListener('click', () => {
+        group.querySelectorAll('[data-seg]').forEach(s => s.classList.remove('on'));
+        seg.classList.add('on');
+      });
+    });
+  });
+  // sliders value label
+  document.querySelectorAll('.slider').forEach(s => {
+    s.addEventListener('input', () => {
+      const v = s.parentElement.querySelector('.slider-val');
+      if (v) v.textContent = s.value + (v.textContent.replace(/[0-9]/g,''));
+    });
+  });
+}
+
+/* ---------- theme toggle ---------- */
+document.getElementById('themeBtn').addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+});
+document.getElementById('appBadge').innerHTML = svg('bolt');
+
+/* ---------- init ---------- */
+renderNav();
+selectTab('general');
+</script>
+</body>
+</html>

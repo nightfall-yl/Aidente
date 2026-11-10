@@ -143,6 +143,8 @@ class IOKitService {
         adapterMetrics.maximumSupportedPower = adapterSpecification.maximumPower
         adapterMetrics.protocolName = adapterSpecification.protocolName
         adapterMetrics.powerProfiles = adapterSpecification.profiles
+        adapterMetrics.manufacturer = adapterSpecification.manufacturer
+        adapterMetrics.isApple = adapterSpecification.manufacturer?.contains("Apple") ?? false
         adapterMetrics.adapterConnected = batteryMetrics.externalConnected
             || adapterMetrics.maximumSupportedPower > 0
 
@@ -230,7 +232,8 @@ class IOKitService {
     private func getAdapterSpecification() -> (
         maximumPower: Double,
         protocolName: String,
-        profiles: [AdapterPowerProfile]
+        profiles: [AdapterPowerProfile],
+        manufacturer: String?
     ) {
         let registryDetails = getRegistryAdapterDetails()
         var maximumPower = 0.0
@@ -285,7 +288,9 @@ class IOKitService {
             protocolName = ""
         }
 
-        return (maximumPower, protocolName, profiles)
+        let manufacturer = registryDetails?["Manufacturer"] as? String
+
+        return (maximumPower, protocolName, profiles, manufacturer)
     }
 
     private func getRegistryAdapterDetails() -> [String: Any]? {

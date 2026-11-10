@@ -3,16 +3,35 @@ import Defaults
 import SwiftUI
 
 struct AutomationSettingsView: View {
-    @Default(.appLanguage) private var appLanguage
-
-    @State private var scheduleStore = ScheduleStore.shared
+    private let scheduleStore = ScheduleStore.shared
     @State private var showingNewTask = false
+
+    /// Constant URL/description-key pairs. The localized description is
+    /// resolved at render time (see `shortcutRows`) so a language switch
+    /// re-translates instead of freezing the first-access locale.
+    private struct ShortcutCommand {
+        let url: String
+        let key: String
+    }
+
+    private static let shortcutCommands: [ShortcutCommand] = [
+        ShortcutCommand(url: "aidente://set-limit?value=80", key: "设置充电上限（示例 80%）"),
+        ShortcutCommand(url: "aidente://top-up", key: "临时充至 100%"),
+        ShortcutCommand(url: "aidente://calibrate", key: "开始电池校准"),
+        ShortcutCommand(url: "aidente://pause", key: "暂停充电"),
+        ShortcutCommand(url: "aidente://discharge?value=70", key: "放电至目标（示例 70%）"),
+        ShortcutCommand(url: "aidente://resume", key: "恢复充电"),
+    ]
+
+    private var shortcutRows: [(url: String, description: String)] {
+        Self.shortcutCommands.map { ($0.url, AidenteL10n.t($0.key)) }
+    }
 
     var body: some View {
         AidenteSettingsPage {
             AidenteCard(
                 "计划任务",
-                subtitle: "按设定时间自动调整上限、补电、校准、暂停或放电。错过的任务可在 Mac 唤醒后补做。",
+                subtitle: "按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。错过的任务可在 Mac 唤醒后补做。",
                 icon: "calendar.badge.clock",
                 colors: AidenteTheme.automationColors
             ) {
@@ -44,6 +63,18 @@ struct AutomationSettingsView: View {
                                 size: 34
                             )
 
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(task.summary)
+                                    .font(.headline)
+                                Text(
+                                    "\(task.nextRun.formatted(.dateTime.locale(AidenteL10n.isEnglish ? Locale(identifier: "en_US") : Locale(identifier: "zh_CN")).month().day().hour().minute())) · \(task.repeatRule.title)"
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+
+                            Spacer(minLength: 8)
+
                             Toggle(
                                 "",
                                 isOn: Binding(
@@ -54,18 +85,6 @@ struct AutomationSettingsView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .tint(task.action.colors.first ?? AidenteTheme.jade)
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(task.summary)
-                                    .font(.headline)
-                                Text(
-                                    "\(task.nextRun.formatted(.dateTime.locale(Locale(identifier: "zh_CN")).month().day().hour().minute())) · \(task.repeatRule.title)"
-                                )
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
 
                             Button {
                                 scheduleStore.remove(task)
@@ -99,19 +118,18 @@ struct AutomationSettingsView: View {
                 colors: AidenteTheme.dashboardColors
             ) {
                 AidenteInsetPanel {
-                    Text(
-                        """
-                        aidente://set-limit?value=80
-                        aidente://top-up
-                        aidente://calibrate
-                        aidente://pause
-                        aidente://discharge?value=70
-                        aidente://resume
-                        """
-                    )
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(shortcutRows, id: \.url) { row in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.url)
+                                    .font(.system(.body, design: .monospaced))
+                                    .textSelection(.enabled)
+                                Text(row.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -185,13 +203,24 @@ private struct NewScheduleTaskView: View {
                                         get: { Double(value) },
                                         set: { value = Int($0) }
                                     ),
-                                    in: 20...100,
+                                    // The charge limit spans 20–100%, but
+                                    // discharging to 100% is meaningless; the
+                                    // discharge target stops at 80%.
+                                    in: action == .setChargeLimit
+                                        ? 20...100 : 20...80,
                                     step: 5
                                 )
                                 .frame(width: 150)
                                 Text("\(value)%")
                                     .monospacedDigit()
                                     .frame(width: 42, alignment: .trailing)
+                            }
+                        }
+                        .onChange(of: action) { _, newAction in
+                            // Clamp when switching between the two value
+                            // actions so the stored value stays in range.
+                            if newAction == .dischargeTo {
+                                value = min(value, 80)
                             }
                         }
                     }
@@ -204,7 +233,11 @@ private struct NewScheduleTaskView: View {
                     ) {
                         DatePicker(
                             "",
-                            selection: $nextRun
+                            selection: $nextRun,
+                            // Past times would fire immediately under
+                            // "run soon after a miss", so only future
+                            // times are selectable.
+                            in: Date()...
                         )
                         .labelsHidden()
                     }
@@ -267,24 +300,3 @@ private struct NewScheduleTaskView: View {
     }
 }
 
-private extension ScheduleActionKind {
-    var icon: String {
-        switch self {
-        case .setChargeLimit: "battery.75percent"
-        case .startCalibration: "arrow.triangle.2.circlepath.circle.fill"
-        case .topUp: "bolt.circle.fill"
-        case .pauseCharging: "pause.circle.fill"
-        case .dischargeTo: "arrow.down.circle.fill"
-        }
-    }
-
-    var colors: [Color] {
-        switch self {
-        case .setChargeLimit: AidenteTheme.chargingColors
-        case .startCalibration: AidenteTheme.dashboardColors
-        case .topUp: AidenteTheme.automationColors
-        case .pauseCharging: [AidenteTheme.coral, AidenteTheme.amber]
-        case .dischargeTo: AidenteTheme.generalColors
-        }
-    }
-}

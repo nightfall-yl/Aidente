@@ -64,7 +64,7 @@ enum AppLanguage: String, Defaults.Serializable, CaseIterable, Identifiable {
         switch self {
         case .system: AidenteL10n.t("跟随系统", "System")
         case .simplifiedChinese: AidenteL10n.t("中文", "Chinese")
-        case .english: "English"
+        case .english: AidenteL10n.t("英语", "English")
         }
     }
 }

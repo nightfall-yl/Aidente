@@ -21,6 +21,10 @@ enum AidenteTheme {
     static let automationColors = [amber, gold]
     static let advancedColors = [Color.indigo, violet]
     static let aboutColors = [coral, amber]
+
+    /// Settings sidebar "Permissions" tab identity: ocean→violet, distinct
+    /// from General's pure blue pair.
+    static let permissionColors = [ocean, violet]
 }
 
 // MARK: - New Glass surface system (`gross-glass.html`, plan A + B + L4)
@@ -565,6 +569,7 @@ struct AidenteCard<Content: View>: View {
     let subtitle: String?
     let icon: String
     let colors: [Color]
+    let showDivider: Bool
     @ViewBuilder let content: Content
 
     init(
@@ -572,12 +577,14 @@ struct AidenteCard<Content: View>: View {
         subtitle: String? = nil,
         icon: String,
         colors: [Color],
+        showDivider: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.colors = colors
+        self.showDivider = showDivider
         self.content = content()
     }
 
@@ -590,9 +597,11 @@ struct AidenteCard<Content: View>: View {
                 colors: colors
             )
 
-            Rectangle()
-                .fill(.primary.opacity(0.10))
-                .frame(height: 1)
+            if showDivider {
+                Rectangle()
+                    .fill(.primary.opacity(0.10))
+                    .frame(height: 1)
+            }
 
             VStack(alignment: .leading, spacing: 11) {
                 content
@@ -619,15 +628,16 @@ struct AidenteSettingsPage<Content: View>: View {
         self.content = content()
     }
 
+    /// The settings detail pane owns the ScrollView so its page header scrolls
+    /// away together with the cards. Keep this container free of a nested
+    /// ScrollView, otherwise the header and the cards scroll independently.
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 14) {
-                content
-            }
-            .padding(20)
-            .frame(maxWidth: 740)
-            .frame(maxWidth: .infinity)
+        LazyVStack(spacing: 14) {
+            content
         }
+        .padding(20)
+        .frame(maxWidth: 740)
+        .frame(maxWidth: .infinity)
         .background(Color.clear)
         .tint(AidenteTheme.jade)
     }
@@ -803,5 +813,60 @@ struct AidenteInsetPanel<Content: View>: View {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .strokeBorder(.primary.opacity(0.09), lineWidth: 1)
             }
+    }
+}
+
+/// Shared "helper install/repair failed" alert used by both the Charging and
+/// Permissions settings pages, so the wording and dismiss behavior stay in
+/// one place.
+private struct AidenteInstallErrorAlert: ViewModifier {
+    @Binding var error: String?
+
+    func body(content: Content) -> some View {
+        content.alert(
+            AidenteL10n.t("无法启用充电控制服务", "Cannot Enable Charging Control Service"),
+            isPresented: Binding(
+                get: { error != nil },
+                set: { if !$0 { error = nil } }
+            )
+        ) {
+            Button(AidenteL10n.t("好", "OK")) { error = nil }
+        } message: {
+            if let error {
+                Text(error)
+            }
+        }
+    }
+}
+
+extension View {
+    func aidenteInstallErrorAlert(_ error: Binding<String?>) -> some View {
+        modifier(AidenteInstallErrorAlert(error: error))
+    }
+}
+
+extension ScheduleActionKind {
+    /// Icon badge and color pair for UI rows, kept with the other shared
+    /// theme components (the model file stays SwiftUI-free).
+    var icon: String {
+        switch self {
+        case .setChargeLimit: "battery.75percent"
+        case .startCalibration: "arrow.triangle.2.circlepath.circle.fill"
+        case .topUp: "bolt.circle.fill"
+        case .pauseCharging: "pause.circle.fill"
+        case .dischargeTo: "arrow.down.circle.fill"
+        case .resumeCharging: "play.circle.fill"
+        }
+    }
+
+    var colors: [Color] {
+        switch self {
+        case .setChargeLimit: AidenteTheme.chargingColors
+        case .startCalibration: AidenteTheme.dashboardColors
+        case .topUp: AidenteTheme.automationColors
+        case .pauseCharging: [AidenteTheme.coral, AidenteTheme.amber]
+        case .dischargeTo: AidenteTheme.generalColors
+        case .resumeCharging: AidenteTheme.generalColors
+        }
     }
 }

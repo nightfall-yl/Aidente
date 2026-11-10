@@ -29,6 +29,8 @@ struct AdapterMetrics: Equatable, Sendable {
     var maximumSupportedPower: Double = 0
     var protocolName: String = ""
     var powerProfiles: [AdapterPowerProfile] = []
+    var manufacturer: String? = nil
+    var isApple: Bool = false
 }
 
 struct AdapterPowerProfile: Equatable, Identifiable, Sendable {
