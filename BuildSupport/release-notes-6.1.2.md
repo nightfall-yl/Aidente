@@ -18,7 +18,7 @@
 
 适用于 Apple Silicon MacBook、macOS 14 及以上。下载 DMG 后将 Aidente.app 拖入「应用程序」；6.0.1 及以上也可通过应用内检查更新安装。从 6.0 升级仍需先手动安装一次 6.0.1。
 
-升级后如需管理充电，可在应用中点击「修复控制服务」，通过 macOS 管理员授权更新应用及后台服务的身份登记。管理员密码只由系统弹窗接收。发行包沿用 ad-hoc 完整性签名，未经 Apple 公证；首次打开可按 macOS 提示从 Finder 右键选择「打开」。
+升级后若已开启「管理充电」，Aidente 会在启动时自动提示重新授权，通过 macOS 管理员弹窗更新应用及后台服务的身份登记。管理员密码只由系统弹窗接收。发行包沿用 ad-hoc 完整性签名，未经 Apple 公证；首次打开可按 macOS 提示从 Finder 右键选择「打开」。
 
 本版目前只有本地构建产物 `Dist/Aidente-6.1.2.dmg`（卷名 `Aidente 6.1.2 (build 23)`）。尚未发布 GitHub Release，因此没有官方的 `Aidente-6.1.2-arm64.dmg`、macOS ZIP 与 `SHA256SUMS-6.1.2.txt`。
 

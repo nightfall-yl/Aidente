@@ -2,7 +2,6 @@ import Defaults
 import Foundation
 import IOKit.pwr_mgt
 import Observation
-import UserNotifications
 import os.log
 import smc_power
 import AidenteShared
@@ -68,7 +67,6 @@ class ChargeManager {
     private var limitPolicy = ChargeLimitPolicy()
     private var lastLimit: Int?
     private var lastAutomaticDischarge: Bool?
-    private var lastNotifiedChargingState: Bool?
     private var heatProtectionPaused = false
     private var heatProtectionReviewDate = Date.distantPast
     private var isSystemSleeping = false
@@ -368,13 +366,6 @@ class ChargeManager {
     private func advanceCalibrationIfNeeded(batteryPercentage: Int) {
         if topUpActive && batteryPercentage >= 100 {
             setTopUpActive(false)
-            sendWorkflowNotification(
-                title: AidenteL10n.t("临时补电完成", "Top-Up Complete"),
-                body: AidenteL10n.t(
-                    "电池已达到 100%，现已恢复原来的充电上限。",
-                    "The battery reached 100% and the original charge limit has been restored."
-                )
-            )
         }
 
         switch calibrationStage {
@@ -396,13 +387,6 @@ class ChargeManager {
             where batteryPercentage <= Defaults[.calibrationOriginalLimit]:
             setCalibrationStage(.idle)
             Defaults[.calibrationHoldUntil] = 0
-            sendWorkflowNotification(
-                title: AidenteL10n.t("电池校准完成", "Battery Calibration Complete"),
-                body: AidenteL10n.t(
-                    "电池已恢复至 \(Defaults[.calibrationOriginalLimit])% 的原充电上限。",
-                    "The original \(Defaults[.calibrationOriginalLimit])% charge limit has been restored."
-                )
-            )
         default:
             return
         }
@@ -501,7 +485,6 @@ class ChargeManager {
     }
 
     private func clearCachedState() {
-        lastNotifiedChargingState = nil
         limitPolicy = ChargeLimitPolicy()
     }
 
@@ -549,7 +532,6 @@ class ChargeManager {
                     guard pendingPowerRequest == request else { continue }
                     clearControlErrors()
                     batteryService.scheduleSinglePoll()
-                    if request.charging { sendChargingStateNotification(charging: true, reason: reason) }
                     if changed { schedulePowerVerification(request) }
                 } catch {
                     appliedPowerRequest = nil
@@ -559,7 +541,6 @@ class ChargeManager {
                         "Charging control did not take effect: \(error.localizedDescription)"
                     )
                     logger.error("POWER_REQUEST_FAILED \(error.localizedDescription, privacy: .public)")
-                    lastNotifiedChargingState = nil
                 }
                 break
             }
@@ -597,7 +578,6 @@ class ChargeManager {
                 case .held:
                     powerHoldVerified = true
                     powerFlowError = nil
-                    sendChargingStateNotification(charging: false, reason: nil)
                 case .charging:
                     powerHoldVerified = false
                     powerFlowError = AidenteL10n.t(
@@ -646,53 +626,6 @@ class ChargeManager {
             sleepAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
             logger.info("Sleep assertion released")
         }
-    }
-
-    private func sendChargingStateNotification(charging: Bool, reason: String?) {
-        guard charging != lastNotifiedChargingState else { return }
-        lastNotifiedChargingState = charging
-
-        guard !Defaults[.disableNotifications],
-            Defaults[.showChargingStatusChangedNotification]
-        else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = AidenteL10n.t(
-            charging ? "已恢复充电" : "已暂停充电",
-            charging ? "Charging Resumed" : "Charging Paused"
-        )
-        if let reason {
-            content.body = reason
-        }
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: "chargingStateChanged",
-            content: content,
-            trigger: nil
-        )
-
-        UNUserNotificationCenter.current().add(request) { [logger] error in
-            if let error {
-                logger.error("Failed to deliver notification: \(error)")
-            }
-        }
-    }
-
-    private func sendWorkflowNotification(title: String, body: String) {
-        guard !Defaults[.disableNotifications] else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: "workflow-\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
     }
 
     func startTopUp() {

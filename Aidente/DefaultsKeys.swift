@@ -138,11 +138,6 @@ extension Defaults.Keys {
     static let showBatteryStateInStatusIcon = Key<Bool>(
         "showBatteryStateInStatusIcon", default: true)
 
-    // Notifications
-    static let disableNotifications = Key<Bool>("disableNotifications", default: false)
-    static let showChargingStatusChangedNotification = Key<Bool>(
-        "showChargingStatusChangedNotification", default: true)
-
     // Menu Dashboard
     static let showTimeTillDischarge = Key<Bool>("showTimeTillDischarge", default: true)
     static let showBatteryCycleCount = Key<Bool>("showBatteryCycleCount", default: true)

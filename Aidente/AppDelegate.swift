@@ -3,7 +3,6 @@ import Defaults
 import Darwin
 import IOKit
 import Observation
-import UserNotifications
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -112,7 +111,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 statusBarManager.showPopoverForPreview()
             }
             observePowerEvents()
-            requestNotificationPermissions()
             openSettingsFromCommandLineIfRequested()
             updateService.presentPreviewAlertIfRequested()
         }
@@ -124,8 +122,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try ChargingHelperManager.shared.ensureInstalled()
         } catch {
-            // The settings page exposes the stored registration error and the
-            // approval/repair actions. Read-only monitoring still starts.
+            // Read-only monitoring still starts; the launch-time prompt in
+            // UpdateService offers one-click re-authorization instead.
         }
     }
 
@@ -169,13 +167,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             viewModel: viewModel,
             settingsWindowController: settingsWindowController
         )
+        // Let the launch-time re-authorization prompt wake charging control
+        // immediately after the helper has been re-registered.
+        updateService.controlRetryHandler = { [weak self] in
+            self?.chargeManager.retryControlAfterRepair()
+        }
+        updateService.checkControlAuthorizationOnLaunch()
         updateService.start()
-    }
-
-    private func requestNotificationPermissions() {
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .sound]
-        ) { _, _ in }
     }
 
     private func observePowerEvents() {

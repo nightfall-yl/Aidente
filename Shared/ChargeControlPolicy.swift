@@ -78,7 +78,7 @@ public struct FirmwarePowerPolicy {
 }
 
 /// Pure policy shared by the app and regression tests. A normal hold never
-/// disconnects the adapter; discharge is a separate, explicitly enabled action.
+/// disconnects the adapter; automatic discharge is opt-in and off by default.
 public struct ChargeLimitPolicy {
     public var reachedLimit = false
     public var automaticDischargeActive = false

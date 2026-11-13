@@ -125,7 +125,6 @@ swiftc \
     -framework SwiftUI \
     -framework IOKit \
     -framework ServiceManagement \
-    -framework UserNotifications \
     -sdk "$sdk" \
     -target "$target" \
     -module-cache-path "$module_cache_dir" \

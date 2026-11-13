@@ -6,49 +6,41 @@ struct DiagnosticsSettingsView: View {
 
     var body: some View {
         AidenteSettingsPage {
+            // 问题记录 / 导出诊断包 / 隐私保护 三卡整合后的单卡：诊断记录
+            // 控件行置顶，编号行不再展示（对齐 HTML 原型）。
             AidenteCard(
-                "问题记录",
-                subtitle: "复现异常时记录关键电池与充电控制状态，最长持续两小时。",
-                icon: "waveform.badge.magnifyingglass",
-                colors: AidenteTheme.advancedColors
+                "诊断与导出",
+                subtitle: "诊断信息始终由用户决定是否生成和发送。",
+                icon: "square.and.arrow.up.on.square.fill",
+                colors: AidenteTheme.aboutColors
             ) {
-                AidenteInsetPanel {
-                    HStack(spacing: 12) {
-                        AidenteIconBadge(
-                            icon: diagnosticCenter.isRecording
-                                ? "record.circle.fill" : "checkmark.shield.fill",
-                            colors: diagnosticCenter.isRecording
-                                ? AidenteTheme.chargingColors : AidenteTheme.generalColors,
-                            size: 38
-                        )
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(
-                                diagnosticCenter.isRecording
-                                    ? AidenteL10n.t("正在记录问题", "Recording Issue")
-                                    : AidenteL10n.t("诊断记录未启动", "Diagnostic Recording Is Off")
-                            )
-                            .font(.system(size: 14, weight: .semibold))
-
-                            if let startedAt = diagnosticCenter.recordingStartedAt {
-                                TimelineView(.periodic(from: .now, by: 1)) { context in
-                                    Text(elapsedText(from: startedAt, to: context.date))
-                                        .font(.system(size: 11.5, design: .monospaced))
-                                        .foregroundStyle(.secondary)
-                                }
-                            } else {
+                AidenteControlRow(
+                    diagnosticCenter.isRecording
+                        ? AidenteL10n.t("正在记录问题", "Recording Issue")
+                        : AidenteL10n.t("诊断记录未启动", "Diagnostic Recording Is Off"),
+                    subtitle: diagnosticCenter.isRecording
+                        ? nil
+                        : AidenteL10n.t(
+                            "平时不会增加高频采样或后台负担",
+                            "No extra high-frequency sampling runs while idle"
+                        ),
+                    icon: diagnosticCenter.isRecording
+                        ? "record.circle.fill" : "checkmark.shield.fill",
+                    colors: AidenteTheme.advancedColors
+                ) {
+                    HStack(spacing: 10) {
+                        if diagnosticCenter.isRecording {
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
                                 Text(
-                                    AidenteL10n.t(
-                                        "平时不会增加高频采样或后台负担",
-                                        "No extra high-frequency sampling runs while idle"
+                                    elapsedText(
+                                        from: diagnosticCenter.recordingStartedAt ?? .now,
+                                        to: context.date
                                     )
                                 )
-                                .font(.system(size: 11.5))
+                                .font(.system(size: 11.5, design: .monospaced))
                                 .foregroundStyle(.secondary)
                             }
                         }
-
-                        Spacer()
 
                         Button {
                             if diagnosticCenter.isRecording {
@@ -65,42 +57,12 @@ struct DiagnosticsSettingsView: View {
                                     ? "stop.fill" : "record.circle"
                             )
                         }
-                        .buttonStyle(
-                            AidenteActionButtonStyle(
-                                colors: diagnosticCenter.isRecording
-                                    ? AidenteTheme.chargingColors : AidenteTheme.dashboardColors
-                            )
-                        )
+                        .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.aboutColors))
                     }
                 }
 
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(AidenteL10n.t("问题编号"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.secondary)
-                        Text(diagnosticCenter.supportIdentifier)
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .textSelection(.enabled)
-                    }
+                AidenteRowDivider()
 
-                    Spacer()
-
-                    Button {
-                        diagnosticCenter.copySupportIdentifier()
-                    } label: {
-                        Label(AidenteL10n.t("复制编号"), systemImage: "doc.on.doc")
-                    }
-                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.generalColors))
-                }
-            }
-
-            AidenteCard(
-                "导出诊断包",
-                subtitle: "只在你确认后生成本地 ZIP，Aidente 不会自动上传。",
-                icon: "square.and.arrow.up.on.square.fill",
-                colors: AidenteTheme.generalColors
-            ) {
                 AidenteSettingToggle(
                     "包含最近的崩溃报告",
                     subtitle: "最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏",
@@ -127,7 +89,6 @@ struct DiagnosticsSettingsView: View {
                         diagnosticItem("Aidente 统一日志（最近 1 小时或本次记录）")
                         diagnosticItem("软件、macOS、机型与后台服务状态")
                         diagnosticItem("电池、适配器及充电控制快照")
-                        diagnosticItem("经过筛选的充电设置，不包含完整偏好数据")
                         diagnosticItem("用户名、路径、网络地址、序列号自动脱敏")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -152,7 +113,7 @@ struct DiagnosticsSettingsView: View {
                             )
                         }
                     }
-                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.generalColors))
+                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.aboutColors))
                     .disabled(diagnosticCenter.isExporting)
 
                     if diagnosticCenter.lastExportURL != nil {
@@ -161,7 +122,7 @@ struct DiagnosticsSettingsView: View {
                         } label: {
                             Label(AidenteL10n.t("在访达中显示"), systemImage: "folder.fill")
                         }
-                        .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.dashboardColors))
+                        .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.aboutColors))
                     }
 
                     Spacer()
@@ -169,23 +130,10 @@ struct DiagnosticsSettingsView: View {
             }
 
             AidenteCard(
-                "隐私保护",
-                subtitle: "诊断信息始终由用户决定是否生成和发送。",
-                icon: "hand.raised.fill",
-                colors: AidenteTheme.advancedColors
-            ) {
-                AidenteNotice(
-                    text: "Aidente 不会自动上传日志。诊断包默认不含耗电 App 名称，也不主动收集账户名、设备序列号或网络配置。发送前可以先解压检查。",
-                    icon: "lock.shield.fill",
-                    colors: AidenteTheme.advancedColors
-                )
-            }
-
-            AidenteCard(
                 "可选 CLI",
                 subtitle: "高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。",
                 icon: "terminal.fill",
-                colors: AidenteTheme.dashboardColors
+                colors: AidenteTheme.permissionColors
             ) {
                 AidenteInsetPanel {
                     VStack(alignment: .leading, spacing: 7) {
@@ -205,7 +153,7 @@ struct DiagnosticsSettingsView: View {
                     } label: {
                         Label(AidenteL10n.t("复制 CLI 完整路径"), systemImage: "doc.on.clipboard")
                     }
-                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.dashboardColors))
+                    .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.permissionColors))
 
                     Spacer()
 
@@ -220,9 +168,9 @@ struct DiagnosticsSettingsView: View {
                 }
             }
 
-            // Page-level feedback: statusMessage is shared by recording,
-            // copy actions, and exports, so the notice lives below all cards
-            // instead of inside the export card.
+            // Page-level feedback: statusMessage is shared by copy actions and
+            // exports, so the notice lives below all cards instead of inside
+            // the export card.
             if let statusMessage = diagnosticCenter.statusMessage {
                 AidenteNotice(
                     text: statusMessage,
@@ -244,7 +192,7 @@ struct DiagnosticsSettingsView: View {
     private func diagnosticItem(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 7) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(AidenteTheme.jade)
+                .foregroundStyle(AidenteTheme.aboutColors.first ?? AidenteTheme.coral)
             Text(AidenteL10n.t(text))
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)

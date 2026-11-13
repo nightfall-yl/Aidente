@@ -44,30 +44,30 @@ enum AidenteL10n {
             || text.contains("Background control service is not connected")
         {
             return t(
-                "后台控制服务未连接。请修复控制服务后重试。",
-                "The background control service is not connected. Repair it and try again."
+                "后台控制服务未连接。请重新授权后台控制服务后重试。",
+                "The background control service is not connected. Re-authorize the control service and try again."
             )
         }
         if text.contains("充电暂停命令未生效")
             || text.contains("pause charging command did not take effect")
         {
             return t(
-                "充电暂停命令未生效。请修复控制服务后重试。",
-                "The pause charging command did not take effect. Repair the control service and try again."
+                "充电暂停命令未生效。请重新授权后台控制服务后重试。",
+                "The pause charging command did not take effect. Re-authorize the control service and try again."
             )
         }
         if text.contains("适配器控制未生效")
             || text.contains("Adapter control did not take effect")
         {
             return t(
-                "适配器控制未生效。请修复控制服务后重试。",
-                "Adapter control did not take effect. Repair the control service and try again."
+                "适配器控制未生效。请重新授权后台控制服务后重试。",
+                "Adapter control did not take effect. Re-authorize the control service and try again."
             )
         }
         if text.contains("SMC") {
             return t(
-                "SMC 已接受暂停设置，但系统仍报告电池正在充电。请点“修复控制服务”后重试。",
-                "SMC accepted the pause setting, but the system still reports charging. Click Repair Control Service and try again."
+                "SMC 已接受暂停设置，但系统仍报告电池正在充电。请重新授权后台控制服务后重试。",
+                "SMC accepted the pause setting, but the system still reports charging. Re-authorize the control service and try again."
             )
         }
         return text
@@ -81,8 +81,8 @@ enum AidenteL10n {
         "通用": "General",
         "仪表盘": "Dashboard",
         "充电管理": "Charging",
-        "权限管理": "Permissions",
-        "计划与自动化": "Schedules",
+        "睡眠管理": "Sleep Management",
+        "自动化": "Automation",
         "诊断": "Diagnostics",
         "关于": "About",
         "软件更新": "Software Update",
@@ -121,12 +121,6 @@ enum AidenteL10n {
         "图标内": "Inside Icon",
         "使用颜色显示电池状态": "Use Color for Battery State",
         "充电、接通电源、低电量使用不同颜色": "Use different colors for charging, plugged in, and low battery",
-        "通知": "Notifications",
-        "控制 Aidente 何时向你报告充电状态。": "Choose when Aidente reports charging status.",
-        "关闭全部通知": "Disable All Notifications",
-        "充电状态变化时通知": "Notify on Charging Changes",
-        "暂停或恢复充电时发送系统通知": "Send a notification when charging pauses or resumes",
-        "已被“关闭全部通知”停用": "Disabled by Turn Off All Notifications",
         "状态信息": "Status Information",
         "选择仪表盘顶部显示的系统与电池时间信息。": "Choose the system and battery readouts shown at the top of the dashboard.",
         "电源来源": "Power Source",
@@ -157,12 +151,8 @@ enum AidenteL10n {
         "显示功率分配图": "Show Power Flow Diagram",
         "计划任务": "Scheduled Tasks",
         "按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。错过的任务可在 Mac 唤醒后补做。": "Automatically adjust the limit, top up, calibrate, pause, discharge, or resume charging on schedule. Missed tasks can run after your Mac wakes.",
-        "还没有计划任务": "No Scheduled Tasks",
-        "创建一项任务，让 Aidente 在合适的时间自动照顾电池。": "Create a task so Aidente can care for your battery at the right time.",
         "删除任务": "Delete Task",
         "添加计划任务": "Add Scheduled Task",
-        "Apple 快捷指令": "Apple Shortcuts",
-        "在“快捷指令”中使用“打开 URL”操作，即可控制 Aidente。": "Use the Open URL action in Shortcuts to control Aidente.",
         "选择动作、执行时间和重复规则": "Choose an action, time, and repeat rule",
         "任务设置": "Task Settings",
         "执行动作": "Action",
@@ -179,25 +169,16 @@ enum AidenteL10n {
         "临时充至 100%": "Top Up to 100%",
         "暂停充电": "Pause Charging",
         "放电至": "Discharge To",
-        "设置充电上限（示例 80%）": "Set the charge limit (80% shown)",
-        "放电至目标（示例 70%）": "Discharge to a target (70% shown)",
         "仅一次": "Once",
         "每天": "Daily",
         "工作日": "Weekdays",
         "每周": "Weekly",
         "每两周": "Every Two Weeks",
         "每月": "Monthly",
-        "电量读取方式": "Battery Level Source",
-        "选择 Aidente 用于充电上限、巡航和校准的电量数据。": "Choose the battery level Aidente uses for charge limits, sailing, and calibration.",
         "使用硬件电量百分比": "Use Hardware Battery Percentage",
         "直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值": "Read the raw battery management value instead of the macOS-calibrated percentage",
         "硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。": "The hardware value may differ from the macOS menu bar by a few points. All charging strategies use the selected reading.",
-        "问题记录": "Issue Recording",
-        "复现异常时记录关键电池与充电控制状态，最长持续两小时。": "Record key battery and charging-control states while reproducing an issue, for up to two hours.",
-        "问题编号": "Support ID",
-        "复制编号": "Copy ID",
         "导出诊断包": "Export Diagnostics",
-        "只在你确认后生成本地 ZIP，Aidente 不会自动上传。": "Create a local ZIP only after your confirmation. Aidente never uploads it automatically.",
         "包含最近的崩溃报告": "Include Recent Crash Reports",
         "最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏": "Collect up to five Aidente reports from the last seven days and redact them automatically",
         "包含耗电 App 名称": "Include Energy App Names",
@@ -206,12 +187,10 @@ enum AidenteL10n {
         "Aidente 统一日志（最近 1 小时或本次记录）": "Aidente unified logs (last hour or current recording)",
         "软件、macOS、机型与后台服务状态": "App, macOS, Mac model, and helper status",
         "电池、适配器及充电控制快照": "Battery, adapter, and charging-control snapshot",
-        "经过筛选的充电设置，不包含完整偏好数据": "Selected charging settings, not the complete preferences domain",
         "用户名、路径、网络地址、序列号自动脱敏": "User names, paths, network addresses, and serial numbers are redacted",
         "在访达中显示": "Show in Finder",
-        "隐私保护": "Privacy Protection",
         "诊断信息始终由用户决定是否生成和发送。": "You always decide whether diagnostic information is generated or shared.",
-        "Aidente 不会自动上传日志。诊断包默认不含耗电 App 名称，也不主动收集账户名、设备序列号或网络配置。发送前可以先解压检查。": "Aidente never uploads logs automatically. Energy app names are excluded by default, and account names, device serial numbers, and network configuration are not intentionally collected. You can inspect the archive before sharing it.",
+        "诊断与导出": "Diagnostics & Export",
         "可选 CLI": "Optional CLI",
         "高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。": "Advanced users can inspect status or trigger actions from Terminal. The CLI never stays resident.",
         "复制 CLI 完整路径": "Copy Full CLI Path",
@@ -257,8 +236,8 @@ enum AidenteL10n {
         "执行完整充放电校准流程": "Run a complete charge and discharge calibration",
         "自动保护": "Automatic Protection",
         "高温": "Heat",
-        "睡眠暂停": "Sleep Pause",
-        "巡航": "Sailing",
+        "阻止睡眠": "Prevent Sleep",
+        "电池巡航": "Battery Sailing",
         "电池详情": "Battery Details",
         "充电设置": "Charging Settings",
         "实时电池养护": "Live Battery Care",
@@ -280,26 +259,22 @@ enum AidenteL10n {
         "当前正从安装磁盘映像运行，后台控制服务无法可靠启动。请退出 Aidente，将应用拖入“应用程序”文件夹后重新打开。": "Aidente is running from a disk image, so its background service cannot start reliably. Quit the app, drag it to Applications, and reopen it.",
         "当前设备不支持充电管理；Aidente 将继续提供只读电池监测。": "This device does not support charging control; Aidente will continue in read-only monitoring mode.",
         "达到上限后暂停充电": "Pause charging at the limit",
-        "快捷操作": "Quick Actions",
-        "执行一次性操作，不会改动你保存的充电上限。": "Run a one-time action without changing your saved charge limit.",
-        "当前状态": "Current Status",
-        "修复控制服务": "Repair Control Service",
-        "停止补电": "Stop Top-Up",
-        "开始校准": "Start Calibration",
-        "取消校准": "Cancel Calibration",
         "恢复充电": "Resume Charging",
         "自动放电": "Automatic Discharge",
-        "接通电源且电量高于目标时，自动放电至充电上限。": "When plugged in above the target, automatically discharge to the charge limit.",
         "启用自动放电": "Enable Automatic Discharge",
         "到达目标后自动恢复适配器供电": "Restore adapter power automatically at the target",
         "当前设备不支持适配器控制。": "This device does not support adapter control.",
-        "睡眠与退出行为": "Sleep & Quit Behavior",
+        "睡眠行为": "Sleep Behavior",
         "决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。": "Choose charging behavior while the Mac sleeps or Aidente is not running.",
         "达到上限前阻止睡眠": "Prevent Sleep Until Charge Limit",
         "睡眠时暂停充电": "Pause Charging During Sleep",
         "退出 Aidente 后保持暂停": "Keep Charging Paused After Quitting",
         "适合快速用户切换或临时退出应用": "Useful for fast user switching or temporarily quitting the app",
+        "仅阻止因长时间无操作而自动睡眠，合盖仍会睡眠。": "Only prevents idle auto-sleep; closing the lid still sleeps.",
+        "进入睡眠（含合盖）时暂停充电。": "Pauses charging when the Mac sleeps (including closing the lid).",
+        "退出后保持充电受控状态。": "Retains the controlled charging state after Aidente quits.",
         "电池校准": "Battery Calibration",
+        "电池校准未启动": "Battery Calibration Is Off",
         "充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。": "Charge to 100% → discharge → recharge → hold full → restore the original limit.",
         "满电保持时间": "Full-Charge Hold Time",
         "巡航模式": "Sailing Mode",

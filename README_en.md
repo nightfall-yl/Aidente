@@ -141,9 +141,10 @@ Users upgrading from 6.0 must install 6.0.1 manually once because 6.0 did not
 yet contain the updater. Updates after 6.0.1 can be completed inside Aidente.
 
 Drag `Aidente.app` to `/Applications`, open it, then enable charge management in
-Settings → Charging, then authorize the administrator installation. After updating
-to 6.1, click Repair Control Service to authorize the new app/helper identity.
-See [administrator installation notes](administrator-install-notes.md).
+Settings → Charging, then authorize the administrator installation. On later
+updates or app replacements, Aidente prompts for re-authorization at launch when
+charge management is on; click Re-authorize Now and use the macOS administrator
+dialog. See [administrator installation notes](administrator-install-notes.md).
 
 The distributed local build is ad-hoc signed, not Apple-notarized. If Finder
 blocks the first launch, right-click the app and choose Open.

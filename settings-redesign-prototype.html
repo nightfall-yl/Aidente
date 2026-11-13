@@ -13,15 +13,14 @@
     --stroke-strong: rgba(0, 0, 0, 0.14);
     --text: #1d1d1f;
     --text-2: #6e6e73;
-    --text-3: #8e8e93;
+    --text-3: #737378;
     --hover: rgba(0, 0, 0, 0.05);
     --sel-bg: rgba(0, 122, 255, 0.80);
     --sel-text: #ffffff;
     --field: #ffffff;
-    --jade: #2ed680;
-    --accent: #2ed680;
     --search-bg: rgba(0, 0, 0, 0.06);
-    --shadow: none;
+    /* 侧栏 tab 徽章尺寸：唯一来源。状态文案徽章跟随此值，JS 用 getComputedStyle 读取。 */
+    --tab-badge-size: 22px;
     color-scheme: light;
   }
   .dark {
@@ -32,13 +31,11 @@
     --stroke-strong: rgba(255, 255, 255, 0.18);
     --text: #f2f2f7;
     --text-2: #98989f;
-    --text-3: #76767b;
+    --text-3: #96969d;
     --hover: rgba(255, 255, 255, 0.06);
     --sel-bg: rgba(10, 132, 255, 0.80);
     --sel-text: #ffffff;
     --field: #3a3a3e;
-    --jade: #2ed680;
-    --accent: #2ed680;
     --search-bg: rgba(255, 255, 255, 0.08);
   }
 
@@ -101,10 +98,10 @@
   }
   .app-badge {
     width: 34px; height: 34px; border-radius: 9px;
-    background: linear-gradient(135deg, var(--jade), #66ebad);
+    background: #1c2b3a; border: 1px solid var(--stroke);
     display: grid; place-items: center; flex: 0 0 34px;
   }
-  .app-badge svg { width: 18px; height: 18px; color: #0c3d27; }
+  .app-badge svg { width: 18px; height: 18px; color: #2ed680; }
   .side-head .name { font-size: 14px; font-weight: 700; }
   .side-head .ver { font-size: 11px; color: var(--text-3); }
 
@@ -119,7 +116,8 @@
   .nav-item:hover { background: var(--hover); }
   .nav-item.active { background: var(--sel-bg); color: var(--sel-text); font-weight: 600; }
   .nav-icon {
-    width: 22px; height: 22px; border-radius: 6px; flex: 0 0 22px;
+    width: var(--tab-badge-size); height: var(--tab-badge-size);
+    border-radius: 6px; flex: 0 0 var(--tab-badge-size);
     display: grid; place-items: center;
   }
   .nav-icon svg { width: 14px; height: 14px; color: #fff; }
@@ -131,9 +129,7 @@
   }
   .detail::-webkit-scrollbar { width: 10px; }
   .detail::-webkit-scrollbar-thumb { background: var(--stroke-strong); border-radius: 6px; border: 3px solid var(--window); }
-  .page-title {
-    font-size: 22px; font-weight: 700; margin: 0 0 2px;
-  }
+  .page-title { font-size: 20px; font-weight: 700; margin: 0; }
   .page-sub { font-size: 12.5px; color: var(--text-2); margin-bottom: 20px; }
 
   .cards { max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
@@ -145,12 +141,7 @@
     padding: 16px 16px 6px;
   }
   .card-head { display: flex; align-items: center; gap: 11px; padding-bottom: 14px; }
-  .card-icon {
-    width: 32px; height: 32px; border-radius: 8px; flex: 0 0 32px;
-    display: grid; place-items: center;
-  }
-  .card-icon svg { width: 18px; height: 18px; color: #fff; }
-  .card-title { font-size: 14px; font-weight: 600; }
+  .card-title { font-size: 14px; font-weight: 600; margin: 0; }
   .card-sub { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
   .card-divider { height: 1px; background: var(--stroke); margin: 0 -16px 6px; }
 
@@ -162,19 +153,19 @@
   .row .r-sub { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
   .row .r-main { flex: 1; min-width: 0; }
   .row .r-control { flex: 0 0 auto; display: flex; align-items: center; }
-  .row-stack .r-main { flex: 1; }
   .row-text { font-size: 12px; color: var(--text-2); line-height: 1.5; padding: 8px 0 11px; }
 
   .divider { height: 1px; background: var(--stroke); margin: 0 -16px; }
 
   /* Toggle */
+  /* 开关两态都由 renderCard 传入的卡色决定：
+     --toggle-on = 首色实底；--toggle-off = 首色 16% 半透明叠卡片背景 */
   .toggle {
     width: 38px; height: 22px; border-radius: 12px;
-    background: #c7c7cc; position: relative; cursor: pointer; transition: background .15s;
+    background: var(--toggle-off, #c7c7cc); position: relative; cursor: pointer; transition: background .15s;
     flex: 0 0 38px;
   }
-  .dark .toggle { background: #4a4a4e; }
-  .toggle.on { background: #3d8ffa; }
+  .toggle.on { background: var(--toggle-on, #3d8ffa); }
   .toggle::after {
     content: ""; position: absolute; top: 2px; left: 2px;
     width: 18px; height: 18px; border-radius: 50%; background: #fff;
@@ -197,11 +188,15 @@
   /* Slider */
   .slider-wrap { display: flex; align-items: center; gap: 10px; }
   .slider { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px;
-    background: var(--stroke-strong); width: 180px; outline: none; }
+    background: var(--stroke-strong); width: 180px; }
+  .slider:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid #0a84ff; outline-offset: 2px;
+  }
   .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px;
     border-radius: 50%; background: #fff; border: 1px solid var(--stroke-strong);
     box-shadow: 0 1px 2px rgba(0,0,0,.2); cursor: pointer; }
-  .slider-val { font-size: 13px; font-weight: 600; color: var(--accent); width: 46px; text-align: right; }
+  /* 滑杆数值：13px 常规字重，与行标签同用系统文字色 var(--text)，不随卡色变化 */
+  .slider-val { font-size: 13px; color: var(--text); width: 46px; text-align: right; }
 
   /* Button */
   .btn {
@@ -209,16 +204,16 @@
     border: 1px solid transparent; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
   }
   .btn svg { width: 13px; height: 13px; }
-  .btn-primary { background: var(--accent); color: #0c3d27; }
   .btn-ghost { background: var(--field); border-color: var(--stroke); color: var(--text); }
 
   /* Notice */
   .notice {
-    display: flex; gap: 9px; padding: 10px 12px; border-radius: 9px;
+    display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 9px;
     font-size: 11.5px; line-height: 1.45; margin: 6px 0 10px;
     background: var(--search-bg); color: var(--text-2);
   }
-  .notice svg { width: 15px; height: 15px; flex: 0 0 15px; margin-top: 1px; }
+  /* 徽章与文字垂直居中；文字换行时由文字块撑高容器，上下等量向外延伸，徽章仍居中 */
+  .notice > div { min-width: 0; }
 
   /* Inset panel */
   .inset {
@@ -227,12 +222,48 @@
   }
   .inset.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
 
-  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--jade); flex: 0 0 8px; }
-  .status-line { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
-  .pill { font-size: 10.5px; font-weight: 700; color: var(--accent); background: rgba(46,214,128,.14);
-    padding: 3px 8px; border-radius: 20px; }
+  /* 状态文案：卡内说明状态 / 注意事项的独立文字行（.notice） */
 
-  .hint { font-size: 10.5px; color: var(--text-3); }
+  /* 真实组件取色：AidenteIconBadge = 首色 16% 底 / 34% 描边 / 尾色图标 */
+  .ib { display: grid; place-items: center; flex: 0 0 auto; box-sizing: border-box; }
+  .ib svg { width: var(--ico); height: var(--ico); color: inherit; }
+  .notice .ib { flex: 0 0 var(--tab-badge-size); align-self: center; }
+  /* 仪表盘 tab：行徽章右缘对齐卡头徽章。固定 28px 槽位（= 卡头徽章宽），徽章右对齐，
+     使 26px 行徽章右缘落在 28px 卡头徽章右缘上，行徽章归入卡头徽章组。 */
+  .badge-slot { width: 28px; flex: 0 0 28px; display: flex; justify-content: flex-end; align-items: center; }
+  .page-head { display: flex; align-items: center; gap: 11px; }
+  .page-head .page-sub { margin: 1px 0 0; }
+
+  /* 基线说明（在窗口外的固定浅灰页面背景上：文字变量固定取浅色主题值，
+     否则暗色模式下会继承到近白的 --text，落在浅背景上看不清） */
+  .legend { max-width: 980px; margin: 0 auto 28px; font-size: 11px;
+    color: var(--text-2); line-height: 1.75;
+    --text: #1d1d1f; --text-2: #6e6e73; --text-3: #737378; }
+  .legend b { color: var(--text); }
+  .legend code { font-size: 10.5px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+  .sw { display: inline-flex; align-items: center; gap: 5px; }
+  .sw i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+  /* 添加计划任务弹窗 · 页下方静态预览（560×590 窗口 mockup） */
+  .sheet-wrap { max-width: 720px; margin-top: 20px; }
+  .sheet-wrap .sheet-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+  .sheet-window {
+    width: 560px; max-width: 100%; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--stroke-strong); background: var(--window);
+    box-shadow: 0 10px 34px rgba(0,0,0,.18);
+  }
+  .sheet-bg { background: var(--window); padding: 24px; }
+  .sheet-title { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .sheet-title-t { font-size: 17px; font-weight: 700; margin: 0; }
+  .sheet-title-s { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .sheet-actions .btn { padding: 7px 16px; }
+  .field {
+    font-size: 13px; color: var(--text); background: var(--field);
+    border: 1px solid var(--stroke); border-radius: 7px; padding: 5px 10px;
+    min-width: 150px; display: inline-block; text-align: left;
+  }
 </style>
 </head>
 <body>
@@ -242,7 +273,7 @@
       <div class="traffic t-y"></div>
       <div class="traffic t-g"></div>
       <div class="tt">Aidente 设置</div>
-      <button class="theme-toggle" id="themeBtn">深色 / 浅色</button>
+      <button class="theme-toggle" id="themeBtn" aria-pressed="false">深色 / 浅色</button>
     </div>
     <div class="body">
       <aside class="sidebar">
@@ -252,12 +283,13 @@
             <div class="name">Aidente</div>
           </div>
         </div>
-        <nav class="nav" id="nav"></nav>
+        <nav class="nav" id="nav" role="tablist" aria-label="设置分类"></nav>
       </aside>
       <div class="vdiv"></div>
       <main class="detail" id="detail"></main>
     </div>
   </div>
+  <div class="legend" id="legend"></div>
 
 <script>
 /* ---------- icon paths (lucide-style) ---------- */
@@ -282,77 +314,158 @@ const ICON = {
   check: '<path d="M20 6 9 17l-5-5"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   terminal: '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  /* sheet 弹窗专用图标（SF Symbol 名 → lucide 线性路径；此前字典缺失导致渲染成色块） */
+  'calendar.badge.plus': '<path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M19 16v6"/><path d="M22 19h-6"/>',
+  'slider.horizontal.3': '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="12" x2="12" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+  'bolt.fill': '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  'percent': '<line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  'clock.badge.fill': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  'repeat.circle.fill': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  'arrow.clockwise.circle.fill': '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>',
 };
-const svg = (k, cls) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
+const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
 
-/* ---------- palette (mirrors AidenteTheme) ---------- */
+/* ---------- palette: 6.1.3 / 8779443 真实色值 ---------- */
+/* AidenteTheme.swift 的 Color(red:green:blue:) 固定 sRGB，换算成 hex */
 const C = {
-  general:    ['#3d8ffa', '#5cbdff'],
-  dashboard:  ['#8c6bfa', '#e661db'],
-  charging:   ['#2ed680', '#66ebad'],
-  automation: ['#ff972e', '#ffc245'],
-  diagnostics:['#8c6bfa', '#e661db'],
-  about:      ['#fa574d', '#ff972e'],
+  general:     ['#3d8ffa', '#5cbdff'], // generalColors    = [ocean, sky]
+  dashboard:   ['#8c6bfa', '#e661db'], // dashboardColors  = [violet, pink]
+  charging:    ['#2ed680', '#66ebad'], // chargingColors   = [jade, mint]
+  permissions: ['#3d8ffa', '#8c6bfa'], // permissionColors = [ocean, violet]
+  automation:  ['#ff972e', '#ffc245'], // automationColors = [amber, gold]
+  advanced:    ['#5856d6', '#8c6bfa'], // advancedColors   = [Color.indigo, violet]（固定值）
+  about:       ['#fa574d', '#ff972e'], // aboutColors      = [coral, amber]
+  heat:        ['#ff972e', '#fa574d'], // 高温保护字面量    = [amber, coral]
 };
-const grad = (k) => `linear-gradient(135deg, ${C[k][0]}, ${C[k][1]})`;
+/* 2026-11-11 设计规则：卡内徽章三档 —— 28（标题行 / 卡头）、
+   26（选项行、Inset）、TAB_BADGE_SIZE（状态文案，始终跟随侧栏 tab，当前 22px）；
+   页标题 34 属卡外元素，不受此限。
+   尺寸唯一来源是 CSS 变量 --tab-badge-size：侧栏 .nav-icon、状态文案 .notice .ib 与
+   iconBadge() 的内联宽高都取它，改一处即同步，不再单独写死数字。
+   详情区按元素分两类。
+   徽章 = 色对渐变实底、恒定不随主题切换；侧栏 tab 饱和 100%，详情区降到 90%。
+   状态文案、动作按钮 = 首色半透明叠在卡片背景 var(--card) 上，跟随主题变化：
+   浅色卡片上显淡、深色卡片上随底色变深。文字仍用 var(--text) 等系统语义色。
+   例外：状态文案徽章与「添加计划任务」sheet 的行徽章用 legacy 式
+   （首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的
+   legacyStyle: true（AidenteTheme.swift:911 / AutomationSettingsView.swift:120）。 */
 
-/* ---------- icon badge helper ---------- */
-function badge(k, colors, size) {
+/* 侧栏 tab 徽章尺寸：只从 CSS 变量读取；状态文案徽章共用，不写死 22。 */
+const TAB_BADGE_SIZE = parseFloat(
+  getComputedStyle(document.documentElement).getPropertyValue('--tab-badge-size'));
+const pal = k => C[k];
+const rgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+};
+/* HSL 饱和度 × factor 等价于向同亮度灰 l 混合 (1-factor)；factor=1 原色。
+   侧栏徽章用默认 1，详情区徽章用 BADGE_SATURATION = 0.9。 */
+const badgeTint = (hex, factor) => {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = [n >> 16 & 255, n >> 8 & 255, n & 255];
+  const l = (Math.max(...ch) + Math.min(...ch)) / 2;
+  return '#' + ch.map(v => Math.round(l + factor * (v - l)).toString(16).padStart(2, '0')).join('');
+};
+const grad = (k, factor = 1) => {
+  const [a, b] = pal(k);
+  return `linear-gradient(135deg, ${badgeTint(a, factor)}, ${badgeTint(b, factor)})`;
+};
+
+/* 侧栏导航徽章：渐变实底 + 白图标（SettingsView.sidebarRow，真实实现） */
+function badge(k, colors) {
   return `<span class="nav-icon" style="background:${grad(colors)}">${svg(k)}</span>`;
+}
+/* 2026-11-11 规则：详情区徽章绘制对齐侧栏（135° 渐变实底 + 白图标，
+   无半透明底 / 描边 / 阴影 / 尾色图标），但色对饱和度降到 90% 且恒定不随主题切换。
+   侧栏 tab 徽章保持 100% 饱和。 */
+const BADGE_SATURATION = 0.9;
+function iconBadge(k, colors, size) {
+  const ico = Math.round(size * 0.46);
+  return `<span class="ib" style="width:${size}px;height:${size}px;`
+    + `border-radius:${Math.max(6, Math.round(size * 0.27))}px;background:${grad(colors, BADGE_SATURATION)};`
+    + `color:#fff;--ico:${ico}px">${svg(k)}</span>`;
+}
+/* 状态文案（AidenteIconBadge 式）徽章：首色 16% 底 / 34% 描边 / 尾色图标，
+   半透明叠在卡片背景 var(--card) 上、跟随主题变化（不恒定），带外围框线；
+   尺寸跟随 --tab-badge-size。用于「添加计划任务」弹窗任务设置卡的行徽章（用户 2026-11-11 定）。 */
+function legacyBadge(k, colors, size = TAB_BADGE_SIZE) {
+  const [a, b] = pal(colors);
+  const ico = Math.round(size * 0.46);
+  return `<span class="ib" style="width:${size}px;height:${size}px;`
+    + `border-radius:${Math.max(6, Math.round(size * 0.27))}px;`
+    + `background:${rgba(a, .16)};border:1px solid ${rgba(a, .34)};color:${b};--ico:${ico}px">`
+    + `${svg(k)}</span>`;
 }
 
 /* ---------- data: tabs + cards ---------- */
 const TABS = [
-  { id:'general',   title:'通用',         icon:'gear',      colors:'general' },
-  { id:'dashboard', title:'仪表盘',       icon:'gauge',     colors:'dashboard' },
-  { id:'charging',  title:'充电管理',     icon:'battery',   colors:'charging' },
-  { id:'permissions',title:'权限管理',    icon:'shield',    colors:'general' },
-  { id:'automation',title:'计划与自动化', icon:'calendar',  colors:'automation' },
-  { id:'diagnostics',title:'诊断',        icon:'waveform',  colors:'diagnostics' },
-  { id:'about',     title:'关于',         icon:'heart',     colors:'about', sep:true },
+  { id:'general',    title:'通用',         icon:'gear',      colors:'general' },
+  { id:'dashboard',  title:'仪表盘',       icon:'gauge',     colors:'dashboard' },
+  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'charging' },
+  { id:'permissions',title:'睡眠管理',     icon:'shield',    colors:'advanced' },
+  { id:'automation', title:'自动化', icon:'calendar',  colors:'automation' },
+  { id:'diagnostics',title:'诊断',         icon:'waveform',  colors:'about' },
+  { id:'about',      title:'关于',         icon:'heart',     colors:'permissions' },
 ];
 
+/* 各控件 colors 字段保留 6.1.3 真实基线值供追溯；
+   渲染时由 renderCard 按「同一卡内颜色一致」规则统一覆盖为卡头色对。 */
+/* 2026-11-11 按 Swift 源码重新校正（8779443 / 6.1.3）：
+   ① 「使用硬件电量百分比」开关 + 状态文案在「通用 → 菜单栏实时读数」卡，
+      与 Swift 源码一致（GeneralSettingsView.swift:144-158，由充电管理页迁入），渲染随本卡 charging。
+   ② 「任务设置」是点「添加计划任务」后弹出的独立 sheet（NewScheduleTaskView），
+      不是「自动化」页的常驻卡，已从 cards 移除，仅在注释保留其结构。
+   ③ 运行时条件不模拟，原型一律展示默认 / 开启态，仅在注释标注：
+      manageCharging 控制「电池校准 / 巡航模式 / 高温保护」是否出现
+      （原「睡眠与退出行为」卡已移至「睡眠管理」页并更名「睡眠行为」，2026-11-11 用户指令）；
+      sailingMode 控制两个滑杆；enableHeatProtectionMode 控制温度上限；
+      hasMagSafe 控制整张 MagSafe 卡；updateService.phase != .idle 才显示更新状态面板；
+      设备能力不足时开关置灰；通知总开关禁用时子开关副标题动态改显原因。 */
 const PAGES = {
   general: {
-    sub: '语言、外观、启动与通知等全局基础偏好。',
+    sub: '语言、外观、启动等全局基础偏好。',
     cards: [
       { title:'语言', sub:'切换菜单栏和设置界面的显示语言。', icon:'lang', colors:'general', rows:[
-        rSeg(['跟随系统','中文','English'], 0),
+        rSeg(['跟随系统','中文','英语'], 0),  // 中文界面显示「英语」，英文界面仍 English
       ]},
-      { title:'外观', sub:'选择浅色、深色或由系统自动切换。', icon:'brush', colors:'dashboard', rows:[
+      { title:'外观', sub:'选择浅色、深色或由系统自动切换。', icon:'brush', colors:'general', rows:[
         rSeg(['自动','浅色','深色'], 0),
         rDiv(),
-        rToggle('始终使用不透明背景', '系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。', false, 'dashboard'),
+        rToggle('始终使用不透明背景', '系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。', false, 'dashboard', 'brush'),
       ]},
       { title:'启动', sub:'让电池保护在登录后自动开始工作。', icon:'power', colors:'general', rows:[
-        rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general'),
+        rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general', 'power'),
       ]},
       { title:'菜单栏实时读数', sub:'在电量、功率或两者同时显示之间切换。', icon:'signal', colors:'charging', rows:[
-        rSeg(['电量','功率','电量 + 功率'], 0),
+        rSeg(['电量','功率','电量 + 功率'], 0, 'charging', 'signal'),
         rDiv(),
-        rToggle('使用颜色显示电池状态', '充电、接通电源、低电量使用不同颜色。', true, 'dashboard'),
+        // 「电量数字位置」是 Picker，且仅当菜单栏显示内容 = 电量百分比时出现（GeneralSettingsView.swift:105-121）
+        rControl('电量数字位置', '', { t:'picker', val:'图标旁' }, 'charging', 'sliders'),
         rDiv(),
-        rToggle('使用硬件电量百分比', '直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值。', false, 'charging'),
+        rToggle('使用颜色显示电池状态', '充电、接通电源、低电量使用不同颜色。', true, 'charging', 'brush'),
+        rDiv(),
+        // 2026-11-11 用户指令：由「充电管理 → 电量读取方式」移回此处，颜色随本卡（charging）
+        rToggle('使用硬件电量百分比', '直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值。', false, 'charging', 'battery'),
         rNotice('硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。', 'info', 'charging'),
       ]},
-      { title:'通知', sub:'控制 Aidente 何时向你报告充电状态。', icon:'bell', colors:'automation', rows:[
-        rToggle('关闭全部通知', '', false, 'about'),
+      { title:'MagSafe 指示灯', sub:'在受支持机型上用颜色显示充电、暂停和保护状态。', icon:'bolt', colors:'automation', rows:[
+        rToggle('由 Aidente 控制指示灯', '', true, 'automation', 'bolt'),
         rDiv(),
-        rToggle('充电状态变化时通知', '暂停或恢复充电时发送系统通知。', true, 'automation'),
+        rControl('高温保护时的灯光', '', { t:'picker', val:'关闭' }, 'automation', 'bolt'),  // 源码 Picker 5 项：关闭 / 绿色 / 橙色 / 橙色慢闪 / 橙色快闪
       ]},
     ]
   },
   dashboard: {
-    sub: '选择仪表盘显示的状态信息，并设置如何打开完整仪表盘。',
+    sub: '配置仪表盘顶部的时间信息与打开方式。',
     cards: [
       { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'dashboard', rows:[
-        rToggle('系统运行时间', '', true, 'dashboard'),
+        rToggle('系统运行时间', '', true, 'dashboard', 'gauge'),
         rDiv(),
-        rToggle('电池剩余时间', '', true, 'automation'),
+        rToggle('电池剩余时间', '', true, 'dashboard', 'gauge'),
       ]},
-      { title:'访问仪表盘', sub:'菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。', icon:'signal', colors:'dashboard', rows:[
-        rNotice('双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。', 'info', 'dashboard'),
-        rBtn('打开仪表盘', 'primary', 'dashboard'),
+      { title:'访问仪表盘', sub:'菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。', icon:'signal', colors:'automation', rows:[
+        rNotice('双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。面板显示项可在仪表盘内配置。', 'info', 'general'),
+        rBtn('打开仪表盘', 'automation'),
       ]},
     ]
   },
@@ -360,204 +473,315 @@ const PAGES = {
     sub: '设定充电上限、巡航与高温保护，养护电池。',
     cards: [
       { title:'充电管理', sub:'限制最高充电量，减少电池长期处于满电状态的时间。', icon:'battery', colors:'charging', rows:[
-        rToggle('管理充电', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging'),
-        rControl('充电上限', '达到上限后由适配器供电，下降 2% 后补电。', rSlider(80, 50, 100, '%')),
-      ]},
-      { title:'自动放电', sub:'接入电源或降低上限时，若高出目标超过 1%，主动放电至目标。', icon:'plug', colors:'general', rows:[
-        rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'general'),
-      ]},
-      { title:'睡眠与退出行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'dashboard', rows:[
-        rToggle('达到上限前阻止睡眠', '', false, 'dashboard'),
+        rToggle('管理充电', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging', 'plug'),
+        rNotice('部分新固件在电量高于上限时会使用电池，不能保证仅由充电器供电；临时暂停使用当时电量的固件上限，允许小幅波动。', 'info', 'charging'),
+        rControl('充电上限', '达到上限后由适配器供电，下降 2% 后补电；巡航模式使用巡航范围', rSlider(80, 20, 100, '%'), 'charging', 'sliders'),
+        // 默认态示例：运行时由 chargeLimit / sailingMode / 供电状态填充，原型不模拟动态读数
+        rNotice('正在以 80% 上限管理充电，达到上限后由适配器供电；巡航模式当前关闭。', 'battery', 'charging'),
         rDiv(),
-        rToggle('睡眠时暂停充电', '', true, 'general'),
-        rDiv(),
-        rToggle('退出 Aidente 后保持暂停', '适合快速用户切换或临时退出应用。', false, 'about'),
-      ]},
-      { title:'电池校准', sub:'充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。', icon:'gauge', colors:'dashboard', rows:[
-        rControl('放电目标', '', rSlider(15, 5, 20, '%')),
-        rDiv(),
-        rControl('满电保持时间', '', rStepper('60 分钟')),
+        // 2026-11-11 用户指令恢复：自动放电回到原位，默认关闭
+        rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'charging', 'plug'),
       ]},
       { title:'巡航模式', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'general', rows:[
-        rToggle('启用巡航模式', '', false, 'general'),
+        rToggle('启用巡航模式', '', false, 'general', 'signal'),
+        rDiv(),
+        rControl('低于上限多少时恢复充电', '', rSlider(3, 1, 20, '%'), 'general', 'sliders'),
+        rDiv(),
+        // 源码是只读数值 Text（chargeLimit − sailingModeLimit），不是滑杆
+        rControl('恢复充电电量', '', rStepper('77%'), 'charging', 'sliders'),
       ]},
-      { title:'高温保护', sub:'温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。', icon:'bolt', colors:'about', rows:[
-        rToggle('启用高温保护', '', false, 'about'),
+      { title:'高温保护', sub:'温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。', icon:'bolt', colors:'heat', rows:[
+        rToggle('启用高温保护', '', false, 'heat', 'bolt'),
+        rDiv(),
+        rControl('温度上限', '', rSlider(40, 30, 50, '°C'), 'heat', 'bolt'),
       ]},
-      { title:'快捷操作', sub:'执行一次性操作，不会改动你保存的充电上限。', icon:'bolt', colors:'automation', rows:[
-        rInset('<div class="status-line"><span class="badge-dot"></span>正在以 80% 上限管理充电</div>'),
-        rBtnRow([['临时充至 100%','primary','automation'],['开始校准','dashboard'],['暂停充电','about']]),
+      { title:'电池校准', sub:'充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。', icon:'gauge', colors:'automation', rows:[
+        // 校准是一次性完整 loop，不是持续开关：与诊断页「诊断记录未启动」同款
+        // 控件行 + 内联按钮；运行中 label 显示当前阶段（校准：xxx）、按钮变「停止校准」。
+        { t:'control', label:'电池校准未启动', sub:'执行一次完整的充放电校准流程', icon:'gauge', colors:'dashboard', control:{ t:'button', label:'开始电池校准' } },
+        rDiv(),
+        rControl('放电目标', '', rSlider(15, 5, 20, '%'), 'dashboard', 'sliders'),
+        rDiv(),
+        rControl('满电保持时间', '', rStepper('60 分钟'), 'automation', 'sliders'),
       ]},
+      // 2026-11-11 用户指令：原「睡眠与退出行为」卡移至「睡眠管理」页并更名「睡眠行为」
     ]
   },
   automation: {
     sub: '按计划自动执行充电任务，或接入快捷指令。',
     cards: [
-      { title:'计划任务', sub:'按设定时间自动调整上限、补电、校准、暂停或放电。错过的任务可在 Mac 唤醒后补做。', icon:'calendar', colors:'automation', rows:[
-        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
-          +grad('automation')+'">'+svg('bolt')+'</span><div><div style="font-weight:600;color:var(--text)">临时充至 100%</div>'
-          +'<div style="font-size:11px">11月10日 09:00 · 每周一</div></div><span class="seg on" style="margin-left:auto">开</span></div>'),
-        rBtn('添加计划任务', 'primary', 'automation'),
+      { title:'计划任务', sub:'按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。错过的任务可在 Mac 唤醒后补做。', icon:'calendar', colors:'automation', rows:[
+        /* 无任务时不再显示「还没有计划任务」空状态文案（用户 2026-11-11 决定：
+           设置中不需要提示用户）。卡内仅保留「添加计划任务」动作按钮，
+           对应 AutomationSettingsView.swift 删除 tasks.isEmpty 空态 Inset 分支。 */
+        rBtn('添加计划任务', 'automation'),
       ]},
-      { title:'Apple 快捷指令', sub:'在「快捷指令」中使用「打开 URL」操作，即可控制 Aidente。', icon:'terminal', colors:'dashboard', rows:[
-        rInset('aidente://set-limit?value=80<br>aidente://top-up<br>aidente://calibrate<br>aidente://pause<br>aidente://discharge?value=70<br>aidente://resume', true),
-      ]},
-    ]
+      /* 「任务设置」不是本页常驻卡；点「添加计划任务」后弹出的独立 sheet
+         （AutomationSettingsView.swift:143-301，560×590）。下方「添加计划任务弹窗」
+         预览块按真实源码结构呈现该 sheet 并应用已定规则：标题徽章取卡头档 28
+         （Swift 当前 44，待同步）；卡内统一 automation 色（AidenteCard 注入
+         cardColors 覆盖各控件基线 colors）；开关走卡色两态、行徽章 26。 */
+    ],
+    sheet: {
+      title: '添加计划任务', sub: '选择动作、执行时间和重复规则',
+      icon: 'calendar.badge.plus', colors: 'automation',
+      card: {
+        title: '任务设置', icon: 'slider.horizontal.3', colors: 'automation', rows: [
+          { t:'control', label:'执行动作', icon:'bolt.fill', colors:'charging',
+            control:{ t:'picker', val:'设置充电上限' } },
+          { t:'div' },
+          { t:'control', label:'充电上限', icon:'percent', colors:'charging',
+            control:{ t:'slider', min:20, max:100, val:80, suf:'%' } },
+          { t:'div' },
+          { t:'control', label:'首次执行', icon:'clock.badge.fill', colors:'general',
+            control:{ t:'date', val:'今天 18:00' } },
+          { t:'div' },
+          { t:'control', label:'重复', icon:'repeat.circle.fill', colors:'dashboard',
+            control:{ t:'picker', val:'从不' } },
+          { t:'div' },
+          { t:'toggle', label:'错过后尽快补做', sub:'Mac 唤醒并运行 Aidente 后执行',
+            icon:'arrow.clockwise.circle.fill', colors:'automation', on:true },
+        ]
+      }
+    },
   },
   diagnostics: {
-    sub: '记录问题、导出诊断包，并查看隐私与命令行。',
+    sub: '记录问题、导出诊断包，并查看命令行。',
     cards: [
-      { title:'问题记录', sub:'复现异常时记录关键电池与充电控制状态，最长持续两小时。', icon:'waveform', colors:'dashboard', rows:[
-        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
-          +grad('charging')+'">'+svg('bolt')+'</span><div><div style="font-weight:600;color:var(--text)">诊断记录未启动</div>'
-          +'<div style="font-size:11px">平时不会增加高频采样或后台负担</div></div></div>'),
-        rBtnRow([['开始问题记录','primary','dashboard'],['复制编号','ghost','general']]),
-      ]},
-      { title:'导出诊断包', sub:'只在你确认后生成本地 ZIP，Aidente 不会自动上传。', icon:'download', colors:'general', rows:[
-        rToggle('包含最近的崩溃报告', '最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏。', true, 'dashboard'),
+      { title:'诊断与导出', sub:'诊断信息始终由用户决定是否生成和发送。', icon:'download', colors:'about', rows:[
+        { t:'control', label:'诊断记录未启动', sub:'平时不会增加高频采样或后台负担', icon:'check', colors:'about', control:{ t:'button', label:'开始问题记录' } },
         rDiv(),
-        rToggle('包含耗电 App 名称', '默认关闭；开启后仅记录导出时的 App 名称与活动估算。', false, 'charging'),
+        rToggle('包含最近的崩溃报告', '最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏。', true, 'advanced', 'info'),
+        rDiv(),
+        rToggle('包含耗电 App 名称', '默认关闭；开启后仅记录导出时的 App 名称与活动估算。', false, 'charging', 'bolt'),
         rInset('导出内容预览<br>• Aidente 统一日志（最近 1 小时或本次记录）<br>• 软件、macOS、机型与后台服务状态<br>• 电池、适配器及充电控制快照<br>• 用户名、路径、网络地址、序列号自动脱敏'),
-        rBtnRow([['导出诊断包','primary','general']]),
+        rBtnRow([['导出诊断包','about'],['在访达中显示','about']]),
       ]},
-      { title:'隐私保护', sub:'诊断信息始终由用户决定是否生成和发送。', icon:'shield', colors:'dashboard', rows:[
-        rNotice('Aidente 不会自动上传日志。诊断包默认不含耗电 App 名称，也不主动收集账户名、设备序列号或网络配置。发送前可以先解压检查。', 'shield', 'dashboard'),
-      ]},
-      { title:'可选 CLI', sub:'高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。', icon:'terminal', colors:'dashboard', rows:[
+      { title:'可选 CLI', sub:'高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。', icon:'terminal', colors:'permissions', rows:[
         rInset('aidente status<br>aidente limit 80<br>aidente pause · aidente resume<br>aidente diagnostics', true),
-        rBtnRow([['复制 CLI 完整路径','ghost','dashboard']]),
+        rBtn('复制 CLI 完整路径', 'permissions'),
       ]},
     ]
   },
   permissions: {
-    sub: '查看并重发控制服务的系统授权。',
+    sub: '配置 Mac 睡眠与退出应用后的充电行为。',
     cards: [
-      { title:'重新检查授权', sub:'当 Aidente 未在「系统设置 → 通用 → 登录项与扩展」中获批准时，重新检测授权状态。', icon:'shield', colors:'general', rows:[
-        rNotice('请前往「系统设置 → 通用 → 登录项与扩展」批准 Aidente，然后点击下方按钮重新检查。', 'shield', 'general'),
-        rBtn('重新检查授权', 'primary', 'general'),
-      ]},
-      { title:'修复控制服务', sub:'升级后主程序或后台控制程序改变、身份不匹配导致控制失效时，重新登记授权。', icon:'shield', colors:'about', rows:[
-        rNotice('后台控制服务身份不匹配或已损坏。点击修复将重新通过 macOS 管理员授权安装服务，无需开发者账号。', 'info', 'about'),
-        rBtn('修复控制服务', 'primary', 'about'),
+      // 2026-11-11 用户指令：自「充电管理」页移入本页，并更名「睡眠行为」；颜色随页标题（advanced，与仪表盘互换后）
+      { title:'睡眠行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'advanced', rows:[
+        rToggle('达到上限前阻止睡眠', '仅阻止因长时间无操作而自动睡眠，合盖仍会睡眠。', false, 'advanced', 'power'),
+        rDiv(),
+        rToggle('睡眠时暂停充电', '进入睡眠（含合盖）时暂停充电。', true, 'advanced', 'power'),
+        rDiv(),
+        rToggle('退出 Aidente 后保持暂停', '退出后保持充电受控状态。', false, 'advanced', 'power'),
       ]},
     ]
   },
   about: {
     sub: '软件更新、版本信息与法律开源声明。',
     cards: [
-      { title:'Aidente', sub:'为 Apple 芯片 MacBook 打造的独立电池养护工具', icon:'bolt', colors:'charging', rows:[] },
-      { title:'软件更新', sub:'从 Aidente 官方 GitHub 发行版安全获取更新。', icon:'download', colors:'automation', rows:[
-        rInset('<div style="display:flex;gap:12px;align-items:center"><span class="nav-icon" style="background:'
-          +grad('automation')+'">'+svg('check')+'</span><div><div style="font-weight:600;color:var(--text)">已是最新版本</div>'
-          +'<div style="font-size:11px">v6.1.3</div></div></div>'),
-        rToggle('自动检查更新', '启动后检查，并每隔六小时检查一次正式发行版。', true, 'automation'),
+      { title:'软件更新', sub:'从 Aidente 官方 GitHub 发行版安全获取更新。', icon:'download', colors:'permissions', rows:[
+        // 更新状态面板仅 updateService.phase != .idle（点「检查更新」后）才出现，闲置时不占位
+        // （AboutSettingsView.swift:18-61），故本页默认态不再渲染该 Inset。
+        rToggle('自动检查更新', '启动后检查，并每隔六小时检查一次正式发行版。', true, 'automation', 'download'),
         rDiv(),
-        rBtnRow([['检查更新','primary','charging'],['查看 GitHub 发行版','ghost','dashboard']]),
+        rBtnRow([['检查更新','permissions'],['查看 GitHub 发行版','permissions']]),
       ]},
-      { title:'法律与开源', sub:'开源许可、商标与安全声明。', icon:'shield', colors:'about', rows:[
+      { title:'法律与开源', sub:'开源许可、商标与安全声明。', icon:'shield', colors:'general', rows:[
         rText('<b>安全说明</b><br>Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭「管理充电」，恢复系统默认充电状态。'),
         rDiv(),
         rText('<b>商标声明</b><br>Aidente 是独立项目，与 AppHouseKitchen 不存在隶属、授权或分发关系。AlDente 是其各自权利人的商标。'),
         rDiv(),
         rText('<b>开放源代码</b><br>Aidente 是基于开源 Stasis 项目修改的 GPL-3.0 软件，并使用 SMCKit 与 Defaults 开源组件。'),
-        rBtn('查看开源许可证', 'ghost', 'dashboard'),
+        rBtnRow([['查看开源许可证','general'],['查看第三方声明','general']]),
       ]},
     ]
   },
 };
 
-/* ---------- row renderers ---------- */
-function rToggle(label, sub, on, colors) {
-  return { t:'toggle', label, sub, on, colors };
-}
-function rSeg(opts, sel) { return { t:'seg', opts, sel }; }
-function rControl(label, sub, control) { return { t:'control', label, sub, control }; }
+/* ---------- 设置页 UI 术语体系（2026-11-11 定） ----------
+   卡内元素 = 卡头 / 行徽章 / 开关行 / 状态点 / 状态文案 / 动作按钮 / 数值
+              （「同一卡内颜色一致」规则的作用范围，由 renderCard 统一覆盖）
+   状态文案 = 卡内说明状态、注意事项的独立文字行：如快捷操作卡「正在以 80% 上限
+              管理充电」、通用页「菜单栏实时读数」卡下的「硬件电量通常会与…」
+   状态点   = 状态文案前的 8px 圆点
+   动作按钮 = 所有按钮与按钮组（代码 AidenteActionButtonStyle）
+   以下 rNotice / rBtn / rBtnRow 等 helper 名是实现细节，不重命名。
+   colors = 该控件在 6.1.3 基线里真实使用的色对键。
+   ---------------------------------------------------------- */
+function rToggle(label, sub, on, colors, icon) { return { t:'toggle', label, sub, on, colors, icon }; }
+function rSeg(opts, sel, colors, icon) { return { t:'seg', opts, sel, colors, icon }; }
+function rControl(label, sub, control, colors, icon) { return { t:'control', label, sub, control, colors, icon }; }
 function rSlider(val, min, max, suf) { return { t:'slider', val, min, max, suf }; }
 function rStepper(txt) { return { t:'stepper', txt }; }
 function rDiv() { return { t:'div' }; }
 function rNotice(text, icon, colors) { return { t:'notice', text, icon, colors }; }
 function rInset(html, mono) { return { t:'inset', html, mono }; }
 function rText(text) { return { t:'text', text }; }
-function rBtn(label, kind, colors) { return { t:'btn', label, kind, colors }; }
+function rBtn(label, colors) { return { t:'btn', label, colors }; }
 function rBtnRow(list) { return { t:'btnrow', list }; }
 
-/* ---------- render ---------- */
-function renderRow(r) {
+/* ---------- render：按真实组件取色 ---------- */
+function rowBadge(r, legacy) {
+  if (legacy) return legacyBadge(r.icon || 'sliders', r.colors, TAB_BADGE_SIZE);
+  return r.colors ? iconBadge(r.icon || 'sliders', r.colors, 26) : '';
+}
+function renderRow(r, legacy) {
+  const b = rowBadge(r, legacy);
+  const bOut = b ? `<span class="badge-slot">${b}</span>` : b;
   switch (r.t) {
-    case 'toggle':
-      return `<div class="row"><div class="r-main"><div class="r-label">${r.label}</div>${r.sub?`<div class="r-sub">${r.sub}</div>`:''}</div><div class="r-control"><div class="toggle ${r.on?'on':''}" data-toggle></div></div></div>`;
+    case 'toggle': {
+      const a = r.colors ? pal(r.colors)[0] : null;
+      const tint = a ? ` style="--toggle-on:${a};--toggle-off:${rgba(a, .16)}"` : '';
+      return `<div class="row">${bOut}<div class="r-main"><div class="r-label">${r.label}</div>`
+        + `${r.sub ? `<div class="r-sub">${r.sub}</div>` : ''}</div>`
+        + `<div class="r-control"><div class="toggle ${r.on ? 'on' : ''}"${tint} role="switch" tabindex="0" aria-checked="${r.on ? 'true' : 'false'}" data-toggle></div></div></div>`;
+    }
     case 'seg':
-      return `<div class="row"><div class="r-main"><div class="r-label">${r.opts[0]}</div></div><div class="r-control"><div class="segmented">${r.opts.map((o,i)=>`<span class="seg ${i===r.sel?'on':''}" data-seg>${o}</span>`).join('')}</div></div></div>`;
+      /* Swift 的 Picker(...).labelsHidden()：本行不显示字段名，也不显示行徽章，仅显示选项控件 */
+      return `<div class="row"><div class="r-main"></div>`
+        + `<div class="r-control"><div class="segmented" role="radiogroup">`
+        + `${r.opts.map((o, i) => `<span class="seg ${i === r.sel ? 'on' : ''}" role="radio" aria-checked="${i === r.sel}" tabindex="0" data-seg>${o}</span>`).join('')}`
+        + `</div></div></div>`;
     case 'control':
-      return `<div class="row"><div class="r-main"><div class="r-label">${r.label}</div>${r.sub?`<div class="r-sub">${r.sub}</div>`:''}</div><div class="r-control">${renderControl(r.control)}</div></div>`;
-    case 'slider':
-      return `<div class="slider-wrap"><input class="slider" type="range" min="${r.min}" max="${r.max}" value="${r.val}"><span class="slider-val">${r.val}${r.suf}</span></div>`;
-    case 'stepper':
-      return `<span style="font-size:13px;color:var(--text)">${r.txt}</span>`;
+      return `<div class="row">${bOut}<div class="r-main"><div class="r-label">${r.label}</div>`
+        + `${r.sub ? `<div class="r-sub">${r.sub}</div>` : ''}</div>`
+        + `<div class="r-control">${renderControl(r.control, r.colors, r.label)}</div></div>`;
     case 'div':
       return `<div class="divider"></div>`;
-    case 'notice':
-      return `<div class="notice">${svg(r.icon)}<div>${r.text}</div></div>`;
+    case 'notice': {
+      /* 状态文案徽章 = legacy 式（16% 底 / 34% 描边 / 尾色图标），跟随主题；
+         尺寸跟随 --tab-badge-size，与文字垂直居中。对应 Swift AidenteNotice 的 legacyStyle: true。 */
+      const [a, b] = pal(r.colors || 'general');
+      const ico = Math.round(TAB_BADGE_SIZE * 0.46);
+      return `<div class="notice" style="background:${rgba(a, .075)};border:1px solid ${rgba(a, .20)}">`
+        + `<span class="ib" style="width:${TAB_BADGE_SIZE}px;height:${TAB_BADGE_SIZE}px;`
+        + `border-radius:${Math.max(6, Math.round(TAB_BADGE_SIZE * 0.27))}px;`
+        + `background:${rgba(a, .16)};border:1px solid ${rgba(a, .34)};color:${b};--ico:${ico}px">`
+        + `${svg(r.icon || 'info')}</span><div>${r.text}</div></div>`;
+    }
     case 'inset':
-      return `<div class="inset ${r.mono?'mono':''}">${r.html}</div>`;
+      return `<div class="inset ${r.mono ? 'mono' : ''}">${r.html}</div>`;
     case 'text':
       return `<div class="row-text">${r.text}</div>`;
-    case 'btn':
-      return `<div style="padding:6px 0 12px"><span class="btn btn-${r.kind}">${svg('bolt')}${r.label}</span></div>`;
+    case 'btn': {
+      const a = pal(r.colors || 'general')[0];
+      return `<div style="padding:6px 0 12px"><span class="btn" style="background:${rgba(a, .20)};`
+        + `border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${svg('bolt')}${r.label}</span></div>`;
+    }
     case 'btnrow':
-      return `<div style="display:flex;gap:10px;padding:6px 0 12px">${r.list.map(([l,k,c])=>`<span class="btn btn-${k}">${svg('bolt')}${l}</span>`).join('')}</div>`;
+      return `<div style="display:flex;gap:10px;padding:6px 0 12px">`
+        + r.list.map(([l, c]) => {
+          const a = pal(c || 'general')[0];
+          return `<span class="btn" style="background:${rgba(a, .20)};border-color:${rgba(a, .34)};`
+            + `color:var(--text)" role="button" tabindex="0">${svg('bolt')}${l}</span>`;
+        }).join('') + `</div>`;
   }
   return '';
 }
-function renderControl(c) {
+function renderControl(c, colors, label) {
+  if (c.t === 'picker' || c.t === 'date') {
+    const caret = c.t === 'picker' ? ' <span style="opacity:.45;font-size:11px">▾</span>' : '';
+    return `<span class="field">${c.val}${caret}</span>`;
+  }
   if (c.t === 'slider') {
-    return `<div class="slider-wrap"><input class="slider" type="range" min="${c.min}" max="${c.max}" value="${c.val}"><span class="slider-val">${c.val}${c.suf}</span></div>`;
+    return `<div class="slider-wrap"><input class="slider" type="range" min="${c.min}" max="${c.max}"`
+      + ` value="${c.val}" aria-label="${label || '数值'}">`
+      + `<span class="slider-val">${c.val}${c.suf}</span></div>`;
   }
   if (c.t === 'stepper') return `<span style="font-size:13px;color:var(--text)">${c.txt}</span>`;
+  if (c.t === 'button') {
+    const a = colors ? pal(colors)[0] : '#5856d6';
+    return `<span class="btn" style="background:${rgba(a, .20)};border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${c.label}</span>`;
+  }
   return '';
 }
 
-function renderCard(card) {
+/* 2026-11-11 设计规则：同一张卡片内颜色一致，不设强调色 / 状态色例外。
+   卡头选定色对后，卡内行徽章、开关行、状态点、状态文案、动作按钮、数值一律继承；
+   其中徽章为恒定实底，状态文案与动作按钮按半透明档位跟随主题变化。
+   PAGES 里各控件原有的 colors 值保留作 6.1.3 基线追溯，渲染时统一覆盖。 */
+function renderCard(card, legacyRows) {
+  const rows = card.rows.map(r => {
+    const row = { ...r, colors: card.colors };
+    if (r.t === 'btnrow') row.list = r.list.map(([label]) => [label, card.colors]);
+    return row;
+  });
   return `<div class="card">
     <div class="card-head">
-      <span class="card-icon" style="background:${grad(card.colors)}">${svg(card.icon)}</span>
-      <div><div class="card-title">${card.title}</div>${card.sub?`<div class="card-sub">${card.sub}</div>`:''}</div>
+      ${iconBadge(card.icon, card.colors, 28)}
+      <div><h2 class="card-title">${card.title}</h2>${card.sub ? `<div class="card-sub">${card.sub}</div>` : ''}</div>
     </div>
-    ${card.rows.length ? '<div class="card-divider"></div>' : ''}
-    ${card.rows.map(renderRow).join('')}
+    ${rows.length ? '<div class="card-divider"></div>' : ''}
+    ${rows.map(r => renderRow(r, legacyRows)).join('')}
   </div>`;
+}
+
+/* 添加计划任务弹窗（sheet）静态预览：标题区 + 任务设置卡 + 底部按钮。
+   sheet 标题徽章 34 属卡外元素，与页标题同档（AutomationSettingsView.swift:92-101 同为 34）。
+   卡内元素经 renderCard 统一为 automation，行徽章取 legacy 式 22（源码 legacyStyle: true）。 */
+function renderSheet(sheet) {
+  const [a] = pal(sheet.colors);
+  return `<div class="sheet-window"><div class="sheet-bg">`
+    + `<div class="sheet-title">${iconBadge(sheet.icon, sheet.colors, 34)}`
+    + `<div><h2 class="sheet-title-t">${sheet.title}</h2>`
+    + `<div class="sheet-title-s">${sheet.sub}</div></div></div>`
+    + renderCard(sheet.card, true)
+    + `<div class="sheet-actions">`
+    + `<span class="btn btn-ghost" role="button" tabindex="0">取消</span>`
+    + `<span class="btn" style="background:${rgba(a, .20)};border-color:${rgba(a, .34)};color:var(--text)">添加任务</span>`
+    + `</div></div></div>`;
 }
 
 function renderNav() {
   const nav = document.getElementById('nav');
   nav.innerHTML = TABS.map((t, i) => {
-    return `<div class="nav-item ${i===0?'active':''}" data-tab="${t.id}">${badge(t.icon, t.colors)}<span>${t.title}</span></div>`;
+    return `<div class="nav-item ${i===0?'active':''}" role="tab" tabindex="0" aria-selected="${i===0}" data-tab="${t.id}">${badge(t.icon, t.colors)}<span>${t.title}</span></div>`;
   }).join('');
   nav.querySelectorAll('.nav-item').forEach(el => {
     el.addEventListener('click', () => selectTab(el.dataset.tab));
   });
 }
 
+let currentTab = 'general';
 function selectTab(id) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === id));
+  currentTab = id;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const on = el.dataset.tab === id;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-selected', String(on));
+  });
   const page = PAGES[id];
   const tab = TABS.find(t => t.id === id);
   const detail = document.getElementById('detail');
-  detail.innerHTML = `<div class="page-title">${tab.title}</div><div class="page-sub">${page.sub}</div><div class="hdiv"></div><div class="cards">${page.cards.map(renderCard).join('')}</div>`;
+  detail.innerHTML = `<div class="page-head">${iconBadge(tab.icon, tab.colors, 34)}`
+    + `<div><h1 class="page-title">${tab.title}</h1><div class="page-sub">${page.sub}</div></div></div>`
+    + `<div class="hdiv"></div><div class="cards">${page.cards.map(c => renderCard(c, false)).join('')}</div>`
+    + (page.sheet ? `<div class="sheet-wrap"><div class="sheet-label">添加计划任务弹窗（点「添加计划任务」后弹出 · 560×590）</div>${renderSheet(page.sheet)}</div>` : '');
   bindInteractions();
 }
 
 function bindInteractions() {
+  // 非原生控件统一支持 Enter / Space 激活
+  document.querySelectorAll('[tabindex]:not(input):not(button)').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+  });
   // toggles
   document.querySelectorAll('[data-toggle]').forEach(el => {
-    el.addEventListener('click', () => el.classList.toggle('on'));
+    el.addEventListener('click', () => {
+      el.classList.toggle('on');
+      el.setAttribute('aria-checked', String(el.classList.contains('on')));
+    });
   });
   // segmented
   document.querySelectorAll('.segmented').forEach(group => {
     group.querySelectorAll('[data-seg]').forEach(seg => {
       seg.addEventListener('click', () => {
-        group.querySelectorAll('[data-seg]').forEach(s => s.classList.remove('on'));
-        seg.classList.add('on');
+        group.querySelectorAll('[data-seg]').forEach(s => {
+          s.classList.remove('on'); s.setAttribute('aria-checked', 'false');
+        });
+        seg.classList.add('on'); seg.setAttribute('aria-checked', 'true');
       });
     });
   });
@@ -571,14 +795,39 @@ function bindInteractions() {
 }
 
 /* ---------- theme toggle ---------- */
-document.getElementById('themeBtn').addEventListener('click', () => {
-  document.body.classList.toggle('dark');
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.setAttribute('aria-pressed', 'false');
+themeBtn.addEventListener('click', () => {
+  const dark = document.body.classList.toggle('dark');
+  themeBtn.setAttribute('aria-pressed', String(dark));
 });
 document.getElementById('appBadge').innerHTML = svg('bolt');
+
+/* ---------- 规则说明 ---------- */
+function renderLegend() {
+  /* 按标签映射当前实际色对 */
+  const legendPairs = [
+    ['general', '通用'], ['dashboard', '仪表盘'], ['charging', '充电管理'],
+    ['advanced', '睡眠管理'], ['automation', '自动化'], ['about', '诊断'],
+    ['permissions', '关于'], ['heat', '高温保护（字面量）'],
+  ];
+  const sw = legendPairs.map(([k, label]) =>
+    `<span class="sw"><i style="background:linear-gradient(135deg,${pal(k)[0]},${pal(k)[1]})"></i>${label}</span>`
+  ).join('');
+  document.getElementById('legend').innerHTML =
+    `<b>配色规则</b>`
+    + `<br>· 卡内同色：每张卡由卡头选定色对，行徽章、开关行、状态点、状态文案、动作按钮、数值全部继承，无强调色例外；相邻卡允许同色 / 相近色。`
+    + `<br>· 徽章恒定：色对 135° 渐变实底 + 白图标，不随主题切换；侧栏 tab 饱和 100%，详情区徽章同款绘制但饱和 90%。例外：状态文案徽章与「添加计划任务」sheet 行徽章为 legacy 式（首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的 legacyStyle: true。`
+    + `<br>· 跟随主题的部分：开关开态 = 首色实底、关态 = 首色 16% 半透明；动作按钮 = 首色 20% 底 / 34% 描边；状态文案 = 首色 7.5% 底 / 20% 描边——三者叠在卡背景上随主题变。滑杆数值用系统文字色 var(--text)，与行标签一致，不随卡色变化。`
+    + `<br>· 徽章尺寸：状态文案 = 侧栏 tab（引用唯一来源 <code>--tab-badge-size</code>）、行 / Inset <code>26</code>、卡头 <code>28</code>、页标题与 sheet 标题 <code>34</code>；状态文案的徽章与文字垂直居中，换行时容器上下等量延伸。`
+    + `<br><b>术语</b>：侧栏 tab（左边栏）；页标题（右边栏）；卡片 = 卡头（徽章 + 标题）、行 / Inset、卡内元素；状态文案 = 卡内说明状态的文字行；状态点 = 其前圆点；动作按钮 = 所有按钮；toggle（开关）。`
+    + `<div class="swatches">${sw}</div>`;
+}
 
 /* ---------- init ---------- */
 renderNav();
 selectTab('general');
+renderLegend();
 </script>
 </body>
 </html>

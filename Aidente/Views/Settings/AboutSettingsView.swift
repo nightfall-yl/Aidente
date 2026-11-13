@@ -7,13 +7,19 @@ struct AboutSettingsView: View {
 
     let updateService: UpdateService
 
+    /// One card = one color pair: the status panel, toggle, version readout
+    /// and action buttons all use the Software Update card's own tint.
+    private var updateTint: Color {
+        AidenteTheme.permissionColors.first ?? AidenteTheme.ocean
+    }
+
     var body: some View {
         AidenteSettingsPage {
             AidenteCard(
                 "软件更新",
                 subtitle: "从 Aidente 官方 GitHub 发行版安全获取更新。",
                 icon: "arrow.triangle.2.circlepath.circle.fill",
-                colors: AidenteTheme.automationColors
+                colors: AidenteTheme.permissionColors
             ) {
                 // The status panel only appears once a check has run. In the
                 // idle phase it would just repeat the card subtitle ("waiting
@@ -24,10 +30,10 @@ struct AboutSettingsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: updateService.statusIcon)
                                 .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(Color(nsColor: updateService.statusColor))
+                                .foregroundStyle(updateTint)
                                 .frame(width: 34, height: 34)
                                 .background(
-                                    Color(nsColor: updateService.statusColor).opacity(0.12),
+                                    updateTint.opacity(0.12),
                                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 )
 
@@ -44,18 +50,18 @@ struct AboutSettingsView: View {
 
                             Text("v\(updateService.currentVersion)")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(AidenteTheme.jade)
+                                .foregroundStyle(updateTint)
                                 .padding(.horizontal, 9)
                                 .padding(.vertical, 5)
                                 .background(
-                                    Capsule().fill(AidenteTheme.jade.opacity(0.12))
+                                    Capsule().fill(updateTint.opacity(0.12))
                                 )
                         }
 
                         if updateService.isBusy {
                             ProgressView()
                                 .progressViewStyle(.linear)
-                                .tint(AidenteTheme.jade)
+                                .tint(updateTint)
                         }
                     }
                 }
@@ -64,7 +70,7 @@ struct AboutSettingsView: View {
                     "自动检查更新",
                     subtitle: "启动后检查，并每隔六小时检查一次正式发行版。",
                     icon: "clock.arrow.2.circlepath",
-                    colors: [AidenteTheme.jade, AidenteTheme.sky],
+                    colors: AidenteTheme.permissionColors,
                     isOn: $automaticallyCheckForUpdates
                 )
 
@@ -82,7 +88,7 @@ struct AboutSettingsView: View {
                         )
                     }
                     .buttonStyle(
-                        AidenteActionButtonStyle(colors: AidenteTheme.chargingColors)
+                        AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
                     )
                     .disabled(updateService.isBusy)
 
@@ -95,7 +101,7 @@ struct AboutSettingsView: View {
                         )
                     }
                     .buttonStyle(
-                        AidenteActionButtonStyle(colors: AidenteTheme.dashboardColors)
+                        AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
                     )
                 }
             }
@@ -104,7 +110,7 @@ struct AboutSettingsView: View {
                 "法律与开源",
                 subtitle: "开源许可、商标与安全声明。",
                 icon: "shield",
-                colors: AidenteTheme.aboutColors
+                colors: AidenteTheme.generalColors
             ) {
                 VStack(alignment: .leading, spacing: 12) {
                     legalBlock(
@@ -142,7 +148,7 @@ struct AboutSettingsView: View {
                             )
                         }
                         .buttonStyle(
-                            AidenteActionButtonStyle(colors: AidenteTheme.dashboardColors)
+                            AidenteActionButtonStyle(colors: AidenteTheme.generalColors)
                         )
 
                         Button {
@@ -154,7 +160,7 @@ struct AboutSettingsView: View {
                             )
                         }
                         .buttonStyle(
-                            AidenteActionButtonStyle(colors: AidenteTheme.dashboardColors)
+                            AidenteActionButtonStyle(colors: AidenteTheme.generalColors)
                         )
                     }
                     .padding(.top, 4)

@@ -28,8 +28,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: AidenteL10n.t("通用")
         case .dashboard: AidenteL10n.t("仪表盘")
         case .charging: AidenteL10n.t("充电管理")
-        case .permissions: AidenteL10n.t("权限管理")
-        case .automation: AidenteL10n.t("计划与自动化")
+        case .permissions: AidenteL10n.t("睡眠管理")
+        case .automation: AidenteL10n.t("自动化")
         case .diagnostics: AidenteL10n.t("诊断")
         case .about: AidenteL10n.t("关于")
         }
@@ -56,24 +56,23 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var colors: [Color] {
         switch self {
+        // 方案 A（2026-11-12）：蓝 → 紫 → 绿 → 靛 → 橙 → 橙红 → 蓝紫，
+        // 7 个 tab 顺序不变；仪表盘 / 睡眠管理色对互换，每页首卡与 tab 同色。
         case .general: AidenteTheme.generalColors
         case .dashboard: AidenteTheme.dashboardColors
         case .charging: AidenteTheme.chargingColors
-        // Unique hue pairs per tab: permissions get an ocean→violet guard
-        // feel instead of reusing general's blue; diagnostics switch to the
-        // deeper indigo pair so neither collides with its neighbors.
-        case .permissions: AidenteTheme.permissionColors
+        case .permissions: AidenteTheme.advancedColors
         case .automation: AidenteTheme.automationColors
-        case .diagnostics: AidenteTheme.advancedColors
-        case .about: AidenteTheme.aboutColors
+        case .diagnostics: AidenteTheme.aboutColors
+        case .about: AidenteTheme.permissionColors
         }
     }
 
     var detailSubtitle: String {
         switch self {
         case .general: AidenteL10n.t(
-            "语言、外观、启动与通知等全局基础偏好。",
-            "Global basics: language, appearance, startup and notifications."
+            "语言、外观、启动等全局基础偏好。",
+            "Global basics: language, appearance, and startup."
         )
         case .dashboard: AidenteL10n.t(
             "配置仪表盘顶部的时间信息与打开方式。",
@@ -84,16 +83,16 @@ enum SettingsTab: String, CaseIterable, Identifiable {
             "Set the charge limit, sailing mode and heat protection to care for the battery."
         )
         case .permissions: AidenteL10n.t(
-            "查看并重发控制服务的系统授权。",
-            "Review and re-issue the system authorization for the control service."
+            "配置 Mac 睡眠与退出应用后的充电行为。",
+            "Set charging behavior while the Mac sleeps or Aidente is not running."
         )
         case .automation: AidenteL10n.t(
-            "按计划自动执行充电任务，或接入快捷指令。",
-            "Run charging tasks on a schedule, or wire up Shortcuts."
+            "按计划自动执行充电任务。",
+            "Run charging tasks on a schedule."
         )
         case .diagnostics: AidenteL10n.t(
-            "记录问题、导出诊断包，并查看隐私与命令行。",
-            "Record issues, export a diagnostics package, and review privacy and the CLI."
+            "记录问题、导出诊断包，并查看命令行。",
+            "Record issues, export a diagnostics package, and review the CLI."
         )
         case .about: AidenteL10n.t(
             "软件更新、版本信息与法律开源声明。",
@@ -277,6 +276,9 @@ struct SettingsView: View {
                         colors: selectedTab.colors,
                         size: 34
                     )
+                    // Page-head badge uses the same sidebar-style gradient
+                    // as the cards (90% saturation, constant across themes).
+                    .environment(\.aidenteCardColors, selectedTab.colors)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(selectedTab.title)
                             .font(.system(size: 20, weight: .bold))
@@ -301,7 +303,7 @@ struct SettingsView: View {
                 Group {
                     switch selectedTab {
                     case .general:
-                        GeneralSettingsView()
+                        GeneralSettingsView(capabilities: capabilities)
                     case .dashboard:
                         DashboardSettingsView()
                     case .charging:
@@ -310,7 +312,7 @@ struct SettingsView: View {
                             chargeManager: chargeManager
                         )
                     case .permissions:
-                        PermissionsSettingsView(chargeManager: chargeManager)
+                        PermissionsSettingsView(capabilities: capabilities)
                     case .automation:
                         AutomationSettingsView()
                     case .diagnostics:

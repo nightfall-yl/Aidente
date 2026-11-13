@@ -68,6 +68,7 @@ class BatteryService {
     private var ioKitMonitorTask: Task<Void, Never>?
     private var smcPollTask: Task<Void, Never>?
     private var delayedPollTask: Task<Void, Never>?
+    private var postConnectPollTask: Task<Void, Never>?
 
     private let logger = Logger(
         subsystem: "com.aidente.app",
@@ -260,6 +261,11 @@ class BatteryService {
     private func handleIOKitUpdate(_ newBatteryMetrics: BatteryMetrics, adapterUpdate: AdapterMetrics) {
         logger.debug("Received IOKit update")
 
+        // Detect the plug-in transition before the metrics below overwrite
+        // the previous adapter state.
+        let adapterJustConnected =
+            adapterUpdate.adapterConnected && !adapterMetrics.adapterConnected
+
         var updatedBattery = newBatteryMetrics
         updatedBattery.batteryVoltage = metrics.batteryVoltage
         updatedBattery.batteryCurrent = metrics.batteryCurrent
@@ -276,6 +282,21 @@ class BatteryService {
 
         if updatedAdapter != adapterMetrics {
             adapterMetrics = updatedAdapter
+        }
+
+        // IOKit events carry no fresh SMC power data: right after the adapter
+        // is plugged in, adapterPower still holds the stale 0 W reading and
+        // batteryPower the negative discharge value, so the menu bar icon
+        // would stay on "battery" until the user opens the popover (which is
+        // what starts fast SMC polling). Schedule two follow-up SMC polls so
+        // the charging state becomes visible within a couple of seconds.
+        if adapterJustConnected {
+            scheduleSinglePoll(delay: .seconds(1))
+            postConnectPollTask?.cancel()
+            postConnectPollTask = Task {
+                try? await Task.sleep(for: .seconds(3))
+                await self.pollSMCOnce()
+            }
         }
 
         updateControlState(from: updatedBattery, adapter: updatedAdapter)
@@ -397,6 +418,8 @@ class BatteryService {
         smcPollTask = nil
         delayedPollTask?.cancel()
         delayedPollTask = nil
+        postConnectPollTask?.cancel()
+        postConnectPollTask = nil
         xpcManager.disconnect()
     }
 }

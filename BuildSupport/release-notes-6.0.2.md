@@ -9,7 +9,7 @@
 
 ## 安装与升级
 
-适用于 Apple Silicon MacBook，macOS 14 及以上。将 Aidente.app 放入 /Applications；升级后进入充电管理，点击“修复控制服务”，在 macOS 系统弹窗重新授予管理员权限。
+适用于 Apple Silicon MacBook，macOS 14 及以上。将 Aidente.app 放入 /Applications；升级后若已开启「管理充电」，启动时会自动提示重新授权，在 macOS 系统弹窗重新授予管理员权限。
 
 此版本沿用 ad-hoc 完整性签名，未经 Apple Developer ID 签名或公证。首次打开可能受到 macOS 提示；不需要关闭 SIP 或全局 Gatekeeper。管理员密码仅由系统弹窗接收。
 

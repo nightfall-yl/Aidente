@@ -72,6 +72,12 @@ private struct UpdateInstallResult: Codable {
     let backupPath: String?
 }
 
+private enum InstallResultOutcome {
+    case none
+    case succeeded(String)
+    case failed(String)
+}
+
 private enum AidenteUpdateError: LocalizedError {
     case invalidResponse
     case invalidRelease
@@ -217,6 +223,11 @@ final class UpdateService {
 
     private var automaticCheckTask: Task<Void, Never>?
     private var promptedVersions = Set<String>()
+
+    /// Set by AppDelegate before `start()`. After a successful post-update
+    /// re-authorization the active ChargeManager re-evaluates charging control
+    /// immediately instead of waiting for the next SMC poll.
+    var controlRetryHandler: (() -> Void)?
 
     /// Nil when the running process has no usable Info.plist version (previews,
     /// unit-test hosts, bare executables, or a malformed plist value).
@@ -365,9 +376,31 @@ final class UpdateService {
 
     private init() {}
 
-    func start() {
-        consumeInstallResultIfNeeded()
+    /// Runs one launch-time authorization check no matter how the bundle was
+    /// replaced. Automatic updates leave an install-result file; manually
+    /// copying a new bundle into /Applications does not, but both change the
+    /// binary the helper pins its client identity to.
+    func checkControlAuthorizationOnLaunch() {
+        let outcome = consumeInstallResultIfNeeded()
+        guard !AidenteRuntime.isUIPreview,
+            !CommandLine.arguments.contains("--update-preview")
+        else { return }
 
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard let self else { return }
+            switch outcome {
+            case .failed(let message):
+                self.presentErrorAlert(message)
+            case .none:
+                self.presentLaunchAuthorizationState(updatedVersion: nil)
+            case .succeeded(let version):
+                self.presentLaunchAuthorizationState(updatedVersion: version)
+            }
+        }
+    }
+
+    func start() {
         if CommandLine.arguments.contains("--update-preview") {
             phase = .available(Self.previewRelease)
             return
@@ -812,28 +845,86 @@ final class UpdateService {
         completion(alert.runModal())
     }
 
-    private func consumeInstallResultIfNeeded() {
+    private func consumeInstallResultIfNeeded() -> InstallResultOutcome {
         guard let resultURL = try? Self.updateResultURL(),
             let data = try? Data(contentsOf: resultURL),
             let result = try? JSONDecoder().decode(UpdateInstallResult.self, from: data)
         else {
-            return
+            return .none
         }
 
         try? FileManager.default.removeItem(at: resultURL)
         if result.succeeded {
             phase = .installed(result.version)
             removeValidatedBackupIfPresent(result.backupPath)
-            Task { [weak self] in
-                try? await Task.sleep(for: .milliseconds(700))
-                self?.presentSuccessfulUpdateAlert(version: result.version)
-            }
+            return .succeeded(result.version)
         } else {
             phase = .failed(result.message)
-            Task { [weak self] in
-                try? await Task.sleep(for: .milliseconds(700))
-                self?.presentErrorAlert(result.message)
+            return .failed(result.message)
+        }
+    }
+
+    /// One prompt per launch. Automatic updates carry a version string; a
+    /// manual /Applications replacement has no result file, so the copy is
+    /// phrased around the changed app instead of a specific version.
+    private func presentLaunchAuthorizationState(updatedVersion: String?) {
+        let helper = ChargingHelperManager.shared
+        helper.refreshStatus()
+
+        guard !helper.isInstalled, Defaults[.manageCharging] else {
+            if let updatedVersion {
+                presentSuccessfulUpdateAlert(version: updatedVersion)
             }
+            return
+        }
+
+        let title: String
+        let englishTitle: String
+        if let updatedVersion {
+            title = "Aidente 已更新至 \(updatedVersion)，需要重新授权一次"
+            englishTitle = "Aidente Was Updated to \(updatedVersion) — Re-authorization Needed"
+        } else {
+            title = "需要重新授权后台控制服务"
+            englishTitle = "Background Control Service Needs Re-authorization"
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = AidenteL10n.t(title, englishTitle)
+        alert.informativeText = AidenteL10n.t(
+            "主程序已改变，后台控制服务登记的身份不再匹配，充电管理暂时不可用。点击「立即重新授权」，通过 macOS 管理员弹窗重新登记即可恢复；无需开发者账号。",
+            "The app changed, so the helper's pinned identity no longer matches and charging control is paused. Click Re-authorize Now to re-register through the macOS administrator prompt — no developer account needed."
+        )
+        alert.addButton(withTitle: AidenteL10n.t("立即重新授权", "Re-authorize Now"))
+        alert.addButton(withTitle: AidenteL10n.t("稍后", "Later"))
+        present(alert) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            Task { @MainActor in
+                await self?.performReauthorization()
+            }
+        }
+    }
+
+    private func performReauthorization() async {
+        do {
+            try await ChargingHelperManager.shared.repair()
+            controlRetryHandler?()
+            let alert = NSAlert()
+            alert.alertStyle = .informational
+            alert.messageText = AidenteL10n.t("重新授权完成", "Re-authorization Complete")
+            alert.informativeText = AidenteL10n.t(
+                "后台控制服务已与当前 Aidente 重新匹配，充电管理已恢复。",
+                "The helper now matches this Aidente build; charging control is available again."
+            )
+            alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
+            present(alert) { _ in }
+        } catch {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = AidenteL10n.t("重新授权未完成", "Re-authorization Failed")
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
+            present(alert) { _ in }
         }
     }
 

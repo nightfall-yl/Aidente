@@ -104,7 +104,7 @@ struct DashboardPopoverView: View {
     @Default(.chargeLimit) private var chargeLimit
     @Default(.manageCharging) private var manageCharging
     @Default(.enableHeatProtectionMode) private var heatProtectionEnabled
-    @Default(.stopChargingWhileSleeping) private var sleepPauseEnabled
+    @Default(.disableSleepUntilChargeLimit) private var preventSleepEnabled
     @Default(.sailingMode) private var sailingModeEnabled
     @Default(.appLanguage) private var appLanguage
     @Default(.showTimeTillDischarge) private var showTimeTillDischarge
@@ -977,19 +977,19 @@ struct DashboardPopoverView: View {
 
                 HStack(spacing: 7) {
                     ProtectionPill(
-                        title: "睡眠暂停",
-                        isEnabled: sleepPauseEnabled,
-                        action: { sleepPauseEnabled.toggle() }
+                        title: AidenteL10n.t("电池巡航"),
+                        isEnabled: sailingModeEnabled,
+                        action: { sailingModeEnabled.toggle() }
                     )
                     ProtectionPill(
-                        title: "高温保护",
+                        title: AidenteL10n.t("高温保护"),
                         isEnabled: heatProtectionEnabled,
                         action: { heatProtectionEnabled.toggle() }
                     )
                     ProtectionPill(
-                        title: "巡航",
-                        isEnabled: sailingModeEnabled,
-                        action: { sailingModeEnabled.toggle() }
+                        title: AidenteL10n.t("阻止睡眠"),
+                        isEnabled: preventSleepEnabled,
+                        action: { preventSleepEnabled.toggle() }
                     )
                 }
             }

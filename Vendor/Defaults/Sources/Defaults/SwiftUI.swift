@@ -226,8 +226,8 @@ extension Defaults {
 				isOn: inverted ? $observable.value.toggled() : $observable.value,
 				label: label
 			)
-			.onChange(of: observable.value) {
-				onChange?(inverted ? !$0 : $0)
+			.onChange(of: observable.value) { _, newValue in
+				onChange?(inverted ? !newValue : newValue)
 			}
 		}
 	}

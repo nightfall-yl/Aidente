@@ -33,7 +33,7 @@ struct DashboardSettingsView: View {
                 "访问仪表盘",
                 subtitle: "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。",
                 icon: "macwindow.on.rectangle",
-                colors: AidenteTheme.generalColors
+                colors: AidenteTheme.automationColors
             ) {
                 AidenteNotice(
                     text: "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。面板显示项可在仪表盘内配置。",
@@ -48,7 +48,7 @@ struct DashboardSettingsView: View {
                 } label: {
                     Label(AidenteL10n.t("打开仪表盘"), systemImage: "macwindow")
                 }
-                .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.generalColors))
+                .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.automationColors))
             }
         }
     }

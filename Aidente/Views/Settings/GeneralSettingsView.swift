@@ -1,5 +1,6 @@
 import Defaults
 import SwiftUI
+import smc_power
 
 struct GeneralSettingsView: View {
     @Default(.appLanguage) var appLanguage
@@ -7,11 +8,19 @@ struct GeneralSettingsView: View {
     @Default(.batteryPercentageDisplayLocation) var batteryPercentageDisplayLocation
     @Default(.menuBarReadoutStyle) var menuBarReadoutStyle
     @Default(.showBatteryStateInStatusIcon) var showBatteryStateInStatusIcon
-    @Default(.disableNotifications) var disableNotifications
-    @Default(.showChargingStatusChangedNotification) var showChargingStatusChangedNotification
+    @Default(.useHardwarePercentage) var useHardwarePercentage
     @Default(.forceOpaqueBackground) var forceOpaqueBackground
     @Default(.appAppearance) var appAppearance
+    @Default(.manageMagSafeLED) var manageMagSafeLED
+    @Default(.heatProtectionMagSafeLEDState) var heatProtectionMagSafeLEDState
+    @Default(.enableHeatProtectionMode) var enableHeatProtectionMode
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    private let capabilities: DeviceCapabilities
+
+    init(capabilities: DeviceCapabilities) {
+        self.capabilities = capabilities
+    }
 
     /// The card reports the app-wide policy, not the settings window's own
     /// container capability. That window always renders an opaque baseline
@@ -48,7 +57,7 @@ struct GeneralSettingsView: View {
                 "外观",
                 subtitle: resolution.strategy.detail,
                 icon: "paintbrush.fill",
-                colors: AidenteTheme.dashboardColors
+                colors: AidenteTheme.generalColors
             ) {
                 Picker(AidenteL10n.t("外观模式"), selection: $appAppearance) {
                     ForEach(AppAppearance.allCases) { appearance in
@@ -129,43 +138,75 @@ struct GeneralSettingsView: View {
                     colors: AidenteTheme.chargingColors,
                     isOn: $showBatteryStateInStatusIcon
                 )
-            }
-
-            AidenteCard(
-                "通知",
-                subtitle: "控制 Aidente 何时向你报告充电状态。",
-                icon: "bell.badge.fill",
-                colors: AidenteTheme.automationColors
-            ) {
-                AidenteSettingToggle(
-                    "关闭全部通知",
-                    icon: "bell.slash.fill",
-                    colors: [AidenteTheme.coral, AidenteTheme.amber],
-                    isOn: $disableNotifications
-                )
 
                 AidenteRowDivider()
 
+                // Moved from the charging page's "电量读取方式" card; the row
+                // inherits this card's charging colors via the card environment.
                 AidenteSettingToggle(
-                    "充电状态变化时通知",
-                    // Explain why the row is grayed out while the master
-                    // switch suppresses notifications.
-                    subtitle: disableNotifications
-                        ? AidenteL10n.t(
-                            "已被“关闭全部通知”停用",
-                            "Disabled by Turn Off All Notifications"
-                        )
-                        : AidenteL10n.t("暂停或恢复充电时发送系统通知"),
-                    icon: "bolt.badge.clock.fill",
-                    colors: AidenteTheme.automationColors,
-                    isOn: $showChargingStatusChangedNotification
+                    "使用硬件电量百分比",
+                    subtitle: "直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值",
+                    icon: "battery.100.bolt",
+                    colors: AidenteTheme.chargingColors,
+                    isOn: $useHardwarePercentage
                 )
-                    .disabled(disableNotifications)
-                    .opacity(disableNotifications ? 0.48 : 1)
+
+                AidenteNotice(
+                    text: "硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。",
+                    icon: "info.circle.fill",
+                    colors: AidenteTheme.chargingColors
+                )
+            }
+
+            // Moved from the charging page; still gated by the device's
+            // MagSafe capability, and the heat-protection row follows the
+            // heat-protection preference owned by the charging page.
+            if capabilities.hasMagSafe {
+                AidenteCard(
+                    "MagSafe 指示灯",
+                    subtitle: "在受支持机型上用颜色显示充电、暂停和保护状态。",
+                    icon: "lightbulb.led.fill",
+                    colors: AidenteTheme.automationColors
+                ) {
+                    AidenteSettingToggle(
+                        "由 Aidente 控制指示灯",
+                        icon: "lightbulb.fill",
+                        colors: AidenteTheme.automationColors,
+                        isOn: $manageMagSafeLED
+                    )
+                    .disabled(!capabilities.magsafeLEDControl)
+                    .opacity(capabilities.magsafeLEDControl ? 1 : 0.5)
+
+                    if manageMagSafeLED && enableHeatProtectionMode {
+                        AidenteRowDivider()
+                        AidenteControlRow(
+                            "高温保护时的灯光",
+                            icon: "lightspectrum.horizontal",
+                            colors: AidenteTheme.automationColors
+                        ) {
+                            Picker("", selection: $heatProtectionMagSafeLEDState) {
+                                Text(AidenteL10n.t("关闭")).tag(MagSafeLEDState.off)
+                                Text(AidenteL10n.t("绿色")).tag(MagSafeLEDState.green)
+                                Text(AidenteL10n.t("橙色")).tag(MagSafeLEDState.orange)
+                                Text(AidenteL10n.t("橙色慢闪"))
+                                    .tag(MagSafeLEDState.blinkOrangeSlow)
+                                Text(AidenteL10n.t("橙色快闪"))
+                                    .tag(MagSafeLEDState.blinkOrangeFast)
+                            }
+                            .labelsHidden()
+                            .frame(width: 140)
+                        }
+                    }
+
+                    if !capabilities.magsafeLEDControl {
+                        AidenteNotice(text: "当前设备不支持 MagSafe 指示灯控制。")
+                    }
+                }
             }
         }
         .onChange(of: launchAtLogin) { _, newValue in
             LaunchAtLoginService.shared.setLaunchAtLogin(newValue)
         }
+        .animation(.default, value: manageMagSafeLED)
     }
 }

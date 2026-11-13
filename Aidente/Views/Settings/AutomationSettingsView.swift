@@ -1,31 +1,9 @@
-import AppKit
 import Defaults
 import SwiftUI
 
 struct AutomationSettingsView: View {
     private let scheduleStore = ScheduleStore.shared
     @State private var showingNewTask = false
-
-    /// Constant URL/description-key pairs. The localized description is
-    /// resolved at render time (see `shortcutRows`) so a language switch
-    /// re-translates instead of freezing the first-access locale.
-    private struct ShortcutCommand {
-        let url: String
-        let key: String
-    }
-
-    private static let shortcutCommands: [ShortcutCommand] = [
-        ShortcutCommand(url: "aidente://set-limit?value=80", key: "设置充电上限（示例 80%）"),
-        ShortcutCommand(url: "aidente://top-up", key: "临时充至 100%"),
-        ShortcutCommand(url: "aidente://calibrate", key: "开始电池校准"),
-        ShortcutCommand(url: "aidente://pause", key: "暂停充电"),
-        ShortcutCommand(url: "aidente://discharge?value=70", key: "放电至目标（示例 70%）"),
-        ShortcutCommand(url: "aidente://resume", key: "恢复充电"),
-    ]
-
-    private var shortcutRows: [(url: String, description: String)] {
-        Self.shortcutCommands.map { ($0.url, AidenteL10n.t($0.key)) }
-    }
 
     var body: some View {
         AidenteSettingsPage {
@@ -35,27 +13,8 @@ struct AutomationSettingsView: View {
                 icon: "calendar.badge.clock",
                 colors: AidenteTheme.automationColors
             ) {
-                if scheduleStore.tasks.isEmpty {
-                    AidenteInsetPanel {
-                        HStack(spacing: 13) {
-                            AidenteIconBadge(
-                                icon: "calendar.badge.plus",
-                                colors: AidenteTheme.automationColors,
-                                size: 44
-                            )
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(AidenteL10n.t("还没有计划任务"))
-                                    .font(.headline)
-                                Text(AidenteL10n.t("创建一项任务，让 Aidente 在合适的时间自动照顾电池。"))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                        }
-                    }
-                } else {
-                    ForEach(Array(scheduleStore.tasks.enumerated()), id: \.element.id) {
-                        index, task in
+                ForEach(Array(scheduleStore.tasks.enumerated()), id: \.element.id) {
+                    index, task in
                         HStack(spacing: 12) {
                             AidenteIconBadge(
                                 icon: task.action.icon,
@@ -83,8 +42,7 @@ struct AutomationSettingsView: View {
                                 )
                             )
                             .labelsHidden()
-                            .toggleStyle(.switch)
-                            .tint(task.action.colors.first ?? AidenteTheme.jade)
+                            .toggleStyle(AidenteCardToggleStyle(color: AidenteTheme.automationColors.first ?? AidenteTheme.amber))
 
                             Button {
                                 scheduleStore.remove(task)
@@ -101,7 +59,6 @@ struct AutomationSettingsView: View {
                             AidenteRowDivider()
                         }
                     }
-                }
 
                 Button {
                     showingNewTask = true
@@ -109,29 +66,6 @@ struct AutomationSettingsView: View {
                     Label(AidenteL10n.t("添加计划任务"), systemImage: "plus.circle.fill")
                 }
                 .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.automationColors))
-            }
-
-            AidenteCard(
-                "Apple 快捷指令",
-                subtitle: "在“快捷指令”中使用“打开 URL”操作，即可控制 Aidente。",
-                icon: "wand.and.stars.inverse",
-                colors: AidenteTheme.dashboardColors
-            ) {
-                AidenteInsetPanel {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(shortcutRows, id: \.url) { row in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.url)
-                                    .font(.system(.body, design: .monospaced))
-                                    .textSelection(.enabled)
-                                Text(row.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
             }
         }
         .sheet(isPresented: $showingNewTask) {
@@ -158,8 +92,13 @@ private struct NewScheduleTaskView: View {
                     AidenteIconBadge(
                         icon: "calendar.badge.plus",
                         colors: AidenteTheme.automationColors,
-                        size: 44
+                        size: 34
                     )
+                    // The sheet title sits outside any AidenteCard, so the
+                    // badge would fall back to the translucent non-card style.
+                    // The prototype draws it as a solid gradient — inject the
+                    // card-color environment explicitly to match.
+                    .environment(\.aidenteCardColors, AidenteTheme.automationColors)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(AidenteL10n.t("添加计划任务"))
                             .font(.title2.bold())
@@ -177,7 +116,9 @@ private struct NewScheduleTaskView: View {
                     AidenteControlRow(
                         "执行动作",
                         icon: action.icon,
-                        colors: action.colors
+                        colors: action.colors,
+                        badgeSize: 22,
+                        legacyStyle: true
                     ) {
                         Picker("", selection: $action) {
                             ForEach(ScheduleActionKind.allCases) { action in
@@ -195,7 +136,9 @@ private struct NewScheduleTaskView: View {
                                 action == .setChargeLimit ? "充电上限" : "放电目标"
                             ),
                             icon: "percent",
-                            colors: AidenteTheme.chargingColors
+                            colors: AidenteTheme.chargingColors,
+                            badgeSize: 22,
+                            legacyStyle: true
                         ) {
                             HStack {
                                 Slider(
@@ -229,7 +172,9 @@ private struct NewScheduleTaskView: View {
                     AidenteControlRow(
                         "首次执行",
                         icon: "clock.badge.fill",
-                        colors: AidenteTheme.generalColors
+                        colors: AidenteTheme.generalColors,
+                        badgeSize: 22,
+                        legacyStyle: true
                     ) {
                         DatePicker(
                             "",
@@ -246,7 +191,9 @@ private struct NewScheduleTaskView: View {
                     AidenteControlRow(
                         "重复",
                         icon: "repeat.circle.fill",
-                        colors: AidenteTheme.dashboardColors
+                        colors: AidenteTheme.dashboardColors,
+                        badgeSize: 22,
+                        legacyStyle: true
                     ) {
                         Picker("", selection: $repeatRule) {
                             ForEach(ScheduleRepeatRule.allCases) { rule in
@@ -263,6 +210,8 @@ private struct NewScheduleTaskView: View {
                         subtitle: "Mac 唤醒并运行 Aidente 后执行",
                         icon: "arrow.clockwise.circle.fill",
                         colors: AidenteTheme.automationColors,
+                        badgeSize: 22,
+                        legacyStyle: true,
                         isOn: $runAtNextOpportunity
                     )
                 }

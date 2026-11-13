@@ -19,12 +19,57 @@ enum AidenteTheme {
     static let dashboardColors = [violet, pink]
     static let chargingColors = [jade, mint]
     static let automationColors = [amber, gold]
-    static let advancedColors = [Color.indigo, violet]
+    /// Fixed sRGB #5856D6 (the HTML prototype's `advanced` pair). The old
+    /// `Color.indigo` is a dynamic system color, which made the badge gradient
+    /// shift between light and dark appearance.
+    static let advancedColors = [Color(red: 0.345, green: 0.337, blue: 0.839), violet]
     static let aboutColors = [coral, amber]
 
     /// Settings sidebar "Permissions" tab identity: ocean→violet, distinct
     /// from General's pure blue pair.
     static let permissionColors = [ocean, violet]
+}
+
+// MARK: - Settings card color context (settings-redesign-prototype.html, 2026-11-11)
+
+/// A settings card publishes its color pair to every descendant so
+/// "one card = one color pair" holds without rewriting each row's call site.
+/// `nil` means outside a settings card (dashboard, sheets, sidebar), where
+/// components keep their classic translucent badge painting unchanged.
+private struct AidenteCardColorsKey: EnvironmentKey {
+    static let defaultValue: [Color]? = nil
+}
+
+extension EnvironmentValues {
+    var aidenteCardColors: [Color]? {
+        get { self[AidenteCardColorsKey.self] }
+        set { self[AidenteCardColorsKey.self] = newValue }
+    }
+}
+
+extension AidenteTheme {
+    /// Detail-area badges use the sidebar's 135° solid gradient but at 90%
+    /// saturation (HSL saturation × 0.9 ≡ mixing 10% same-lightness grey),
+    /// matching `BADGE_SATURATION` in the HTML prototype. Sidebar badges stay
+    /// at 100% because they are drawn directly in `SettingsView.sidebarRow`.
+    static func badgeColors(_ colors: [Color]) -> [Color] {
+        colors.map { desaturated($0, factor: 0.9) }
+    }
+
+    private static func desaturated(_ color: Color, factor: CGFloat) -> Color {
+        guard let rgb = NSColor(color).usingColorSpace(.sRGB) else {
+            return color
+        }
+        let r = rgb.redComponent
+        let g = rgb.greenComponent
+        let b = rgb.blueComponent
+        let l = (max(r, g, b) + min(r, g, b)) / 2
+        return Color(
+            red: l + factor * (r - l),
+            green: l + factor * (g - l),
+            blue: l + factor * (b - l)
+        )
+    }
 }
 
 // MARK: - New Glass surface system (`gross-glass.html`, plan A + B + L4)
@@ -496,29 +541,62 @@ struct AidenteSettingsBackground: View {
 }
 
 struct AidenteIconBadge: View {
+    @Environment(\.aidenteCardColors) private var cardColors
+
     let icon: String
     let colors: [Color]
     var size: CGFloat = 36
     var cornerRadius: CGFloat? = nil
+    /// Force the legacy tint + stroke painting (16% fill / 34% border / tail
+    /// glyph, no drop shadow) even inside a settings card. `AidenteNotice`
+    /// uses this so its icon follows the theme like the panel it sits in.
+    var legacyStyle: Bool = false
 
-    private var tint: Color { colors.first ?? AidenteTheme.jade }
-    private var iconTint: Color { colors.last ?? tint }
+    /// Inside a settings card every badge inherits the card's color pair;
+    /// outside (dashboard / sheets) the caller's own pair still applies.
+    private var effectiveColors: [Color] { cardColors ?? colors }
 
     var body: some View {
         let radius = cornerRadius ?? max(7, size * 0.27)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let tint = effectiveColors.first ?? AidenteTheme.jade
+        let iconTint = effectiveColors.last ?? tint
+        let useGradient = (cardColors != nil) && !legacyStyle
 
-        ZStack {
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(tint.opacity(0.16))
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(tint.opacity(0.34), lineWidth: 1)
+        let gradientBadge = ZStack {
+            shape.fill(
+                LinearGradient(
+                    colors: AidenteTheme.badgeColors(effectiveColors),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            Image(systemName: icon)
+                .font(.system(size: size * 0.46, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(.white)
+        }
+
+        let tintedBadge = ZStack {
+            shape.fill(tint.opacity(0.16))
+            shape.strokeBorder(tint.opacity(0.34), lineWidth: 1)
             Image(systemName: icon)
                 .font(.system(size: size * 0.46, weight: .semibold))
                 .symbolRenderingMode(.monochrome)
                 .foregroundStyle(iconTint)
         }
+
+        return Group {
+            if useGradient {
+                gradientBadge
+            } else if legacyStyle {
+                tintedBadge
+            } else {
+                tintedBadge
+                    .shadow(color: tint.opacity(0.16), radius: 4, y: 2)
+            }
+        }
         .frame(width: size, height: size)
-        .shadow(color: tint.opacity(0.16), radius: 4, y: 2)
     }
 }
 
@@ -544,7 +622,7 @@ struct AidenteSectionHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 11) {
-            AidenteIconBadge(icon: icon, colors: colors, size: 34)
+            AidenteIconBadge(icon: icon, colors: colors, size: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
@@ -607,6 +685,13 @@ struct AidenteCard<Content: View>: View {
                 content
             }
         }
+        // One card = one color pair: every badge, toggle tint, notice,
+        // action button and numeric value below inherits `colors` here.
+        // Call sites keep their 6.1.3 baseline values for traceability.
+        .environment(\.aidenteCardColors, colors)
+        // Native controls (Picker / Slider / Stepper) inherit the card's
+        // first color instead of the page-wide jade tint.
+        .tint(colors.first ?? AidenteTheme.jade)
         .padding(16)
         .background {
             AidenteMaterialLayer(cornerRadius: 15)
@@ -645,30 +730,52 @@ struct AidenteSettingsPage<Content: View>: View {
 
 struct AidenteSettingToggle: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.aidenteCardColors) private var cardColors
 
     let title: String
     let subtitle: String?
     let icon: String
     let colors: [Color]
+    /// Row badge size. Defaults to 26 (option-row band); the schedule-task
+    /// sheet overrides this to 22 for its legacy status-text style badges.
+    let badgeSize: CGFloat
+    /// Draw the row badge in the legacy status-text style (16% fill / 34%
+    /// border / tail glyph) instead of the gradient solid. Used by the
+    /// "任务设置" sheet card so its rows read as a subgroup of the header.
+    let legacyStyle: Bool
     @Binding var isOn: Bool
+
+    private var effectiveColors: [Color] { cardColors ?? colors }
 
     init(
         _ title: String,
         subtitle: String? = nil,
         icon: String,
         colors: [Color],
+        badgeSize: CGFloat = 26,
+        legacyStyle: Bool = false,
         isOn: Binding<Bool>
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.colors = colors
+        self.badgeSize = badgeSize
+        self.legacyStyle = legacyStyle
         _isOn = isOn
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            AidenteIconBadge(icon: icon, colors: colors, size: 28)
+            // Right-edge align the 26/22px row badge inside a fixed 28px slot
+            // so it shares the card-header badge's right edge (grouped look).
+            AidenteIconBadge(
+                icon: icon,
+                colors: colors,
+                size: badgeSize,
+                legacyStyle: legacyStyle
+            )
+            .frame(width: 28, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
@@ -684,9 +791,7 @@ struct AidenteSettingToggle: View {
 
             Toggle("", isOn: $isOn)
                 .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(colors.first ?? AidenteTheme.jade)
+                .toggleStyle(AidenteCardToggleStyle(color: effectiveColors.first ?? AidenteTheme.jade))
         }
         .padding(.vertical, 2)
     }
@@ -699,6 +804,13 @@ struct AidenteControlRow<Trailing: View>: View {
     let subtitle: String?
     let icon: String
     let colors: [Color]
+    /// Row badge size. Defaults to 26 (option-row band); the schedule-task
+    /// sheet overrides this to 22 for its legacy status-text style badges.
+    let badgeSize: CGFloat
+    /// Draw the row badge in the legacy status-text style (16% fill / 34%
+    /// border / tail glyph) instead of the gradient solid. Used by the
+    /// "任务设置" sheet card so its rows read as a subgroup of the header.
+    let legacyStyle: Bool
     @ViewBuilder let trailing: Trailing
 
     init(
@@ -706,18 +818,30 @@ struct AidenteControlRow<Trailing: View>: View {
         subtitle: String? = nil,
         icon: String,
         colors: [Color],
+        badgeSize: CGFloat = 26,
+        legacyStyle: Bool = false,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.colors = colors
+        self.badgeSize = badgeSize
+        self.legacyStyle = legacyStyle
         self.trailing = trailing()
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            AidenteIconBadge(icon: icon, colors: colors, size: 28)
+            // Right-edge align the 26/22px row badge inside a fixed 28px slot
+            // so it shares the card-header badge's right edge (grouped look).
+            AidenteIconBadge(
+                icon: icon,
+                colors: colors,
+                size: badgeSize,
+                legacyStyle: legacyStyle
+            )
+            .frame(width: 28, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
@@ -736,6 +860,32 @@ struct AidenteControlRow<Trailing: View>: View {
     }
 }
 
+/// Card-aware switch: on-state track = solid card first color (constant),
+/// off-state track = same color at 16% translucency (follows theme). Never
+/// falls back to the system gray/blue switch look. Thumb is a white circle.
+struct AidenteCardToggleStyle: ToggleStyle {
+    let color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(color.opacity(configuration.isOn ? 1.0 : 0.16))
+            .frame(width: 40, height: 24)
+            .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 20, height: 20)
+                    .padding(2)
+                    .shadow(color: .black.opacity(0.18), radius: 1.5, y: 1)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(color.opacity(configuration.isOn ? 0.0 : 0.30), lineWidth: 1)
+            )
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isOn)
+            .onTapGesture { configuration.isOn.toggle() }
+    }
+}
+
 struct AidenteRowDivider: View {
     var body: some View {
         Rectangle()
@@ -746,14 +896,19 @@ struct AidenteRowDivider: View {
 
 struct AidenteNotice: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.aidenteCardColors) private var cardColors
 
     let text: String
     var icon = "exclamationmark.triangle.fill"
     var colors = [AidenteTheme.amber, AidenteTheme.gold]
 
+    private var effectiveColors: [Color] { cardColors ?? colors }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 9) {
-            AidenteIconBadge(icon: icon, colors: colors, size: 26)
+        // Badge and text are vertically centered; a wrapped text block grows
+        // the container equally up and down while the badge stays centered.
+        HStack(alignment: .center, spacing: 9) {
+            AidenteIconBadge(icon: icon, colors: colors, size: 22, legacyStyle: true)
             Text(AidenteL10n.t(text))
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
@@ -763,19 +918,17 @@ struct AidenteNotice: View {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill((colors.first ?? AidenteTheme.amber).opacity(0.075))
+                .fill((effectiveColors.first ?? AidenteTheme.amber).opacity(0.075))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .strokeBorder((colors.first ?? AidenteTheme.amber).opacity(0.20))
+                .strokeBorder((effectiveColors.first ?? AidenteTheme.amber).opacity(0.20))
         )
     }
 }
 
 struct AidenteActionButtonStyle: ButtonStyle {
     let colors: [Color]
-
-    private var tint: Color { colors.first ?? AidenteTheme.ocean }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -784,14 +937,36 @@ struct AidenteActionButtonStyle: ButtonStyle {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(tint.opacity(configuration.isPressed ? 0.13 : 0.20))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(tint.opacity(0.34), lineWidth: 1)
+                AidenteActionButtonSurface(
+                    pressed: configuration.isPressed,
+                    fallback: colors
+                )
             }
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+}
+
+/// Reads the card color pair from the environment so action buttons follow
+/// the card rather than the color passed at the call site. The translucent
+/// fill (20% / 34% stroke) is composited on the card surface, so it still
+/// follows light/dark appearance.
+private struct AidenteActionButtonSurface: View {
+    @Environment(\.aidenteCardColors) private var cardColors
+
+    let pressed: Bool
+    let fallback: [Color]
+
+    private var tint: Color {
+        (cardColors ?? fallback).first ?? AidenteTheme.ocean
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 9, style: .continuous)
+        return shape
+            .fill(tint.opacity(pressed ? 0.13 : 0.20))
+            .overlay {
+                shape.strokeBorder(tint.opacity(0.34), lineWidth: 1)
+            }
     }
 }
 

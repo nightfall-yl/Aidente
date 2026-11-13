@@ -76,10 +76,6 @@ final class DiagnosticCenter {
         Defaults[.diagnosticSessionStartedAt] = startedAt.timeIntervalSince1970
         Defaults[.diagnosticSessionID] = identifier
         errorMessage = nil
-        statusMessage = AidenteL10n.t(
-            "问题记录已开始，请复现问题后导出诊断包。",
-            "Recording started. Reproduce the issue, then export the diagnostic package."
-        )
         logger.notice(
             "DIAGNOSTIC_SESSION_BEGIN id=\(identifier, privacy: .public)"
         )
@@ -98,10 +94,6 @@ final class DiagnosticCenter {
         recordingTask = nil
         self.recordingStartedAt = nil
         Defaults[.diagnosticSessionStartedAt] = 0
-        statusMessage = AidenteL10n.t(
-            "问题记录已停止，仍可导出最近一小时的诊断信息。",
-            "Recording stopped. You can still export diagnostics from the last hour."
-        )
     }
 
     func exportDiagnostics() async {
@@ -152,17 +144,6 @@ final class DiagnosticCenter {
         NSWorkspace.shared.activateFileViewerSelecting([lastExportURL])
     }
 
-    func copySupportIdentifier() {
-        let identifier = supportIdentifier
-        guard identifier != AidenteL10n.t("尚未生成", "Not generated") else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(identifier, forType: .string)
-        statusMessage = AidenteL10n.t(
-            "问题编号已复制。",
-            "Support ID copied."
-        )
-    }
-
     func copyCLIPath() {
         let path = Bundle.main.url(forResource: "aidente", withExtension: nil)?.path
             ?? "/Applications/Aidente.app/Contents/Resources/aidente"
@@ -210,10 +191,6 @@ final class DiagnosticCenter {
 
                 if Date().timeIntervalSince(startedAt) >= Self.maximumSessionDuration {
                     self.stopRecording()
-                    self.statusMessage = AidenteL10n.t(
-                        "问题记录已在两小时后自动停止。",
-                        "Recording stopped automatically after two hours."
-                    )
                     return
                 }
 

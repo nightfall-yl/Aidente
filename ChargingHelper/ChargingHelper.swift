@@ -153,7 +153,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
             do {
                 if managed && stopWhileSleeping && self.powerConnection == 0 {
                     throw NSError(domain: "AidenteControl", code: 2, userInfo: [
-                        NSLocalizedDescriptionKey: "无法注册系统睡眠通知，请修复控制服务"
+                        NSLocalizedDescriptionKey: "无法注册系统睡眠通知，请重启 Aidente 重新授权后台控制服务"
                     ])
                 }
                 try self.applyEffectivePolicy()
