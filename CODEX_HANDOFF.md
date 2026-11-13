@@ -45,7 +45,7 @@
 
 ## 给新任务的第一条消息
 
-> 请接手此目录中的 Aidente 项目。先完整阅读 AGENTS.md、CODEX_HANDOFF.md、administrator-install-notes.md，再检查 Git 未提交修改。保留现有代码，不改版本号、不上传 GitHub、不自动替换已安装应用。先做只读检查，向我确认你理解当前状态和未解决问题，再继续充电控制相关诊断。不要把后台服务正常等同于充电与睡眠问题全部修复。
+> 请接手此目录中的 Aidente 项目。先完整阅读 AGENTS.md、CODEX_HANDOFF.md，再检查 Git 未提交修改。保留现有代码，不改版本号、不上传 GitHub、不自动替换已安装应用。先做只读检查，向我确认你理解当前状态和未解决问题，再继续充电控制相关诊断。不要把后台服务正常等同于充电与睡眠问题全部修复。
 
 ## 2026-09-20 接手时工作区状态（历史）
 
@@ -129,4 +129,4 @@ Build/LocalInstallerTests
 
 ## 说明文件的时效
 
-优先阅读 `administrator-install-notes.md`（当前方案）。`control-service-repair-notes.md` 是更早的签名阻塞分析，已被管理员安装方案部分取代；`maintenance-test-notes.md` 包含之前的整体修复记录。遇到矛盾以源码、当前实测和用户新指令为准。
+`control-service-repair-notes.md` 是更早的签名阻塞分析，其中的手动修复入口已被启动时自动重新授权取代；`maintenance-test-notes.md` 包含之前的整体修复记录。遇到矛盾以源码、当前实测和用户新指令为准。

@@ -144,7 +144,7 @@ Drag `Aidente.app` to `/Applications`, open it, then enable charge management in
 Settings → Charging, then authorize the administrator installation. On later
 updates or app replacements, Aidente prompts for re-authorization at launch when
 charge management is on; click Re-authorize Now and use the macOS administrator
-dialog. See [administrator installation notes](administrator-install-notes.md).
+dialog.
 
 The distributed local build is ad-hoc signed, not Apple-notarized. If Finder
 blocks the first launch, right-click the app and choose Open.
