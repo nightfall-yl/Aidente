@@ -26,7 +26,7 @@
 ### 验证
 
 - **版本号升级到 6.1.4 / Build 25**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[6.1.4-preview]` 归档为 `[6.1.4]-2026-11-14`，新建 `BuildSupport/release-notes-6.1.4.md`。
-- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.4 / 25**；唯一警告仍为第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。
+- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.4 / 25**；构建无编译警告（`Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange` 已改为两参数闭包 `{ _, newValue in }`）。
 - `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.4.dmg`（3.7M，卷名 `Aidente 6.1.4`），`hdiutil verify` VALID；另产出 `Aidente-6.1.4-macOS-arm64.zip`（3.2M）与 `SHA256SUMS-6.1.4.txt`。
 - **充电回归**：`zsh BuildSupport/test_charging.sh` Exit 0：**PASS: 138 charging, sleep, firmware, rollback and readback checks**。
 - **发行**：GitHub Release `6.1.4`（tag `6.1.4`，已置 latest）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.4`。
@@ -37,7 +37,11 @@
 
 - **hero 卡新增「点击修复」备用入口（2026-11-14 补发）**：当 hero 显示「充电控制未生效」且根因为后台控制服务（helper）缺失 / 身份不匹配 / 连接或健康检查失败时，hero 顶部状态行变为可点击并显示「点击修复充电控制」提示（要求 `manageCharging` 开启且不在磁盘映像运行）；点击复用与启动 / 更新后重新授权同一路径（`ChargingHelperManager.repair()`，触发一次 macOS 管理员密码弹窗），完成后经 `ChargeManager.retryControlAfterRepair()` 重新下发充电策略。门控用 `ChargingHelperManager.needsRepair`（`!isInstalled || failure != nil`）区分「helper 授权类故障」与「瞬时 SMC 命令失败」（后者不弹管理员密码、由周期轮询自愈），避免对瞬时错误误给修复入口；修复期间 hero 就地显示「修复中…」，失败保留原错误。新增 `ChargeManager.canQuickRepair` / `attemptQuickRepair()` 与 `MenuViewModel` 透传，`AidenteL10n` 补「修复中…」「点击修复充电控制」中英词条。该入口作为授权意外消失时的备用触发点，避免用户只能去「充电管理」重开关开关。
 
-- **两轮补发均已提交并同步 tag**：更新器修复与 hero 入口两次补发都已提交到 `main`，`tag 6.1.4` 已移到包含全部补发的提交并强制推送，GitHub Release `6.1.4`（本仓库 `nightfall-yl/Aidente`）的 dmg / zip / SHA256SUMS 同步覆盖上传（silent patch，版本号与 tag 不变）。
+- **设置页配色与文案调整（2026-11-15 静默重发）**：仪表盘与充电管理两个 tab 颜色互换——`SettingsTab.colors` 中 `.dashboard` 返 `chargingColors`（绿）、`.charging` 返 `dashboardColors`（紫），侧栏 tab 徽章、页头大徽章与首卡框架色随之互换（仪表盘「状态信息」卡改绿、充电管理「充电管理」卡改紫）；充电管理「巡航模式」卡整卡改 `permissionColors`（蓝紫，与软件更新同色）。文案上「管理充电」改名为「启用充电管理」、「充电上限」改名为「设置充电上限」（`ChargingSettingsView` 字面量 + `AidenteL10n` 新增「启用充电管理」词条），`ChargingHelperManager` 报错文案与 `AboutSettingsView` 安全说明同步；能量流标签「彩色能量流」改为「能量分流」（`Sankey Diagram`），README 与 `settings-redesign-prototype.html` 同步。
+
+- **hero 充电状态文案修正（2026-11-15 静默重发）**：修正 head / 能量分流显示「正在充电」而 hero 显示「等待充电」的错位——`ChargeManager.operationStatusTitle` 新增分支，仅当 `operationStatus == .charging` 且硬件实测 `BatteryService.metrics.isCharging`（`batteryPower > 0`）才返回「正在充电」，否则保持「等待充电」（策略已请求充电、硬件尚未跟上的短暂窗口不谎报），与顶部标题栏、能量分流统一以硬件电流为准。
+
+- **三轮补发均已提交并同步 tag**：更新器修复、hero 入口与本轮设置页 / hero 充电文案三次补发都已提交到 `main`，`tag 6.1.4` 已移到包含全部补发的提交并强制推送，GitHub Release `6.1.4`（本仓库 `nightfall-yl/Aidente`）的 dmg / zip / SHA256SUMS 同步覆盖上传（silent patch，版本号与 tag 不变）。
 
 ## [6.1.3]-2026-11-13
 

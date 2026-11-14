@@ -60,10 +60,10 @@ struct ChargingSettingsView: View {
                 "充电管理",
                 subtitle: "限制最高充电量，减少电池长期处于满电状态的时间。",
                 icon: "battery.75percent",
-                colors: AidenteTheme.chargingColors
+                colors: AidenteTheme.dashboardColors
             ) {
                 AidenteSettingToggle(
-                    "管理充电",
+                    "启用充电管理",
                     subtitle: AidenteL10n.t("首次启用或升级需管理员授权安装后台服务，无需开发者账号", "Administrator authorization installs or updates the service; no developer account required"),
                     icon: "switch.2",
                     colors: AidenteTheme.chargingColors,
@@ -107,13 +107,13 @@ struct ChargingSettingsView: View {
 
                 AidenteNotice(
                     text: AidenteL10n.t("部分新固件在电量高于上限时会使用电池，不能保证仅由充电器供电；临时暂停使用当时电量的固件上限，允许小幅波动。", "Some newer firmware uses battery power above the limit. Temporary pause sets a firmware ceiling at the current level and may allow small fluctuations."),
-                    icon: "info.circle", colors: AidenteTheme.generalColors
+                    icon: "info.circle", colors: AidenteTheme.chargingColors
                 )
 
                 if manageCharging {
                     AidenteRowDivider()
                     AidenteControlRow(
-                        "充电上限",
+                        "设置充电上限",
                         subtitle: AidenteL10n.t("达到上限后由适配器供电，下降 2% 后补电；巡航模式使用巡航范围", "Use adapter power at the limit; recharge after a 2% drop, or use the sailing range"),
                         icon: "target",
                         colors: AidenteTheme.chargingColors
@@ -157,12 +157,12 @@ struct ChargingSettingsView: View {
                     "巡航模式",
                     subtitle: "允许电量在上限附近自然浮动，减少频繁微量补电。",
                     icon: "sailboat.fill",
-                    colors: AidenteTheme.generalColors
+                    colors: AidenteTheme.permissionColors
                 ) {
                     AidenteSettingToggle(
                         "启用巡航模式",
                         icon: "water.waves",
-                        colors: AidenteTheme.generalColors,
+                        colors: AidenteTheme.permissionColors,
                         isOn: $sailingMode
                     )
                     .disabled(!hasChargingControl)
@@ -173,7 +173,7 @@ struct ChargingSettingsView: View {
                         AidenteControlRow(
                             "低于上限多少时恢复充电",
                             icon: "arrow.down.right",
-                            colors: AidenteTheme.generalColors
+                            colors: AidenteTheme.permissionColors
                         ) {
                             InlineSliderRow(
                                 value: sailingModeLimit,
@@ -188,7 +188,7 @@ struct ChargingSettingsView: View {
                         AidenteControlRow(
                             "恢复充电电量",
                             icon: "play.circle.fill",
-                            colors: AidenteTheme.chargingColors
+                            colors: AidenteTheme.permissionColors
                         ) {
                             Text("\(sailingResumePercentage)%")
                                 .font(.body.monospacedDigit())

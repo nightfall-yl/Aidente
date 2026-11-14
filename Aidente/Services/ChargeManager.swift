@@ -129,6 +129,14 @@ class ChargeManager {
            request.adapter, batteryService.adapterMetrics.adapterConnected, !powerHoldVerified {
             return AidenteL10n.t("暂停供电状态待确认", "Verifying charging hold and power flow")
         }
+        // Only report "Charging" once the hardware actually confirms current is
+        // flowing (batteryPower > 0). While the policy has requested charging but
+        // the system has not caught up yet, keep the conservative "Waiting to
+        // Charge" so we never claim charging the helper accepted but never
+        // delivered.
+        if operationStatus == .charging, batteryService.metrics.isCharging {
+            return AidenteL10n.t("正在充电", "Charging")
+        }
         return operationStatus.title
     }
     /// Whether the hero card should offer a one-tap repair entry. True only when

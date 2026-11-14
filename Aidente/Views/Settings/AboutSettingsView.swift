@@ -122,7 +122,7 @@ struct AboutSettingsView: View {
                     legalBlock(
                         title: AidenteL10n.t("安全说明"),
                         body: AidenteL10n.t(
-                            "Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭“管理充电”，恢复系统默认充电状态。"
+                            "Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭“启用充电管理”，恢复系统默认充电状态。"
                         )
                     )
 

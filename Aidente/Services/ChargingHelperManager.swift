@@ -43,7 +43,7 @@ final class ChargingHelperManager {
         refreshStatus()
         guard isInstalled else {
             throw XPCError.commandFailed(AidenteL10n.t(
-                "后台服务未安装或软件已更新，需要重新授权。请在「充电管理」中重新开启「管理充电」，或重启 Aidente 使用自动提示；授权由 macOS 管理员弹窗完成，无需开发者账号。",
+                "后台服务未安装或软件已更新，需要重新授权。请在「充电管理」中重新开启「启用充电管理」，或重启 Aidente 使用自动提示；授权由 macOS 管理员弹窗完成，无需开发者账号。",
                 "The control service is missing or needs updating. Turn Manage Charging off and on in Charging settings, or restart Aidente to use the automatic prompt; authorization uses the macOS administrator dialog, no developer account is required."
             ))
         }

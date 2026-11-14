@@ -30,7 +30,7 @@ private enum DashboardEditableCard: String, CaseIterable, Identifiable {
     /// both languages — no hand-written English labels here.
     var title: String {
         switch self {
-        case .colorEnergyFlow: AidenteL10n.t("彩色能量流")
+        case .colorEnergyFlow: AidenteL10n.t("能量分流")
         case .batteryHealth: AidenteL10n.t("电池健康")
         case .capacityHistory: AidenteL10n.t("容量与寿命趋势")
         case .energyAppRanking: AidenteL10n.t("当前耗电 App")
@@ -765,7 +765,7 @@ struct DashboardPopoverView: View {
             VStack(spacing: 8) {
                 HStack {
                     Label(
-                        AidenteL10n.t("彩色能量流"),
+                        AidenteL10n.t("能量分流"),
                         systemImage: "point.3.connected.trianglepath.dotted"
                     )
                     .font(.system(size: 13, weight: .semibold))

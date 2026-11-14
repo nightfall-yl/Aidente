@@ -420,8 +420,8 @@ function legacyBadge(k, colors, size = TAB_BADGE_SIZE) {
 /* ---------- data: tabs + cards ---------- */
 const TABS = [
   { id:'general',    title:'通用',         icon:'gear',      colors:'general' },
-  { id:'dashboard',  title:'仪表盘',       icon:'gauge',     colors:'dashboard' },
-  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'charging' },
+  { id:'dashboard',  title:'仪表盘',       icon:'gauge',     colors:'charging' },
+  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'dashboard' },
   { id:'permissions',title:'睡眠管理',     icon:'shield',    colors:'advanced' },
   { id:'automation', title:'自动化', icon:'calendar',  colors:'automation' },
   { id:'diagnostics',title:'诊断',         icon:'waveform',  colors:'about' },
@@ -478,7 +478,7 @@ const PAGES = {
   dashboard: {
     sub: '配置仪表盘顶部的时间信息与打开方式。',
     cards: [
-      { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'dashboard', rows:[
+      { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'charging', rows:[
         rToggle('系统运行时间', '', true, 'dashboard', 'gauge'),
         rDiv(),
         rToggle('电池剩余时间', '', true, 'dashboard', 'gauge'),
@@ -495,23 +495,23 @@ const PAGES = {
   charging: {
     sub: '设定充电上限、巡航与高温保护，养护电池。',
     cards: [
-      { title:'充电管理', sub:'限制最高充电量，减少电池长期处于满电状态的时间。', icon:'battery', colors:'charging', rows:[
-        rToggle('管理充电', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging', 'plug'),
+      { title:'充电管理', sub:'限制最高充电量，减少电池长期处于满电状态的时间。', icon:'battery', colors:'dashboard', rows:[
+        rToggle('启用充电管理', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging', 'plug'),
         rNotice('部分新固件在电量高于上限时会使用电池，不能保证仅由充电器供电；临时暂停使用当时电量的固件上限，允许小幅波动。', 'info', 'charging'),
-        rControl('充电上限', '达到上限后由适配器供电，下降 2% 后补电；巡航模式使用巡航范围', rSlider(80, 20, 100, '%'), 'charging', 'sliders'),
+        rControl('设置充电上限', '达到上限后由适配器供电，下降 2% 后补电；巡航模式使用巡航范围', rSlider(80, 20, 100, '%'), 'charging', 'sliders'),
         // 默认态示例：运行时由 chargeLimit / sailingMode / 供电状态填充，原型不模拟动态读数
         rNotice('正在以 80% 上限管理充电，达到上限后由适配器供电；巡航模式当前关闭。', 'battery', 'charging'),
         rDiv(),
         // 2026-11-11 用户指令恢复：自动放电回到原位，默认关闭
         rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'charging', 'plug'),
       ]},
-      { title:'巡航模式', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'general', rows:[
-        rToggle('启用巡航模式', '', false, 'general', 'signal'),
+      { title:'巡航模式', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'permissions', rows:[
+        rToggle('启用巡航模式', '', false, 'permissions', 'signal'),
         rDiv(),
-        rControl('低于上限多少时恢复充电', '', rSlider(3, 1, 20, '%'), 'general', 'sliders'),
+        rControl('低于上限多少时恢复充电', '', rSlider(3, 1, 20, '%'), 'permissions', 'sliders'),
         rDiv(),
         // 源码是只读数值 Text（chargeLimit − sailingModeLimit），不是滑杆
-        rControl('恢复充电电量', '', rStepper('77%'), 'charging', 'sliders'),
+        rControl('恢复充电电量', '', rStepper('77%'), 'permissions', 'sliders'),
       ]},
       { title:'高温保护', sub:'温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。', icon:'bolt', colors:'heat', rows:[
         rToggle('启用高温保护', '', false, 'heat', 'bolt'),
@@ -624,7 +624,7 @@ const PAGES = {
         rToggle('自动检查更新', '启动后检查，并每隔六小时检查一次正式发行版。', true, 'automation', 'download'),
       ]},
       { title:'法律与开源', sub:'开源许可、商标与安全声明。', icon:'shield', colors:'general', rows:[
-        rText('<b>安全说明</b><br>Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭「管理充电」，恢复系统默认充电状态。'),
+        rText('<b>安全说明</b><br>Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭「启用充电管理」，恢复系统默认充电状态。'),
         rDiv(),
         rText('<b>商标声明</b><br>Aidente 是独立项目，与 AppHouseKitchen 不存在隶属、授权或分发关系。AlDente 是其各自权利人的商标。'),
         rDiv(),
@@ -997,7 +997,7 @@ document.getElementById('appBadge').innerHTML = svg('bolt');
 function renderLegend() {
   /* 按标签映射当前实际色对 */
   const legendPairs = [
-    ['general', '通用'], ['dashboard', '仪表盘'], ['charging', '充电管理'],
+    ['general', '通用'], ['dashboard', '充电管理'], ['charging', '仪表盘'],
     ['advanced', '睡眠管理'], ['automation', '自动化'], ['about', '诊断'],
     ['permissions', '关于'], ['heat', '高温保护（字面量）'],
   ];

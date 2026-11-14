@@ -59,8 +59,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         // 方案 A（2026-11-12）：蓝 → 紫 → 绿 → 靛 → 橙 → 橙红 → 蓝紫，
         // 7 个 tab 顺序不变；仪表盘 / 睡眠管理色对互换，每页首卡与 tab 同色。
         case .general: AidenteTheme.generalColors
-        case .dashboard: AidenteTheme.dashboardColors
-        case .charging: AidenteTheme.chargingColors
+        case .dashboard: AidenteTheme.chargingColors
+        case .charging: AidenteTheme.dashboardColors
         case .permissions: AidenteTheme.advancedColors
         case .automation: AidenteTheme.automationColors
         case .diagnostics: AidenteTheme.aboutColors

@@ -12,7 +12,7 @@ struct DashboardSettingsView: View {
                 "状态信息",
                 subtitle: "选择仪表盘顶部显示的系统与电池时间信息。",
                 icon: "gauge.with.dots.needle.67percent",
-                colors: AidenteTheme.dashboardColors
+                colors: AidenteTheme.chargingColors
             ) {
                 AidenteSettingToggle(
                     "系统运行时间",
