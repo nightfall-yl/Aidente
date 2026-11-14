@@ -712,7 +712,9 @@ final class UpdateService {
                 stagedApplicationURL: staged
             )
 
-            try? await Task.sleep(for: .milliseconds(450))
+            // Brief grace so the update sheet (dismissed when phase becomes
+            // .installing) fully ends its modal session before we terminate.
+            try? await Task.sleep(for: .milliseconds(800))
             NSApplication.shared.terminate(nil)
         } catch is CancellationError {
             // User cancelled before installation began. Return to idle so the

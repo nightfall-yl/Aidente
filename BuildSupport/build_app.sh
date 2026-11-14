@@ -273,4 +273,32 @@ if [[ -x "$lsregister" ]]; then
     "$lsregister" -f "$app_dir" >/dev/null 2>&1 || true
 fi
 
+# ---------------------------------------------------------------------------
+# Distribution artifacts
+#
+# The signed app is ready. Emit the two updater-facing files the in-app updater
+# consumes: a zip of the app and a SHA256SUMS file.
+#
+# IMPORTANT: Aidente's updater (UpdateService.sha256(for:in:)) matches the
+# checksum line's filename field against "Aidente-<version>-macOS-arm64.zip".
+# The checksum file MUST therefore carry the BARE asset name. Generate it from
+# inside $dist_dir so `shasum` records no directory prefix (a "Dist/..." prefix
+# previously caused "发行版没有提供 SHA-256 校验值，已拒绝安装").
+# ---------------------------------------------------------------------------
+dist_version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app_dir/Contents/Info.plist")
+
+# Keep Finder / AppleDouble metadata out of the archive.
+find "$app_dir" -name '.DS_Store' -delete
+find "$app_dir" -name '._*' -delete
+
+dist_zip="$dist_dir/Aidente-$dist_version-macOS-arm64.zip"
+rm -f "$dist_zip"
+ditto -c -k --keepParent "$app_dir" "$dist_zip"
+
+# Subshell keeps the working directory change local to this step.
+( cd "$dist_dir" && shasum -a 256 "Aidente-$dist_version-macOS-arm64.zip" > "SHA256SUMS-$dist_version.txt" )
+
 echo "$app_dir"
+echo "Distribution artifacts:"
+echo "  $dist_zip"
+echo "  $dist_dir/SHA256SUMS-$dist_version.txt"

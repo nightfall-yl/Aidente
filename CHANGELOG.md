@@ -31,6 +31,10 @@
 - **充电回归**：`zsh BuildSupport/test_charging.sh` Exit 0：**PASS: 138 charging, sleep, firmware, rollback and readback checks**。
 - **发行**：GitHub Release `6.1.4`（tag `6.1.4`，已置 latest）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.4`。
 
+### 修订
+
+- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。上述修复已以同版本 `6.1.4` **重建并覆盖上传** GitHub Release 的 dmg / zip / SHA256SUMS（silent patch，版本号与 tag 不变）；二进制先于源码提交，tag `6.1.4` 暂仍指向初版提交。
+
 ## [6.1.3]-2026-11-13
 
 

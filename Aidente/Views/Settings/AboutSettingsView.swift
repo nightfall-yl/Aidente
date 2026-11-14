@@ -184,7 +184,14 @@ struct AboutSettingsView: View {
             updateService.automaticCheckPreferenceChanged()
         }
         .onChange(of: updateService.phase) { _, newPhase in
-            presentUpdateSheet(for: newPhase)
+            if case .installing = newPhase {
+                // The app is handing off to the external updater and will call
+                // NSApplication.terminate. A presented sheet keeps a modal
+                // session alive that blocks termination, so dismiss it first.
+                updateSheetTrigger = nil
+            } else {
+                presentUpdateSheet(for: newPhase)
+            }
         }
         .sheet(item: $updateSheetTrigger) { _ in
             UpdateProgressSheet(updateService: updateService)

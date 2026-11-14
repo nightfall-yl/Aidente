@@ -1,6 +1,46 @@
 import Darwin
 import Foundation
 
+// MARK: - Parent-process exit detection
+//
+// `waitForParentToExit` waits for the launching Aidente process to disappear so
+// this helper can safely move the staged replacement over it. `kill(pid, 0)`
+// only reports ESRCH once the PID is fully reaped; a process that has exited
+// but is not yet reaped still answers "exists" (it is a zombie). We therefore
+// also treat a zombie as gone — it is no longer running, so replacing its
+// on-disk bundle is safe.
+
+private let bsdInfoFlavor: Int32 = 3          // PROC_PIDTBSDINFO
+private let processStateZombie: UInt32 = 5    // SZOMB
+
+private func parentProcessIsGone(_ pid: pid_t) -> Bool {
+    // Fully reaped: kill(pid, 0) fails with ESRCH.
+    if kill(pid, 0) != 0, errno == ESRCH {
+        return true
+    }
+    // Exited but not yet reaped (zombie): no longer running, safe to replace.
+    if processIsZombie(pid) {
+        return true
+    }
+    return false
+}
+
+private func processIsZombie(_ pid: pid_t) -> Bool {
+    guard pid > 1 else { return false }
+    // proc_bsdinfo lays out pbsd_pid(0:4), pbsd_ppid(4:8), pbsd_pgid(8:12),
+    // pbsd_status(12:16); SZOMB (zombie) == 5. Read the status word at
+    // byte offset 12 — not 4, which is pbsd_ppid.
+    var buffer = [UInt8](repeating: 0, count: 64)
+    let count = Int32(buffer.count)
+    let ret = buffer.withUnsafeMutableBytes { raw in
+        proc_pidinfo(pid, bsdInfoFlavor, UInt64(0), raw.baseAddress!, count)
+    }
+    guard ret >= 16 else { return false }
+    let status = UInt32(buffer[12]) | UInt32(buffer[13]) << 8
+        | UInt32(buffer[14]) << 16 | UInt32(buffer[15]) << 24
+    return status == processStateZombie
+}
+
 private struct InstallResult: Codable {
     let succeeded: Bool
     let version: String
@@ -93,8 +133,10 @@ private func runProcess(
 
 private func waitForParentToExit(_ pid: pid_t) -> Bool {
     guard pid > 1 else { return false }
-    for _ in 0..<300 {
-        if kill(pid, 0) != 0, errno == ESRCH {
+    // 600 × 100 ms = 60 s. Generous window so a slow teardown or a lingering
+    // zombie (reaped late by the parent) does not abort the update.
+    for _ in 0..<600 {
+        if parentProcessIsGone(pid) {
             return true
         }
         usleep(100_000)
