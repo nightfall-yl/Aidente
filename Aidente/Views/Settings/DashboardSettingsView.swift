@@ -29,26 +29,29 @@ struct DashboardSettingsView: View {
                 )
             }
 
+            /* The notice repeated the subtitle, so the card is header-only:
+               no content rows and no header divider; the action button sits
+               to the right of the title. */
             AidenteCard(
                 "访问仪表盘",
                 subtitle: "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。",
                 icon: "macwindow.on.rectangle",
-                colors: AidenteTheme.automationColors
-            ) {
-                AidenteNotice(
-                    text: "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。面板显示项可在仪表盘内配置。",
-                    icon: "cursorarrow.click.2",
-                    colors: AidenteTheme.generalColors
-                )
-
-                Button {
-                    if let url = URL(string: "aidente://dashboard") {
-                        NSWorkspace.shared.open(url)
+                colors: AidenteTheme.automationColors,
+                showDivider: false,
+                headerAccessory: {
+                    Button {
+                        if let url = URL(string: "aidente://dashboard") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Label(AidenteL10n.t("打开仪表盘"), systemImage: "macwindow")
                     }
-                } label: {
-                    Label(AidenteL10n.t("打开仪表盘"), systemImage: "macwindow")
+                    .buttonStyle(
+                        AidenteActionButtonStyle(colors: AidenteTheme.automationColors)
+                    )
                 }
-                .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.automationColors))
+            ) {
+                EmptyView()
             }
         }
     }

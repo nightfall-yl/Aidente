@@ -206,14 +206,14 @@ final class UpdateService {
     static let shared = UpdateService()
 
     static let releasesPageURL = URL(
-        string: "https://github.com/buffoons8-sketch/Aidente/releases"
+        string: "https://github.com/nightfall-yl/Aidente/releases"
     )!
 
     private static let latestReleaseAPIURL = URL(
-        string: "https://api.github.com/repos/buffoons8-sketch/Aidente/releases/latest"
+        string: "https://api.github.com/repos/nightfall-yl/Aidente/releases/latest"
     )!
     private static let latestReleasePageURL = URL(
-        string: "https://github.com/buffoons8-sketch/Aidente/releases/latest"
+        string: "https://github.com/nightfall-yl/Aidente/releases/latest"
     )!
     private static let maximumAssetSize = 200 * 1_024 * 1_024
     private static let automaticCheckInterval: Duration = .seconds(6 * 60 * 60)
@@ -222,7 +222,7 @@ final class UpdateService {
     private(set) var lastCheckedAt: Date?
 
     private var automaticCheckTask: Task<Void, Never>?
-    private var promptedVersions = Set<String>()
+    private var installTask: Task<Void, Never>?
 
     /// Set by AppDelegate before `start()`. After a successful post-update
     /// re-authorization the active ChargeManager re-evaluates charging control
@@ -328,8 +328,8 @@ final class UpdateService {
             )
         case .checking:
             return AidenteL10n.t(
-                "正在连接 buffoons8-sketch/Aidente",
-                "Connecting to buffoons8-sketch/Aidente"
+                "正在连接 nightfall-yl/Aidente",
+                "Connecting to nightfall-yl/Aidente"
             )
         case .upToDate:
             return checkedTimeDescription
@@ -454,15 +454,29 @@ final class UpdateService {
         guard case .available(let release) = phase else { return }
         guard !AidenteRuntime.isUIPreview else { return }
 
-        Task { [weak self] in
+        installTask = Task { [weak self] in
             await self?.performInstall(release)
+            self?.installTask = nil
         }
     }
 
-    func openReleasePage() {
-        NSWorkspace.shared.open(availableRelease?.pageURL ?? Self.releasesPageURL)
+    /// Cancel an in-flight download or verification. The installation stage
+    /// (`.installing`) has already handed off to the external updater and
+    /// cannot be interrupted, so this is a no-op once that stage begins.
+    func cancelInstall() {
+        installTask?.cancel()
+        installTask = nil
     }
 
+    /// "Skip This Version" in the update sheet. The choice persists across
+    /// launches; the next release with a different version is still offered.
+    func skipVersion(_ version: String) {
+        Defaults[.skippedUpdateVersion] = version
+        phase = .idle
+    }
+
+    /// Preview builds open the update sheet on the "available" state instead
+    /// of showing a standalone alert.
     func presentPreviewAlertIfRequested() {
         guard AidenteRuntime.isUIPreview,
             CommandLine.arguments.contains("--update-preview"),
@@ -470,8 +484,9 @@ final class UpdateService {
         else {
             return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
-            self?.presentUpdatePrompt(for: Self.previewRelease)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            self?.phase = .available(Self.previewRelease)
         }
     }
 
@@ -503,9 +518,8 @@ final class UpdateService {
 
     private func performCheck(manual: Bool) async {
         if CommandLine.arguments.contains("--update-preview") {
-            let preview = Self.previewRelease
-            phase = .available(preview)
-            if manual { presentUpdatePrompt(for: preview) }
+            // The update sheet presents the preview release from `phase`.
+            phase = .available(Self.previewRelease)
             return
         }
 
@@ -521,7 +535,6 @@ final class UpdateService {
                     "The current app version is unavailable, so the update check was skipped."
                 )
                 phase = .failed(message)
-                presentErrorAlert(message)
             }
             return
         }
@@ -531,20 +544,18 @@ final class UpdateService {
         do {
             let release = try await fetchLatestRelease()
             lastCheckedAt = Date()
-            if Self.isVersion(release.version, newerThan: localVersion) {
+            // A skipped release is ignored until a newer one is published;
+            // the sheet then reports "up to date" instead of prompting again.
+            let skipped = Defaults[.skippedUpdateVersion]
+            if Self.isVersion(release.version, newerThan: localVersion),
+                release.version != skipped {
                 phase = .available(release)
-                if manual || !promptedVersions.contains(release.version) {
-                    presentUpdatePrompt(for: release)
-                }
             } else {
                 phase = .upToDate
             }
         } catch {
-            let message = error.localizedDescription
-            phase = .failed(message)
-            if manual {
-                presentErrorAlert(message)
-            }
+            // The settings sheet presents the failure reason from `phase`.
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -619,7 +630,7 @@ final class UpdateService {
             let finalURL = httpResponse.url,
             finalURL.scheme == "https",
             finalURL.host?.lowercased() == "github.com",
-            finalURL.path.hasPrefix("/buffoons8-sketch/Aidente/releases/tag/")
+            finalURL.path.hasPrefix("/nightfall-yl/Aidente/releases/tag/")
         else {
             throw AidenteUpdateError.invalidResponse
         }
@@ -633,9 +644,9 @@ final class UpdateService {
         let assetName = "Aidente-\(version)-macOS-arm64.zip"
         let checksumName = "SHA256SUMS-\(version).txt"
         guard let assetURL = URL(
-            string: "https://github.com/buffoons8-sketch/Aidente/releases/download/\(tag)/\(assetName)"
+            string: "https://github.com/nightfall-yl/Aidente/releases/download/\(tag)/\(assetName)"
         ), let checksumURL = URL(
-            string: "https://github.com/buffoons8-sketch/Aidente/releases/download/\(tag)/\(checksumName)"
+            string: "https://github.com/nightfall-yl/Aidente/releases/download/\(tag)/\(checksumName)"
         ), Self.isOfficialDownloadURL(assetURL), Self.isOfficialDownloadURL(checksumURL)
         else {
             throw AidenteUpdateError.invalidDownloadURL
@@ -703,6 +714,10 @@ final class UpdateService {
 
             try? await Task.sleep(for: .milliseconds(450))
             NSApplication.shared.terminate(nil)
+        } catch is CancellationError {
+            // User cancelled before installation began. Return to idle so the
+            // sheet does not re-present the "available" prompt on next open.
+            phase = .idle
         } catch {
             if let workingDirectory {
                 try? FileManager.default.removeItem(at: workingDirectory)
@@ -710,9 +725,8 @@ final class UpdateService {
             if let stagedApplicationURL {
                 try? FileManager.default.removeItem(at: stagedApplicationURL)
             }
-            let message = error.localizedDescription
-            phase = .failed(message)
-            presentErrorAlert(message)
+            // The open settings sheet switches to its failure state via `phase`.
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -789,37 +803,6 @@ final class UpdateService {
             try process.run()
         } catch {
             throw AidenteUpdateError.updaterLaunchFailed(error.localizedDescription)
-        }
-    }
-
-    private func presentUpdatePrompt(for release: AidenteUpdateRelease) {
-        guard !promptedVersions.contains(release.version) else { return }
-        promptedVersions.insert(release.version)
-
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = AidenteL10n.t(
-            "Aidente \(release.version) 可以更新",
-            "Aidente \(release.version) Is Available"
-        )
-        alert.informativeText = AidenteL10n.t(
-            "点击“立即更新”后，Aidente 会在后台从 GitHub 下载并校验安装包，完成后自动重新启动。",
-            "Click Update Now to download and verify the GitHub release in the background. Aidente will restart automatically when ready."
-        )
-        alert.addButton(withTitle: AidenteL10n.t("立即更新", "Update Now"))
-        alert.addButton(withTitle: AidenteL10n.t("稍后", "Later"))
-        alert.addButton(withTitle: AidenteL10n.t("查看发行说明", "View Release Notes"))
-
-        present(alert) { [weak self] response in
-            guard let self else { return }
-            switch response {
-            case .alertFirstButtonReturn:
-                self.installAvailableUpdate()
-            case .alertThirdButtonReturn:
-                NSWorkspace.shared.open(release.pageURL)
-            default:
-                break
-            }
         }
     }
 
@@ -1147,7 +1130,7 @@ final class UpdateService {
         url.scheme == "https"
             && url.host?.lowercased() == "github.com"
             && url.path.hasPrefix(
-                "/buffoons8-sketch/Aidente/releases/download/"
+                "/nightfall-yl/Aidente/releases/download/"
             )
     }
 
@@ -1189,11 +1172,11 @@ final class UpdateService {
         name: "Aidente 6.1",
         notes: "Update preview",
         pageURL: URL(
-            string: "https://github.com/buffoons8-sketch/Aidente/releases/tag/v6.1"
+            string: "https://github.com/nightfall-yl/Aidente/releases/tag/v6.1"
         )!,
         assetName: "Aidente-6.1-macOS-arm64.zip",
         assetURL: URL(
-            string: "https://github.com/buffoons8-sketch/Aidente/releases/download/v6.1/Aidente-6.1-macOS-arm64.zip"
+            string: "https://github.com/nightfall-yl/Aidente/releases/download/v6.1/Aidente-6.1-macOS-arm64.zip"
         )!,
         assetSize: 2_500_000,
         sha256: String(repeating: "0", count: 64)

@@ -600,24 +600,43 @@ struct AidenteIconBadge: View {
     }
 }
 
+/// A phrase inside a card subtitle that opens a URL when tapped. The linked
+/// words use the system primary text color and carry no underline; all other
+/// words stay secondary, so the link does not need an accent tint.
+struct AidenteCardSubtitleLink {
+    let phrase: String
+    let englishPhrase: String
+    let url: URL
+
+    var localizedPhrase: String {
+        AidenteL10n.isEnglish ? englishPhrase : phrase
+    }
+}
+
 struct AidenteSectionHeader: View {
     @Default(.appLanguage) private var appLanguage
 
     let title: String
     let subtitle: String?
+    let subtitleLink: AidenteCardSubtitleLink?
     let icon: String
     let colors: [Color]
+    let accessory: AnyView?
 
     init(
         _ title: String,
         subtitle: String? = nil,
+        subtitleLink: AidenteCardSubtitleLink? = nil,
         icon: String,
-        colors: [Color]
+        colors: [Color],
+        accessory: AnyView? = nil
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.subtitleLink = subtitleLink
         self.icon = icon
         self.colors = colors
+        self.accessory = accessory
     }
 
     var body: some View {
@@ -628,15 +647,51 @@ struct AidenteSectionHeader: View {
                 Text(AidenteL10n.t(title))
                     .font(.system(size: 14, weight: .semibold))
                 if let subtitle {
-                    Text(AidenteL10n.t(subtitle))
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let link = subtitleLink,
+                        let attributed = linkedSubtitle(subtitle, link: link)
+                    {
+                        Text(attributed)
+                            .font(.system(size: 11.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(AidenteL10n.t(subtitle))
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
             Spacer(minLength: 0)
+
+            if let accessory {
+                accessory
+            }
         }
+    }
+
+    /// Splits the localized subtitle around the linked phrase so the link
+    /// stays inline and wraps with the rest of the sentence.
+    private func linkedSubtitle(
+        _ subtitle: String,
+        link: AidenteCardSubtitleLink
+    ) -> AttributedString? {
+        let localized = AidenteL10n.t(subtitle)
+        let phrase = link.localizedPhrase
+        guard let range = localized.range(of: phrase) else { return nil }
+
+        var result = AttributedString(String(localized[..<range.lowerBound]))
+        result.foregroundColor = .secondary
+
+        var linked = AttributedString(phrase)
+        linked.foregroundColor = .primary
+        linked.link = link.url
+        result.append(linked)
+
+        var tail = AttributedString(String(localized[range.upperBound...]))
+        tail.foregroundColor = .secondary
+        result.append(tail)
+        return result
     }
 }
 
@@ -645,24 +700,53 @@ struct AidenteCard<Content: View>: View {
 
     let title: String
     let subtitle: String?
+    let subtitleLink: AidenteCardSubtitleLink?
     let icon: String
     let colors: [Color]
     let showDivider: Bool
+    let headerAccessory: AnyView
     @ViewBuilder let content: Content
 
+    /// Existing call sites: no card-header button and no subtitle link.
     init(
         _ title: String,
         subtitle: String? = nil,
         icon: String,
         colors: [Color],
         showDivider: Bool = true,
+        subtitleLink: AidenteCardSubtitleLink? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.init(
+            title,
+            subtitle: subtitle,
+            icon: icon,
+            colors: colors,
+            showDivider: showDivider,
+            subtitleLink: subtitleLink,
+            headerAccessory: { EmptyView() },
+            content: content
+        )
+    }
+
+    /// Card header with a trailing action button (e.g. "打开仪表盘").
+    init<Accessory: View>(
+        _ title: String,
+        subtitle: String? = nil,
+        icon: String,
+        colors: [Color],
+        showDivider: Bool = true,
+        subtitleLink: AidenteCardSubtitleLink? = nil,
+        @ViewBuilder headerAccessory: () -> Accessory,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.subtitleLink = subtitleLink
         self.icon = icon
         self.colors = colors
         self.showDivider = showDivider
+        self.headerAccessory = AnyView(headerAccessory())
         self.content = content()
     }
 
@@ -671,8 +755,10 @@ struct AidenteCard<Content: View>: View {
             AidenteSectionHeader(
                 title,
                 subtitle: subtitle,
+                subtitleLink: subtitleLink,
                 icon: icon,
-                colors: colors
+                colors: colors,
+                accessory: headerAccessory
             )
 
             if showDivider {

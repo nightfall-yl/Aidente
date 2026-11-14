@@ -40,7 +40,7 @@ enum ChargeOperationStatus: Equatable {
     var title: String {
         switch self {
         case .monitoring: AidenteL10n.t("只读监测")
-        case .charging: AidenteL10n.t("充电中", "Charging")
+        case .charging: AidenteL10n.t("等待充电", "Waiting to Charge")
         case .paused: AidenteL10n.t("充电已暂停")
         case .sailing: AidenteL10n.t("巡航中")
         case .discharging(let target):

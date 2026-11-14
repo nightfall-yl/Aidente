@@ -7,76 +7,84 @@ struct AboutSettingsView: View {
 
     let updateService: UpdateService
 
-    /// One card = one color pair: the status panel, toggle, version readout
-    /// and action buttons all use the Software Update card's own tint.
-    private var updateTint: Color {
-        AidenteTheme.permissionColors.first ?? AidenteTheme.ocean
+    /// Legal documents are read from the project's own GitHub repository so
+    /// the text always matches the published source, not a bundled snapshot.
+    private static let licenseURL = URL(
+        string: "https://github.com/nightfall-yl/Aidente/blob/main/LICENSE"
+    )!
+    private static let thirdPartyNoticesURL = URL(
+        string: "https://github.com/nightfall-yl/Aidente/blob/main/THIRD_PARTY_NOTICES.md"
+    )!
+
+    @State private var updateSheetTrigger: UpdateSheetTrigger?
+    @State private var didCheckInitialPhase = false
+
+    /// Read from the running bundle so the row always shows the real version.
+    private var versionText: String {
+        let build = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleVersion"
+        ) as? String ?? "—"
+        return "v\(updateService.currentVersion) (Build \(build))"
+    }
+
+    /// One sheet carries the whole flow: checking, no update, new release,
+    /// download / verify / install, completion and failure. The settings card
+    /// itself never grows a status row.
+    private static func shouldPresentUpdateSheet(
+        for phase: AidenteUpdatePhase
+    ) -> Bool {
+        if case .idle = phase { return false }
+        return true
+    }
+
+    /// States reached before this page existed (launch install result, or an
+    /// automatic check that found a release) are replayed once on appear. A
+    /// stale "up to date" result must not pop up every time the tab opens.
+    private static func shouldPresentOnAppear(
+        for phase: AidenteUpdatePhase
+    ) -> Bool {
+        switch phase {
+        case .available, .installed, .failed:
+            true
+        default:
+            false
+        }
+    }
+
+    /// While the sheet is open the trigger stays non-nil, so phase changes
+    /// update its content live instead of re-presenting the window.
+    private func presentUpdateSheet(for phase: AidenteUpdatePhase) {
+        guard updateSheetTrigger == nil,
+            Self.shouldPresentUpdateSheet(for: phase) else { return }
+        updateSheetTrigger = UpdateSheetTrigger()
+    }
+
+    private struct UpdateSheetTrigger: Identifiable {
+        let id = UUID()
     }
 
     var body: some View {
         AidenteSettingsPage {
             AidenteCard(
                 "软件更新",
-                subtitle: "从 Aidente 官方 GitHub 发行版安全获取更新。",
+                subtitle: AidenteL10n.t(
+                    "从 Aidente 官方 GitHub 发行版安全获取更新。",
+                    "Get updates safely from Aidente's official GitHub Releases."
+                ),
                 icon: "arrow.triangle.2.circlepath.circle.fill",
-                colors: AidenteTheme.permissionColors
-            ) {
-                // The status panel only appears once a check has run. In the
-                // idle phase it would just repeat the card subtitle ("waiting
-                // to check", "source: GitHub Releases") above the auto-check
-                // toggle, so the card opens with just the toggle and buttons.
-                if updateService.phase != .idle {
-                    AidenteInsetPanel {
-                        HStack(spacing: 12) {
-                            Image(systemName: updateService.statusIcon)
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(updateTint)
-                                .frame(width: 34, height: 34)
-                                .background(
-                                    updateTint.opacity(0.12),
-                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                )
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(updateService.statusTitle)
-                                    .font(.system(size: 13.5, weight: .semibold))
-                                Text(updateService.statusDetail)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Spacer(minLength: 12)
-
-                            Text("v\(updateService.currentVersion)")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(updateTint)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 5)
-                                .background(
-                                    Capsule().fill(updateTint.opacity(0.12))
-                                )
-                        }
-
-                        if updateService.isBusy {
-                            ProgressView()
-                                .progressViewStyle(.linear)
-                                .tint(updateTint)
-                        }
-                    }
-                }
-
-                AidenteSettingToggle(
-                    "自动检查更新",
-                    subtitle: "启动后检查，并每隔六小时检查一次正式发行版。",
-                    icon: "clock.arrow.2.circlepath",
-                    colors: AidenteTheme.permissionColors,
-                    isOn: $automaticallyCheckForUpdates
+                colors: AidenteTheme.permissionColors,
+                subtitleLink: AidenteCardSubtitleLink(
+                    phrase: "GitHub 发行版",
+                    englishPhrase: "GitHub Releases",
+                    url: UpdateService.releasesPageURL
                 )
-
-                AidenteRowDivider()
-
-                HStack(spacing: 10) {
+            ) {
+                AidenteControlRow(
+                    AidenteL10n.t("当前版本", "Current Version"),
+                    subtitle: versionText,
+                    icon: "number.circle.fill",
+                    colors: AidenteTheme.permissionColors
+                ) {
                     Button {
                         updateService.performPrimaryAction()
                     } label: {
@@ -91,19 +99,17 @@ struct AboutSettingsView: View {
                         AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
                     )
                     .disabled(updateService.isBusy)
-
-                    Button {
-                        updateService.openReleasePage()
-                    } label: {
-                        Label(
-                            AidenteL10n.t("查看 GitHub 发行版", "View GitHub Releases"),
-                            systemImage: "safari.fill"
-                        )
-                    }
-                    .buttonStyle(
-                        AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
-                    )
                 }
+
+                AidenteRowDivider()
+
+                AidenteSettingToggle(
+                    "自动检查更新",
+                    subtitle: "启动后检查，并每隔六小时检查一次正式发行版。",
+                    icon: "clock.arrow.2.circlepath",
+                    colors: AidenteTheme.permissionColors,
+                    isOn: $automaticallyCheckForUpdates
+                )
             }
 
             AidenteCard(
@@ -140,7 +146,7 @@ struct AboutSettingsView: View {
 
                     HStack(spacing: 10) {
                         Button {
-                            openBundledDocument(named: "LICENSE", extension: "txt")
+                            NSWorkspace.shared.open(Self.licenseURL)
                         } label: {
                             Label(
                                 AidenteL10n.t("查看开源许可证"),
@@ -152,7 +158,7 @@ struct AboutSettingsView: View {
                         )
 
                         Button {
-                            openBundledDocument(named: "THIRD_PARTY_NOTICES", extension: "md")
+                            NSWorkspace.shared.open(Self.thirdPartyNoticesURL)
                         } label: {
                             Label(
                                 AidenteL10n.t("查看第三方声明", "View Third-Party Notices"),
@@ -167,8 +173,21 @@ struct AboutSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            guard !didCheckInitialPhase else { return }
+            didCheckInitialPhase = true
+            let phase = updateService.phase
+            guard Self.shouldPresentOnAppear(for: phase) else { return }
+            presentUpdateSheet(for: phase)
+        }
         .onChange(of: automaticallyCheckForUpdates) { _, _ in
             updateService.automaticCheckPreferenceChanged()
+        }
+        .onChange(of: updateService.phase) { _, newPhase in
+            presentUpdateSheet(for: newPhase)
+        }
+        .sheet(item: $updateSheetTrigger) { _ in
+            UpdateProgressSheet(updateService: updateService)
         }
     }
 
@@ -182,13 +201,236 @@ struct AboutSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
+}
 
-    /// Opens a resource shipped in the app bundle; missing files fail
-    /// silently instead of crashing the About page.
-    private func openBundledDocument(named name: String, extension ext: String) {
-        guard let url = Bundle.main.url(forResource: name, withExtension: ext) else {
-            return
+/// Every update state lives in one sheet. It reads `UpdateService.phase` live,
+/// so a check result replaces "checking" without re-presenting the window.
+/// The panel shows only the current state: icon, title, one line of detail and
+/// (for results) a version capsule — no header row, stage list, progress bar
+/// or status notice.
+private struct UpdateProgressSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let updateService: UpdateService
+
+    private var tint: Color {
+        AidenteTheme.permissionColors.first ?? AidenteTheme.ocean
+    }
+
+    private var phase: AidenteUpdatePhase { updateService.phase }
+
+    private var subtitle: String {
+        switch phase {
+        case .idle:
+            "Aidente"
+        case .checking:
+            AidenteL10n.t(
+                "正在连接 nightfall-yl/Aidente",
+                "Connecting to nightfall-yl/Aidente"
+            )
+        case .upToDate:
+            "Aidente \(updateService.currentVersion) · "
+                + AidenteL10n.t("检查完成", "Check Complete")
+        case .available(let release):
+            "Aidente \(release.version) · "
+                + AidenteL10n.t("可更新", "Update Available")
+        case .downloading(let release), .preparing(let release),
+            .installing(let release):
+            "Aidente \(release.version) · "
+                + AidenteL10n.t("正在后台更新", "Updating in the Background")
+        case .installed(let version):
+            "Aidente \(version) · "
+                + AidenteL10n.t("更新完成", "Update Complete")
+        case .failed:
+            "Aidente · " + AidenteL10n.t("更新未完成", "Update Not Completed")
         }
-        NSWorkspace.shared.open(url)
+    }
+
+    private var versionBadge: String? {
+        switch phase {
+        case .upToDate: "v\(updateService.currentVersion)"
+        case .available(let release): "v\(release.version)"
+        default: nil
+        }
+    }
+
+    private enum SheetAction {
+        case available(String)
+        case failed
+        case done
+        case background
+        case cancellable
+    }
+
+    private var action: SheetAction {
+        switch phase {
+        case .available(let release): .available(release.version)
+        case .failed: .failed
+        case .upToDate, .installed: .done
+        case .downloading, .preparing: .cancellable
+        case .installing: .background
+        default: .background
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                AidenteIconBadge(
+                    icon: "arrow.triangle.2.circlepath.circle.fill",
+                    colors: AidenteTheme.permissionColors,
+                    size: 34
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(AidenteL10n.t("软件更新", "Software Update"))
+                        .font(.system(size: 17, weight: .bold))
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            AidenteInsetPanel {
+                HStack(spacing: 12) {
+                    AidenteIconBadge(
+                        icon: updateService.statusIcon,
+                        colors: AidenteTheme.permissionColors,
+                        size: 28
+                    )
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(updateService.statusTitle)
+                            .font(.system(size: 13.5, weight: .semibold))
+                        Text(updateService.statusDetail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    if let versionBadge {
+                        Text(versionBadge)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(tint)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(tint.opacity(0.12)))
+                    }
+                }
+                .padding(5)
+            }
+
+            HStack(spacing: 10) {
+                Spacer(minLength: 0)
+                actionButtons
+            }
+        }
+        .padding(24)
+        .frame(width: 560)
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        switch action {
+        case .available(let version):
+            secondaryButton(
+                AidenteL10n.t("跳过这个版本", "Skip This Version")
+            ) {
+                dismiss()
+                updateService.skipVersion(version)
+            }
+
+            Button {
+                updateService.installAvailableUpdate()
+            } label: {
+                Label(
+                    AidenteL10n.t("立即更新", "Update Now"),
+                    systemImage: "arrow.down.app.fill"
+                )
+            }
+            .buttonStyle(
+                AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
+            )
+
+        case .failed:
+            secondaryButton(AidenteL10n.t("关闭", "Close")) {
+                dismiss()
+            }
+
+            Button {
+                dismiss()
+                updateService.checkForUpdates()
+            } label: {
+                Label(
+                    AidenteL10n.t("重试", "Retry"),
+                    systemImage: "arrow.clockwise"
+                )
+            }
+            .buttonStyle(
+                AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
+            )
+
+        case .done:
+            Button {
+                dismiss()
+            } label: {
+                Label(
+                    AidenteL10n.t("完成", "Done"),
+                    systemImage: "checkmark"
+                )
+            }
+            .buttonStyle(
+                AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
+            )
+
+        case .cancellable:
+            secondaryButton(
+                AidenteL10n.t("取消更新", "Cancel Update")
+            ) {
+                dismiss()
+                updateService.cancelInstall()
+            }
+
+            Button {
+                dismiss()
+            } label: {
+                Label(
+                    AidenteL10n.t("后台继续", "Continue in Background"),
+                    systemImage: "arrow.right"
+                )
+            }
+            .buttonStyle(
+                AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
+            )
+
+        case .background:
+            Button {
+                dismiss()
+            } label: {
+                Label(
+                    AidenteL10n.t("后台继续", "Continue in Background"),
+                    systemImage: "arrow.right"
+                )
+            }
+            .buttonStyle(
+                AidenteActionButtonStyle(colors: AidenteTheme.permissionColors)
+            )
+        }
+    }
+
+    private func secondaryButton(
+        _ title: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                )
+        }
+        .buttonStyle(.plain)
     }
 }

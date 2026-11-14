@@ -129,6 +129,10 @@ extension Defaults.Keys {
         "forceOpaqueBackground", default: false)
     static let automaticallyCheckForUpdates = Key<Bool>(
         "automaticallyCheckForUpdates", default: true)
+    /// Version the user chose to skip from the update sheet. Empty means none;
+    /// a newer release still surfaces normally.
+    static let skippedUpdateVersion = Key<String>(
+        "skippedUpdateVersion", default: "")
 
     // Status Icon
     static let batteryPercentageDisplayLocation = Key<PercentageDisplayLocation>(

@@ -1,6 +1,43 @@
 import Defaults
 import SwiftUI
 
+/// URL scheme commands shown on the Automation page; keep in sync with
+/// README.md and ChargeManager.handleAutomationURL.
+private struct ShortcutURL: Identifiable {
+    let url: String
+    let title: String
+    let englishTitle: String
+
+    var id: String { url }
+}
+
+private let shortcutURLs: [ShortcutURL] = [
+    .init(
+        url: "aidente://set-limit?value=80",
+        title: "设置充电上限", englishTitle: "Set Charge Limit"
+    ),
+    .init(
+        url: "aidente://top-up",
+        title: "临时充至 100%", englishTitle: "Top Up to 100%"
+    ),
+    .init(
+        url: "aidente://calibrate",
+        title: "开始电池校准", englishTitle: "Start Battery Calibration"
+    ),
+    .init(
+        url: "aidente://pause",
+        title: "暂停充电", englishTitle: "Pause Charging"
+    ),
+    .init(
+        url: "aidente://discharge?value=70",
+        title: "放电至指定电量", englishTitle: "Discharge to a Target Level"
+    ),
+    .init(
+        url: "aidente://resume",
+        title: "恢复充电", englishTitle: "Resume Charging"
+    ),
+]
+
 struct AutomationSettingsView: View {
     private let scheduleStore = ScheduleStore.shared
     @State private var showingNewTask = false
@@ -11,7 +48,18 @@ struct AutomationSettingsView: View {
                 "计划任务",
                 subtitle: "按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。错过的任务可在 Mac 唤醒后补做。",
                 icon: "calendar.badge.clock",
-                colors: AidenteTheme.automationColors
+                colors: AidenteTheme.automationColors,
+                showDivider: !scheduleStore.tasks.isEmpty,
+                headerAccessory: {
+                    Button {
+                        showingNewTask = true
+                    } label: {
+                        Label(AidenteL10n.t("添加计划任务"), systemImage: "plus.circle.fill")
+                    }
+                    .buttonStyle(
+                        AidenteActionButtonStyle(colors: AidenteTheme.automationColors)
+                    )
+                }
             ) {
                 ForEach(Array(scheduleStore.tasks.enumerated()), id: \.element.id) {
                     index, task in
@@ -60,12 +108,33 @@ struct AutomationSettingsView: View {
                         }
                     }
 
-                Button {
-                    showingNewTask = true
-                } label: {
-                    Label(AidenteL10n.t("添加计划任务"), systemImage: "plus.circle.fill")
+            }
+
+            AidenteCard(
+                AidenteL10n.t("Apple 快捷指令", "Apple Shortcuts"),
+                subtitle: AidenteL10n.t(
+                    "在「快捷指令」中使用「打开 URL」操作，即可控制 Aidente。",
+                    "Use the Open URL action in Shortcuts to control Aidente."
+                ),
+                icon: "terminal.fill",
+                colors: AidenteTheme.dashboardColors
+            ) {
+                AidenteInsetPanel {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(shortcutURLs) { item in
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                Text(item.url)
+                                    .font(.system(size: 11.5, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 210, alignment: .leading)
+                                Text(AidenteL10n.t(item.title, item.englishTitle))
+                                    .font(.system(size: 11.5))
+                                    .foregroundStyle(.secondary)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
                 }
-                .buttonStyle(AidenteActionButtonStyle(colors: AidenteTheme.automationColors))
             }
         }
         .sheet(isPresented: $showingNewTask) {
