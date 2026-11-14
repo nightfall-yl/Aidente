@@ -111,6 +111,9 @@ class ChargeManager {
     }
     private var powerFlowError: String?
     private var powerHoldVerified = false
+    /// Set while a hero-triggered one-tap repair is running; the hero shows a
+    /// transient "Repairing…" state until it finishes.
+    var isRepairing = false
 
     var controlError: String? {
         guard let rawError =
@@ -127,6 +130,16 @@ class ChargeManager {
             return AidenteL10n.t("暂停供电状态待确认", "Verifying charging hold and power flow")
         }
         return operationStatus.title
+    }
+    /// Whether the hero card should offer a one-tap repair entry. True only when
+    /// control is failing for a helper/authorization reason (not a transient SMC
+    /// command error) and charging control is actually enabled.
+    var canQuickRepair: Bool {
+        guard controlError != nil,
+              Defaults[.manageCharging],
+              !ChargingHelperManager.shared.isRunningFromDiskImage
+        else { return false }
+        return ChargingHelperManager.shared.needsRepair
     }
     private var sleepAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
 
@@ -763,6 +776,22 @@ class ChargeManager {
         clearCachedState()
         evaluate(controlState: batteryService.controlState)
         checkControlService()
+    }
+
+    /// One-tap repair entry used by the dashboard hero when control fails because
+    /// the background helper lost its authorization. Reuses the same
+    /// re-authorization path as the launch/update prompt, then re-applies the
+    /// power policy through `retryControlAfterRepair`.
+    func attemptQuickRepair() async {
+        guard canQuickRepair else { return }
+        isRepairing = true
+        defer { isRepairing = false }
+        do {
+            try await ChargingHelperManager.shared.repair()
+            retryControlAfterRepair()
+        } catch {
+            logger.error("QUICK_REPAIR_FAILED \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func disableChargingManagement() async throws {

@@ -33,7 +33,11 @@
 
 ### 修订
 
-- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。上述修复已以同版本 `6.1.4` **重建并覆盖上传** GitHub Release 的 dmg / zip / SHA256SUMS（silent patch，版本号与 tag 不变）；二进制先于源码提交，tag `6.1.4` 暂仍指向初版提交。
+- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。
+
+- **hero 卡新增「点击修复」备用入口（2026-11-14 补发）**：当 hero 显示「充电控制未生效」且根因为后台控制服务（helper）缺失 / 身份不匹配 / 连接或健康检查失败时，hero 顶部状态行变为可点击并显示「点击修复充电控制」提示（要求 `manageCharging` 开启且不在磁盘映像运行）；点击复用与启动 / 更新后重新授权同一路径（`ChargingHelperManager.repair()`，触发一次 macOS 管理员密码弹窗），完成后经 `ChargeManager.retryControlAfterRepair()` 重新下发充电策略。门控用 `ChargingHelperManager.needsRepair`（`!isInstalled || failure != nil`）区分「helper 授权类故障」与「瞬时 SMC 命令失败」（后者不弹管理员密码、由周期轮询自愈），避免对瞬时错误误给修复入口；修复期间 hero 就地显示「修复中…」，失败保留原错误。新增 `ChargeManager.canQuickRepair` / `attemptQuickRepair()` 与 `MenuViewModel` 透传，`AidenteL10n` 补「修复中…」「点击修复充电控制」中英词条。该入口作为授权意外消失时的备用触发点，避免用户只能去「充电管理」重开关开关。
+
+- **两轮补发均已提交并同步 tag**：更新器修复与 hero 入口两次补发都已提交到 `main`，`tag 6.1.4` 已移到包含全部补发的提交并强制推送，GitHub Release `6.1.4`（本仓库 `nightfall-yl/Aidente`）的 dmg / zip / SHA256SUMS 同步覆盖上传（silent patch，版本号与 tag 不变）。
 
 ## [6.1.3]-2026-11-13
 

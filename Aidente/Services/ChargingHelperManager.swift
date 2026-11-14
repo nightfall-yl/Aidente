@@ -24,6 +24,13 @@ final class ChargingHelperManager {
     private(set) var registrationError: String?
     private(set) var isBusy = false
     var isInstalled: Bool { helperStatus == .installed }
+    /// True when the control helper is missing, its identity no longer matches
+    /// the app, or a connection/health check recently failed. The dashboard hero
+    /// uses this to decide whether a one-tap re-authorization can resolve the
+    /// "charging control inactive" state, instead of offering repair on every
+    /// transient SMC command error (those leave the helper reachable and never
+    /// set `failure`).
+    var needsRepair: Bool { !isInstalled || failure != nil }
     var isRunningFromDiskImage: Bool { Bundle.main.bundlePath.hasPrefix("/Volumes/") }
     private init() { refreshStatus() }
 

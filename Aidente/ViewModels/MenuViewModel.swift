@@ -47,6 +47,9 @@ class MenuViewModel {
     var manualPauseActive: Bool { chargeManager.manualPauseActive }
     var calibrationActive: Bool { chargeManager.calibrationStage != .idle }
     var operationStatusText: String { chargeManager.operationStatusTitle }
+    var canQuickRepair: Bool { chargeManager.canQuickRepair }
+    var isRepairing: Bool { chargeManager.isRepairing }
+    func quickRepair() async { await chargeManager.attemptQuickRepair() }
     var hasControlError: Bool { chargeManager.controlError != nil }
     var manageChargingEnabled: Bool { Defaults[.manageCharging] }
     var adapterConnected: Bool = false

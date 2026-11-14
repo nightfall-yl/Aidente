@@ -635,12 +635,27 @@ struct DashboardPopoverView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(viewModel.operationStatusText)
+                    Text(viewModel.isRepairing
+                          ? AidenteL10n.t("修复中…", "Repairing…")
+                          : viewModel.operationStatusText)
                         .font(.system(size: 15, weight: .bold))
+                    if viewModel.canQuickRepair, !viewModel.isRepairing {
+                        Text(AidenteL10n.t("点击修复充电控制", "Tap to repair charging control"))
+                            .font(.system(size: 10.5))
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Spacer()
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard viewModel.canQuickRepair else { return }
+                Task { await viewModel.quickRepair() }
+            }
+            .help(viewModel.canQuickRepair
+                  ? AidenteL10n.t("点击修复充电控制", "Tap to repair charging control")
+                  : "")
 
             BatteryChargeLimitControl(
                 batteryLevel: viewModel.displayPercentage,
