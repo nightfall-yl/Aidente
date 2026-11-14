@@ -2,7 +2,7 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前 bundle 版本为 **6.1.4 / Build 25**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.4]-2026-11-14` 汇总 6.1.3 发行之后的全部改动（更新流程重构为独立弹窗、更新检查源切到 `nightfall-yl/Aidente`、计划任务卡修正、设置页交互与法律文档链接调整、充电状态文案修正），已于 2026-11-14 正式发行：GitHub Release `6.1.4`，资产含 `Aidente-6.1.4.dmg` / `Aidente-6.1.4-macOS-arm64.zip` / `SHA256SUMS-6.1.4.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`；`[6.1.3]-2026-11-13` 汇总 2026-11-13 全部改动（设置页重构 + 审查整改与配色重排），`release-notes-6.1.3.md` 已同步更新。
+项目当前 bundle 版本为 **6.1.4 / Build 25**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.4]-2026-11-14` 汇总 6.1.3 发行之后的全部改动（更新流程重构为独立弹窗、更新检查源切到 `nightfall-yl/Aidente`、计划任务卡修正、设置页交互与法律文档链接调整、充电状态文案修正），已于 2026-11-14 正式发行：GitHub Release `6.1.4`，资产含 `Aidente-6.1.4.dmg` / `Aidente-6.1.4-macOS-arm64.zip` / `SHA256SUMS-6.1.4.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
 
 ## [6.1.4]-2026-11-14
 
@@ -22,6 +22,14 @@
 **状态文案**
 
 - **hero 状态文案改为「等待充电」**：`ChargeManager.swift:43` 的 `ChargeOperationStatus.charging.title` 由 `AidenteL10n.t("充电中", "Charging")` 改为 `AidenteL10n.t("等待充电", "Waiting to Charge")`，明确该状态表示「策略已请求充电」而非硬件实测正在充电；顶部标题栏的「正在充电」保持不动。
+
+### 验证
+
+- **版本号升级到 6.1.4 / Build 25**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[6.1.4-preview]` 归档为 `[6.1.4]-2026-11-14`，新建 `BuildSupport/release-notes-6.1.4.md`。
+- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.4 / 25**；唯一警告仍为第三方 `Vendor/Defaults/Sources/Defaults/SwiftUI.swift:229` 的 `onChange(of:perform:)` deprecated。
+- `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.4.dmg`（3.7M，卷名 `Aidente 6.1.4`），`hdiutil verify` VALID；另产出 `Aidente-6.1.4-macOS-arm64.zip`（3.2M）与 `SHA256SUMS-6.1.4.txt`。
+- **充电回归**：`zsh BuildSupport/test_charging.sh` Exit 0：**PASS: 138 charging, sleep, firmware, rollback and readback checks**。
+- **发行**：GitHub Release `6.1.4`（tag `6.1.4`，已置 latest）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.4`。
 
 ## [6.1.3]-2026-11-13
 
