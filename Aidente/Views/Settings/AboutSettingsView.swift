@@ -40,11 +40,15 @@ struct AboutSettingsView: View {
     /// States reached before this page existed (launch install result, or an
     /// automatic check that found a release) are replayed once on appear. A
     /// stale "up to date" result must not pop up every time the tab opens.
+    /// Only a release that arrived while this page was not open is replayed
+    /// once on appear. The install success result is deliberately excluded:
+    /// a completed update is surfaced by the new build's own state, not by a
+    /// popup every time the tab opens — the stale phase is consumed silently.
     private static func shouldPresentOnAppear(
         for phase: AidenteUpdatePhase
     ) -> Bool {
         switch phase {
-        case .available, .installed, .failed:
+        case .available, .failed:
             true
         default:
             false
@@ -177,6 +181,12 @@ struct AboutSettingsView: View {
             guard !didCheckInitialPhase else { return }
             didCheckInitialPhase = true
             let phase = updateService.phase
+            // Consume a stale install result without replaying it: the sheet
+            // no longer announces a completed update on every tab visit.
+            if case .installed = phase {
+                updateService.acknowledgeInstallResult()
+                return
+            }
             guard Self.shouldPresentOnAppear(for: phase) else { return }
             presentUpdateSheet(for: phase)
         }
