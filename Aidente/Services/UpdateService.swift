@@ -475,6 +475,16 @@ final class UpdateService {
         phase = .idle
     }
 
+    /// Dismissal of the "Update Complete" sheet. `.installed` is a terminal
+    /// state (the external updater already replaced the app), so it never
+    /// resets itself — without this, every return to the About tab would
+    /// replay the completion sheet. Acknowledging clears it once.
+    func acknowledgeInstallResult() {
+        if case .installed = phase {
+            phase = .idle
+        }
+    }
+
     /// Preview builds open the update sheet on the "available" state instead
     /// of showing a standalone alert.
     func presentPreviewAlertIfRequested() {

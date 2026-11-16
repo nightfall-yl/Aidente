@@ -193,7 +193,15 @@ struct AboutSettingsView: View {
                 presentUpdateSheet(for: newPhase)
             }
         }
-        .sheet(item: $updateSheetTrigger) { _ in
+        .sheet(item: $updateSheetTrigger, onDismiss: {
+            // The "Update Complete" result is a one-shot toast: consume it
+            // whatever way the sheet closes, or it would replay on every
+            // return to this tab (installed never resets itself — the app
+            // has already handed off to the external updater).
+            if case .installed = updateService.phase {
+                updateService.acknowledgeInstallResult()
+            }
+        }) { _ in
             UpdateProgressSheet(updateService: updateService)
         }
     }
