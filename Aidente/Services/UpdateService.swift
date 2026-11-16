@@ -393,9 +393,9 @@ final class UpdateService {
             case .failed(let message):
                 self.presentErrorAlert(message)
             case .none:
-                self.presentLaunchAuthorizationState(updatedVersion: nil)
+                await self.presentLaunchAuthorizationState(updatedVersion: nil)
             case .succeeded(let version):
-                self.presentLaunchAuthorizationState(updatedVersion: version)
+                await self.presentLaunchAuthorizationState(updatedVersion: version)
             }
         }
     }
@@ -868,9 +868,24 @@ final class UpdateService {
     /// One prompt per launch. Automatic updates carry a version string; a
     /// manual /Applications replacement has no result file, so the copy is
     /// phrased around the changed app instead of a specific version.
-    private func presentLaunchAuthorizationState(updatedVersion: String?) {
+    ///
+    /// After an automatic update the daemon re-pins its client manifest within
+    /// a few seconds of the swap (方案 C). The relaunched app checks sooner
+    /// than that, so poll briefly before declaring re-authorization necessary;
+    /// if the pin converges, the update counts as seamless.
+    private func presentLaunchAuthorizationState(updatedVersion: String?) async {
         let helper = ChargingHelperManager.shared
         helper.refreshStatus()
+
+        if helper.isInstalled, updatedVersion != nil {
+            // 8 × 1.5 s = 12 s: the watcher validates and writes the new pin
+            // within ~2 polls once the updater has swapped the bundle.
+            for _ in 0..<8 {
+                helper.refreshStatus()
+                if helper.isInstalled { break }
+                try? await Task.sleep(for: .milliseconds(1500))
+            }
+        }
 
         guard !helper.isInstalled, Defaults[.manageCharging] else {
             if let updatedVersion {
