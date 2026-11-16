@@ -40,19 +40,17 @@ struct AboutSettingsView: View {
     /// States reached before this page existed (launch install result, or an
     /// automatic check that found a release) are replayed once on appear. A
     /// stale "up to date" result must not pop up every time the tab opens.
-    /// Only a release that arrived while this page was not open is replayed
-    /// once on appear. The install success result is deliberately excluded:
-    /// a completed update is surfaced by the new build's own state, not by a
-    /// popup every time the tab opens — the stale phase is consumed silently.
+    /// Only a release discovered while this page was not open is replayed once
+    /// on appear. Failures are deliberately excluded: a failed check is shown
+    /// only at the moment it happens (sheet open, or a check the user started);
+    /// replaying it on every tab visit turned one error into a nag. A stale
+    /// install result is consumed silently — a completed update is surfaced by
+    /// the new build's own state, not by a popup.
     private static func shouldPresentOnAppear(
         for phase: AidenteUpdatePhase
     ) -> Bool {
-        switch phase {
-        case .available, .failed:
-            true
-        default:
-            false
-        }
+        if case .available = phase { return true }
+        return false
     }
 
     /// While the sheet is open the trigger stays non-nil, so phase changes
