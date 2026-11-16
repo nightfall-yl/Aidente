@@ -297,7 +297,9 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
 
     private func watchForClientSwap(expectedVersion: String, generation: Int) {
         let clientPath = LocalControlIdentity.clientPath
-        let bundleURL = URL(fileURLWithPath: LocalControlIdentity.clientPath, isDirectory: true)
+        // The bundle directory, NOT clientPath (that is the executable; reading
+        // "<executable>/Contents/Info.plist" is why version checks read nil).
+        let bundleURL = URL(fileURLWithPath: LocalControlIdentity.clientBundle, isDirectory: true)
         let manifestURL = URL(fileURLWithPath: LocalControlIdentity.manifest)
         // 240 × 0.5 s = 120 s: enough for the updater's 60 s parent-exit window
         // plus the swap itself. The idle poll is a cheap stat + static-signature

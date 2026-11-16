@@ -7,6 +7,9 @@ public enum LocalControlIdentity {
     public static let manifest = directory + "/client.plist"
     public static let launchPlist = "/Library/LaunchDaemons/" + label + ".plist"
     public static let clientPath = "/Applications/Aidente.app/Contents/MacOS/Aidente"
+    /// The installed app bundle (clientPath's grandparent). Distinct from
+    /// `clientPath` because reading bundle metadata needs the .app directory.
+    public static let clientBundle = "/Applications/Aidente.app"
 
     public static func isHex(_ value: String, length: Int) -> Bool {
         value.utf8.count == length && value.utf8.allSatisfy {
