@@ -276,29 +276,34 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         let clientPath = LocalControlIdentity.clientPath
         let bundleURL = URL(fileURLWithPath: LocalControlIdentity.clientPath, isDirectory: true)
         let manifestURL = URL(fileURLWithPath: LocalControlIdentity.manifest)
-        // 60 × 2 s = 120 s: enough for the updater's 60 s parent-exit window
-        // plus the swap itself. Expiring without a swap (failed update, user
-        // rollback) is a no-op — the old pin stays valid.
-        for _ in 0..<60 {
+        // 240 × 0.5 s = 120 s: enough for the updater's 60 s parent-exit window
+        // plus the swap itself. The idle poll is a cheap stat + static-signature
+        // read; the expensive codesign verify only runs once the cdhash moved.
+        // Expiring without a swap (failed update, user rollback) is a no-op —
+        // the old pin stays valid.
+        for _ in 0..<240 {
             guard pinRefreshGeneration == generation else { return }
             guard let pinned = clientPinnedIdentity() else {
                 logger.error("PIN_REFRESH_NO_MANIFEST")
                 return
             }
             guard FileManager.default.fileExists(atPath: clientPath) else {
-                sleep(2)
+                usleep(500_000)
                 continue
             }
             guard let candidate = codeIdentity(at: bundleURL) else {
                 logger.notice("PIN_REFRESH_CANDIDATE_UNREADABLE")
-                sleep(2)
+                usleep(500_000)
                 continue
             }
             if candidate.cdHash == pinned.cdHash {
-                sleep(2) // not swapped yet (or rolled back)
+                usleep(500_000) // not swapped yet (or rolled back)
                 continue
             }
             // The cdhash moved — validate the replacement before re-pinning.
+            // Strict (non-deep) is sufficient here: the updater already ran a
+            // full --deep --strict on the staged bundle before the swap, and
+            // this daemon only needs to reject a post-swap tamper attempt.
             guard candidate.identifier == "com.aidente.app",
                   candidate.version == expectedVersion,
                   verifyCodeSignature(at: bundleURL),
@@ -346,7 +351,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        process.arguments = ["--verify", "--deep", "--strict", bundleURL.path]
+        process.arguments = ["--verify", "--strict", bundleURL.path]
         process.standardOutput = pipe
         process.standardError = pipe
         do {

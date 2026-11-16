@@ -878,12 +878,12 @@ final class UpdateService {
         helper.refreshStatus()
 
         if helper.isInstalled, updatedVersion != nil {
-            // 8 × 1.5 s = 12 s: the watcher validates and writes the new pin
-            // within ~2 polls once the updater has swapped the bundle.
-            for _ in 0..<8 {
+            // 10 × 0.75 s = 7.5 s ceiling; with the daemon's 0.5 s watcher
+            // interval the pin usually converges within the first two checks.
+            for _ in 0..<10 {
                 helper.refreshStatus()
                 if helper.isInstalled { break }
-                try? await Task.sleep(for: .milliseconds(1500))
+                try? await Task.sleep(for: .milliseconds(750))
             }
         }
 
