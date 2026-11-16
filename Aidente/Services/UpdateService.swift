@@ -880,13 +880,13 @@ final class UpdateService {
         if helper.isInstalled, updatedVersion != nil {
             // Wait out the daemon's re-pin first (it lands ~2 s after the
             // swap), then poll a bounded window — feedback lands in a
-            // deliberate 3–5 s band: long enough to never race the pin,
+            // deliberate 3–4 s band: long enough to never race the pin,
             // short enough to feel responsive.
             try? await Task.sleep(for: .milliseconds(2000))
-            for _ in 0..<5 {
+            for _ in 0..<2 {
                 helper.refreshStatus()
                 if helper.isInstalled { break }
-                try? await Task.sleep(for: .milliseconds(750))
+                try? await Task.sleep(for: .milliseconds(1000))
             }
         }
 
