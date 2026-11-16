@@ -2,7 +2,7 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前 bundle 版本为 **6.1.5 / Build 26**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.5]-2026-11-16` 汇总 6.1.4 发行之后的全部改动（仪表盘卡片玻璃化与浅色可读性、删除 App 内不透明覆盖开关、设置页无标题栏左右分栏窗口框架、浅色设置页配色、页头前进 / 后退导航），发行信息见该版本区块。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+项目当前 bundle 版本为 **6.1.5 / Build 26**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.5]-2026-11-16` 汇总 6.1.4 发行之后的全部改动（仪表盘卡片玻璃化与浅色可读性、删除 App 内不透明覆盖开关、设置页无标题栏左右分栏窗口框架、浅色设置页配色、页头前进 / 后退导航），已于 2026-11-16 正式发行：GitHub Release `6.1.5`，资产含 `Aidente-6.1.5.dmg` / `Aidente-6.1.5-macOS-arm64.zip` / `SHA256SUMS-6.1.5.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
 
 ## [6.1.5]-2026-11-16
 

@@ -112,7 +112,7 @@ extension AidenteTheme {
     }
 }
 
-// MARK: - New Glass surface system (`gross-glass.html`, plan A + B + L4)
+// MARK: - New Glass surface system (`material-evolution.html`, plan A + B + L4)
 
 /// macOS supplies the glass on surfaces that can sample a backdrop; the app
 /// owns one fixed neutral level scale and one readability promise.
@@ -126,7 +126,8 @@ enum AidenteSurfaceLevel {
 }
 
 enum AidenteSurfaceTokens {
-    /// Fixed values from `gross-glass.html`: light #F4F5F6 / #F8F8F8 /
+    /// Fixed values from `material-evolution.html` §02 (ex gross-glass):
+    /// light #F4F5F6 / #F8F8F8 /
     /// #FCFCFC, dark #232326 / #28282B / #2D2D31. L1 > L0 and L2 > L0 stay
     /// constant across appearance, container and system state.
     static func color(
@@ -173,7 +174,7 @@ enum AidenteSurfaceTokens {
     }
 
     /// L4 controls: a barely-there fill so the 1pt border stays legible on
-    /// top of live glass. Values from `gross-glass.html`.
+    /// top of live glass. Values from `material-evolution.html` §02.
     static func controlFill(scheme: ColorScheme) -> Color {
         scheme == .dark
             ? Color.white.opacity(0.055)

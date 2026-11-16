@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aidente · 材质与可读性演进档案</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px clamp(16px, 6vw, 80px) 80px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f5f7; color: #1d1d1f; line-height: 1.6;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1c1e; color: #f2f2f7; }
+    .panel { background: #2c2c2e !important; }
+    iframe { border-color: rgba(255,255,255,.14) !important; }
+  }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: #6e6e73; margin: 0 0 6px; }
+  h1 { font-size: 24px; font-weight: 700; margin: 0 0 10px; }
+  .lede { font-size: 14px; color: #6e6e73; margin: 0 0 18px; max-width: 70ch; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 40px; }
+  nav.toc a {
+    font-size: 13px; color: inherit; text-decoration: none;
+    background: rgba(120,120,128,.12); padding: 6px 14px; border-radius: 999px;
+  }
+  nav.toc a:hover { background: rgba(120,120,128,.22); }
+  section.doc { margin: 0 0 56px; }
+  section.doc header { display: flex; gap: 14px; align-items: baseline; margin: 0 0 14px; }
+  .tag {
+    flex: 0 0 auto; font-size: 12px; font-weight: 600; color: #fff;
+    background: #6e6e73; border-radius: 6px; padding: 3px 9px;
+  }
+  h2 { font-size: 17px; font-weight: 700; margin: 0; }
+  header p { font-size: 12.5px; color: #6e6e73; margin: 3px 0 0; }
+  iframe {
+    width: 100%; height: 1100px; border: 1px solid rgba(0,0,0,.12);
+    border-radius: 12px; background: #fff;
+  }
+  .panel {
+    background: #fff; border: 1px solid rgba(0,0,0,.10); border-radius: 12px;
+    padding: 24px 28px; max-width: 860px;
+  }
+  .panel h3 { font-size: 14.5px; margin: 20px 0 8px; }
+  .panel h3:first-child { margin-top: 0; }
+  .panel ul { margin: 0; padding-left: 22px; font-size: 13.5px; }
+  .panel li { margin: 5px 0; }
+  .panel code {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 12px;
+    background: rgba(120,120,128,.14); padding: 1px 5px; border-radius: 4px;
+  }
+  footer { font-size: 12px; color: #6e6e73; margin-top: 60px; }
+</style>
+</head>
+<body>
+  <p class="eyebrow">AIDENTE · DESIGN ARCHIVE</p>
+  <h1>材质与可读性演进档案</h1>
+  <p class="lede">合并自 <code>gross-glass.html</code>、<code>liquid-glass-proposal.html</code>、<code>readability-strategy.html</code>（2026-11-16 合并后原文件删除，内容零改动完整保留于各节 iframe 内）。三份均为 6.1.1 时代的玻璃 / 可读性方案文档；第 04 节为现行落地状态。设置页结构基线见 <code>settings-redesign-prototype.html</code>，仪表盘 alpha 实验见 <code>dashboard-card-glass-prototype.html</code>。</p>
+  <nav class="toc">
+    <a href="#s01">01 历史还原</a>
+    <a href="#s02">02 液态玻璃参数定稿</a>
+    <a href="#s03">03 可读性策略</a>
+    <a href="#s04">04 现行状态 6.1.5</a>
+  </nav>
+  <section class="doc" id="s01">
+    <header><span class="tag">01</span><div><h2>历史还原</h2><p>gross-glass.html 内容 · 6.1.1「毛玻璃」档改版前 vs 现行对照（已归档，结论部分被 6.1.5 玻璃化推翻）</p></div></header>
+    <iframe loading="lazy" srcdoc="<!DOCTYPE html>
+<html lang=&quot;zh-CN&quot; data-appearance=&quot;light&quot; data-plan=&quot;a&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<title>AIdente · 毛玻璃档历史还原（gross glass）· 已对齐 6.1.1 现行方案</title>
+<style>
+:root, html[data-appearance=&quot;light&quot;] {
+  --page: #EDEDF0; --doc: #1D1D1F; --doc2: #6E6E73; --paper: #FFFFFF;
+  --line: #DCDCE1; --chip: #E7E7EC; --chip-ink: #3A3A3F;
+  --ink: #1D1D1F; --ink2: #6E6E73; --stroke: rgba(0,0,0,.10);
+  --accent: #0A84FF; --accent-soft: #E4F1FF; --jade: #0E8A4F;
+  --badge: rgba(10,132,255,.12);
+  --shadow: 0 1px 3px rgba(0,0,0,.07);
+  --winshadow: 0 12px 32px rgba(0,0,0,.16);
+  --divider: rgba(0,0,0,.08);
+  --chrome-shadow: 0 5px 10px rgba(0,0,0,.10);
+  --card-shadow: 0 3px 8px rgba(0,0,0,.10);
+  --card-stroke: linear-gradient(135deg, rgba(255,255,255,.60), rgba(140,90,240,.13), rgba(0,0,0,.10));
+  --l0-settings: #F9F9F9;
+  --l0-settings-wash: linear-gradient(180deg, rgba(255,255,255,.35), rgba(0,0,0,.02));
+  --l1: rgba(237,237,237,.98);
+  --l2-settings: #FBFBFB;
+  --l0-dash: rgba(255,255,255,.60);
+  --l0-dash-wash: linear-gradient(135deg, rgba(255,255,255,.34), rgba(46,204,113,.025), rgba(0,0,0,.025));
+  --l2-dash: rgba(255,255,255,.92);
+  --l2-dash-stroke: rgba(0,0,0,.10);
+  --hero: linear-gradient(90deg, rgba(255,255,255,.97), rgba(5,133,71,.14));
+  --hero-ink: #0A6C3B;
+  --desktop-a: #C9DCF5; --desktop-b: #E8D9F2; --desktop-c: #F5E2CE;
+  --blob1: rgba(90,150,235,.55); --blob2: rgba(190,120,215,.45); --blob3: rgba(240,175,110,.45);
+  --ink-onwin: #1D1D1F;
+}
+html[data-appearance=&quot;dark&quot;] {
+  --page: #151517; --doc: #F5F5F7; --doc2: #98989D; --paper: #1D1D20;
+  --line: #333338; --chip: #2B2B30; --chip-ink: #D6D6DB;
+  --ink: #F5F5F7; --ink2: #98989D; --stroke: rgba(255,255,255,.10);
+  --accent: #0A84FF; --accent-soft: #123049; --jade: #37D07A;
+  --badge: rgba(10,132,255,.22);
+  --shadow: 0 1px 3px rgba(0,0,0,.32);
+  --winshadow: 0 12px 32px rgba(0,0,0,.55);
+  --divider: rgba(255,255,255,.14);
+  --chrome-shadow: 0 5px 10px rgba(0,0,0,.32);
+  --card-shadow: 0 3px 8px rgba(0,0,0,.32);
+  --card-stroke: linear-gradient(135deg, rgba(255,255,255,.13), rgba(140,90,240,.13), rgba(0,0,0,.10));
+  --l0-settings: rgba(58,58,62,.86);
+  --l0-settings-wash: linear-gradient(180deg, rgba(255,255,255,.035), rgba(43,36,26,.20), rgba(0,0,0,.18));
+  --l1: rgba(24,23,22,.98);
+  --l2-settings: rgba(255,255,255,.085);
+  --l0-dash: rgba(48,48,52,.84);
+  --l0-dash-wash: linear-gradient(135deg, rgba(255,255,255,.035), rgba(43,36,26,.20), rgba(0,0,0,.18));
+  --l2-dash: rgba(255,255,255,.045);
+  --l2-dash-stroke: rgba(255,255,255,.10);
+  --hero: linear-gradient(90deg, rgba(29,37,46,.95), rgba(17,19,23,.92));
+  --hero-ink: #7FE0A8;
+  --desktop-a: #233045; --desktop-b: #3A2B47; --desktop-c: #443325;
+  --blob1: rgba(70,120,210,.50); --blob2: rgba(150,80,190,.42); --blob3: rgba(200,130,70,.38);
+  --ink-onwin: #F5F5F7;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--doc);
+  font-family: -apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, &quot;PingFang SC&quot;, &quot;Helvetica Neue&quot;, sans-serif;
+  -webkit-font-smoothing: antialiased; line-height: 1.65; }
+.page { max-width: 1180px; margin: 0 auto; padding: 40px 28px 80px; }
+.doc-head { margin-bottom: 26px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--doc2); text-transform: uppercase; }
+h1 { font-size: 30px; line-height: 1.25; margin: 10px 0 8px; letter-spacing: -.02em; }
+.lede { font-size: 15px; color: var(--doc2); max-width: 820px; margin: 0; }
+h2 { font-size: 20px; margin: 42px 0 14px; letter-spacing: -.01em; }
+h3 { font-size: 15px; margin: 24px 0 8px; }
+p { margin: 8px 0; font-size: 14px; color: var(--doc2); }
+strong { color: var(--doc); font-weight: 600; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+
+/* ---------- 控制条 ---------- */
+.controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; }
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.ctl > span { font-size: 11px; color: var(--doc2); }
+.seg { display: inline-flex; background: var(--chip); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--chip-ink); font: inherit; font-size: 12px;
+  padding: 5px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--paper); color: var(--doc); box-shadow: var(--shadow); font-weight: 600; }
+.switchrow { display: flex; align-items: center; gap: 9px; height: 30px; }
+.sw { width: 38px; height: 22px; border-radius: 999px; background: var(--chip); position: relative;
+  cursor: pointer; transition: background .16s; flex: none; border: 1px solid var(--line); }
+.sw::after { content: &quot;&quot;; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.22); transition: transform .16s; }
+.sw.on { background: var(--accent); border-color: var(--accent); }
+.sw.on::after { transform: translateX(16px); }
+.swlabel { font-size: 12px; color: var(--doc2); }
+.fallback { font-size: 11.5px; color: var(--doc2); margin: -6px 0 16px 4px; }
+.fallback a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--stroke); }
+
+/* ---------- 舞台 / 桌面 ---------- */
+.desktop { position: relative; border-radius: 18px; padding: 22px 18px 24px; overflow: hidden;
+  background: linear-gradient(135deg, var(--desktop-a), var(--desktop-b) 55%, var(--desktop-c));
+  border: 1px solid var(--stroke); }
+.desktop::before, .desktop::after { content: &quot;&quot;; position: absolute; border-radius: 50%;
+  filter: blur(46px); pointer-events: none; }
+.desktop::before { width: 340px; height: 300px; left: -60px; top: -90px; background: var(--blob1); }
+.desktop::after { width: 380px; height: 280px; right: -80px; bottom: -110px; background: var(--blob3); }
+.blob { position: absolute; width: 300px; height: 240px; right: 18%; top: 18%; border-radius: 50%;
+  background: var(--blob2); filter: blur(52px); pointer-events: none; }
+.desktop.plain { background: var(--page); }
+.desktop.plain::before, .desktop.plain::after, .desktop.plain .blob { display: none; }
+.stage { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; position: relative; z-index: 1; }
+.winbox { flex: 1 1 340px; min-width: 320px; }
+.wincap { font-size: 11px; color: var(--doc2); margin: 0 0 8px 4px; display: flex; justify-content: space-between; }
+.wincap em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+/* ---------- 窗口（旧版 .glass 材质） ---------- */
+.win { position: relative; border-radius: 14px; overflow: hidden;
+  box-shadow: var(--winshadow); border: 1px solid var(--stroke); color: var(--ink-onwin); }
+.glass-base { position: absolute; inset: 0; pointer-events: none; }
+.glass-base.sampled {
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+.win-settings > .glass-base { background: var(--l0-settings); }
+.win-dashboard > .glass-base { background: var(--l0-dash); }
+.glass-wash { position: absolute; inset: 0; pointer-events: none; }
+.win-settings > .glass-wash { background: var(--l0-settings-wash); }
+.win-dashboard > .glass-wash { background: var(--l0-dash-wash); }
+.win > *:not(.glass-base):not(.glass-wash):not(.lvl) { position: relative; z-index: 1; }
+
+.win-chrome { padding: 13px 15px 12px; border-bottom: 1px solid var(--divider);
+  box-shadow: var(--chrome-shadow); background: var(--l1); }
+/* 现行方案（6.1.1 / Build 22）：仪表盘已删除 L1 底栏，旧 .footer 规则不再生成节点。 */
+.lights { display: flex; gap: 6px; margin-bottom: 12px; }
+.lights i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #FF5F57; } .lights i:nth-child(2) { background: #FEBC2E; }
+.lights i:nth-child(3) { background: #28C840; }
+.wintitle { display: flex; align-items: center; gap: 9px; }
+.wintitle b { font-size: 14px; } .wintitle small { font-size: 10.5px; color: var(--ink2); }
+.wintitle .spacer { flex: 1; }
+.miniseg { display: inline-flex; background: var(--chip); border-radius: 7px; padding: 2px; gap: 2px; }
+.miniseg span { font-size: 10px; color: var(--ink2); padding: 3px 8px; border-radius: 5px; }
+.miniseg span.on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.win-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.divider { height: 1px; background: var(--divider); }
+
+/* 卡片：设置页用 AidenteCard，仪表盘用 PopoverCardBackground */
+.card { border-radius: 12px; padding: 13px 14px; position: relative; }
+.card.settings { background: var(--l2-settings); border: 1px solid transparent;
+  box-shadow: var(--card-shadow); }
+.card.settings::after { content: &quot;&quot;; position: absolute; inset: 0; border-radius: 12px;
+  padding: 1px; background: var(--card-stroke);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+html[data-appearance=&quot;dark&quot;] .card.settings { background-color: var(--l2-settings); }
+.card.dashboard { background: var(--l2-dash); border: 1px solid var(--l2-dash-stroke); }
+.card-h { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.glyph { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft);
+  display: grid; place-items: center; font-size: 13px; color: var(--accent); flex: none; }
+.glyph.v { background: rgba(140,90,240,.14); color: #8C5AF0; }
+.glyph.g { background: rgba(14,138,79,.14); color: var(--jade); }
+.card-h b { font-size: 12.5px; display: block; }
+.card-h small { font-size: 10.5px; color: var(--ink2); display: block; }
+.rule { height: 1px; background: var(--stroke); margin: 10px 0; }
+.row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.row .txt { flex: 1; font-size: 11.5px; }
+.row .sub { font-size: 10px; color: var(--ink2); }
+.note { font-size: 10.5px; color: var(--ink2); line-height: 1.55; }
+.pill { font-size: 10px; color: var(--accent); background: var(--badge); padding: 3px 8px; border-radius: 999px; font-weight: 600; }
+.btn { font-size: 11px; border: 1px solid var(--stroke); background: var(--l1);
+  padding: 5px 11px; border-radius: 8px; display: inline-block; }
+.picker { display: flex; background: var(--chip); border-radius: 7px; padding: 2px; gap: 2px; }
+.picker span { flex: 1; text-align: center; font-size: 9.5px; color: var(--ink2); padding: 5px 2px; border-radius: 5px; white-space: nowrap; }
+.picker span.on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.sw.tiny { width: 30px; height: 18px; }
+.sw.tiny::after { width: 12px; height: 12px; }
+.sw.tiny.on::after { transform: translateX(12px); }
+.hero { background: var(--hero); border: 1px solid rgba(14,138,79,.24); border-radius: 12px; padding: 13px 14px;
+  display: flex; align-items: center; gap: 12px; }
+.hero .big { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.hero .lbl { font-size: 10.5px; color: var(--ink2); }
+.hero .spacer { flex: 1; }
+.hero .tag { font-size: 11px; color: var(--hero-ink); font-weight: 600; }
+.dash-header { padding: 11px 14px; display: flex; align-items: baseline; gap: 9px; }
+.dash-header b { font-size: 20px; font-weight: 700; }
+.dash-header small { font-size: 11px; color: var(--ink2); }
+.lvl { display: none; position: absolute; top: -9px; right: 8px; font-size: 9px; font-weight: 700;
+  letter-spacing: .06em; color: #fff; background: var(--accent); padding: 1px 6px; border-radius: 5px; z-index: 4; }
+.show-levels .lvl { display: block; }
+.show-levels [data-level] { position: relative; }
+.win > .lvl { top: 6px; }
+
+/* ---------- 读数 ---------- */
+.readout { margin-top: 18px; background: var(--paper); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px 18px; }
+.readout h4 { margin: 0 0 10px; font-size: 13px; color: var(--doc); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--doc2); font-weight: 500; font-size: 11px; }
+td { color: var(--doc); }
+tbody tr:last-child td { border-bottom: 0; }
+.kv { display: flex; gap: 8px; align-items: center; }
+.dot { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--stroke); display: inline-block; flex: none; }
+.mono { font-variant-numeric: tabular-nums; }
+.warn { color: #D97706; font-weight: 600; }
+html[data-appearance=&quot;dark&quot;] .warn { color: #F0B45A; }
+.ok { color: var(--jade); font-weight: 600; }
+.plan { margin-top: 8px; } .plan .panel { margin-bottom: 16px; } .plan h2 { margin-top: 38px; }
+ol, ul { margin: 8px 0; padding-left: 20px; }
+li { font-size: 14px; color: var(--doc2); margin: 5px 0; }
+li strong { color: var(--doc); }
+.tagline { display: inline-block; font-size: 11px; color: var(--accent); background: var(--badge);
+  padding: 3px 9px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; }
+.callout { border-left: 3px solid var(--accent); padding: 6px 0 6px 14px; margin: 14px 0; }
+.callout p { margin: 0; }
+code { font-size: 11.5px; background: var(--chip); padding: 1px 5px; border-radius: 4px; color: var(--chip-ink); }
+.foot { margin-top: 46px; font-size: 11.5px; color: var(--doc2); border-top: 1px solid var(--line); padding-top: 16px; }
+/* ---------- 现行方案（原方案 A）---------- */
+html[data-appearance=&quot;light&quot;][data-plan=&quot;a&quot;] {
+  --l0-settings: #F4F5F6;          /* 玻璃平均落点：设置页自动实体 */
+  --l1: #F8F8F8;
+  --l2-settings: #FCFCFC;
+  --l0-dash: rgba(255,255,255,.62); /* 仪表盘 L0 保留玻璃 */
+  --l2-dash: #FCFCFC;
+  --l2-dash-stroke: rgba(0,0,0,.09);
+  --card-stroke: rgba(0,0,0,.09);
+  --chrome-shadow: none;
+  --card-shadow: none;
+  --divider: rgba(0,0,0,.10);
+  --stroke: rgba(0,0,0,.10);
+  --footer-control-fill: rgba(255,255,255,.24);  /* L4 控件：极淡底，压住彩色玻璃 */
+}
+html[data-appearance=&quot;dark&quot;][data-plan=&quot;a&quot;] {
+  --l0-settings: #232326;
+  --l1: #28282B;
+  --l2-settings: #2D2D31;
+  --l0-dash: rgba(44,44,48,.80);
+  --l2-dash: #2D2D31;
+  --l2-dash-stroke: rgba(255,255,255,.10);
+  --card-stroke: rgba(255,255,255,.10);
+  --chrome-shadow: none;
+  --card-shadow: none;
+  --divider: rgba(255,255,255,.10);
+  --stroke: rgba(255,255,255,.10);
+  --footer-control-fill: rgba(255,255,255,.055); /* L4 控件：暗色只需极轻提亮 */
+}
+/* ① 删两端自绘的窗口底渐变（公共对角渐变 + 设置页垂直渐变） */
+html[data-plan=&quot;a&quot;] .glass-wash { display: none; }
+/* ② 卡片只留一个层级信号：底色抬升 + 1pt 中性描边；渐变描边与阴影全删 */
+html[data-plan=&quot;a&quot;] .card.settings::after { display: none; }
+html[data-plan=&quot;a&quot;] .card.settings {
+  background: var(--l2-settings);
+  border: 1px solid var(--card-stroke);
+  box-shadow: none;
+}
+html[data-plan=&quot;a&quot;] .card.dashboard {
+  background: var(--l2-dash);
+  border: 1px solid var(--l2-dash-stroke);
+}
+/* ③ 现行方案：仪表盘没有 L1 底栏（整层删除），header / 页脚透空，
+   L0 玻璃直接透上来，只留 1pt 中性分隔线；三个控件在 header 右上角。 */
+html[data-plan=&quot;a&quot;] .win-chrome { box-shadow: none; }
+html[data-plan=&quot;a&quot;] .win-chrome.footer { display: none; }
+/* ④ 设置页容器不采样背景，玻璃只出现在仪表盘 L0 */
+html[data-plan=&quot;a&quot;] .win-settings > .glass-base {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* 现行方案：header 右上角三个控件 + 时间串（无 L1 底栏） */
+.dash-header { display: block; }
+.dash-header .hdr-row { display: flex; align-items: flex-start; gap: 8px; }
+.dash-header .hdr-row .title { flex: 1; }
+.hdr-actions { display: inline-flex; gap: 6px; align-self: center; }
+.hdr-actions i { width: 25px; height: 20px; border-radius: 6px; border: 1px solid var(--stroke);
+  background: var(--footer-control-fill, rgba(255,255,255,.24)); display: grid; place-items: center;
+  font-style: normal; font-size: 11px; color: var(--ink2); }
+.timestr { display: flex; justify-content: space-between; gap: 10px;
+  margin-top: 4px; font-size: 10px; color: var(--ink2); }
+/* 类液态玻璃层：AidenteGlassTokens（边缘光 .20、rim 40，实际 alpha = .20 × .55 ≈ .11） */
+html[data-plan=&quot;a&quot;] .win-dashboard {
+  --glass-tint-a: .14; --glass-blur: 2px; --glass-sat: 180%; --glass-bright: 1.06;
+  --glass-rim-w: 40px; --glass-light-a: .20;
+}
+@media (max-width: 780px) { .page { padding: 24px 16px 60px; } .stage { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class=&quot;page&quot;>
+
+  <header class=&quot;doc-head&quot;>
+    <div class=&quot;eyebrow&quot;>AIdente · 毛玻璃档历史还原 · 2026-11-06 原型 / 2026-11-08 对齐现行方案</div>
+    <h1>「毛玻璃」档 · 改版前原样 vs 现行方案</h1>
+    <p class=&quot;lede&quot;>本页保留「可读性策略重构之前」那版 <code>.glass</code> 毛玻璃档的历史还原；另一侧已按 <strong>6.1.1 / Build 22 的真实落地状态</strong> 对齐：固定中性色阶（亮 <code>#F4F5F6 / #F8F8F8 / #FCFCFC</code>、暗 <code>#232326 / #28282B / #2D2D31</code>）、仪表盘恢复背景采样并叠加类液态玻璃层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20）、<strong>无 L1 底栏</strong>、刷新 / 设置 / 退出三个按钮位于 header 右上角、设置页仍固定实体色。定稿参数见 <code>liquid-glass-proposal.html</code>，实现见 <code>AidenteTheme.swift</code>。</p>
+  </header>
+
+  <div class=&quot;panel&quot; style=&quot;margin:0 0 22px;border-left:3px solid var(--accent)&quot;>
+    <span class=&quot;tagline&quot;>现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
+    <p>macOS 26+ 使用系统 <code>glassEffect(.regular)</code>；macOS 15 及更早使用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（不含真折射 / 色散）。仪表盘三个容器 <code>canSampleBackdrop = true</code>，设置窗口仍为 <code>false</code>；「外观」为 自动 / 浅色 / 深色 分段控件，四档材质选择器与 App 内材质开关均已删除。下方表格中的「改版前」一列是<strong>历史快照</strong>，不代表当前实现。</p>
+  </div>
+
+  <h2>一 · 交互原型</h2>
+  <div class=&quot;controls&quot;>
+    <div class=&quot;ctl&quot;><span>方案</span><div class=&quot;seg&quot; id=&quot;cPlan&quot;>
+      <button data-v=&quot;legacy&quot;>改版前 · 原样</button><button data-v=&quot;a&quot; class=&quot;on&quot;>现行方案 · 6.1.1</button></div></div>
+    <div class=&quot;ctl&quot;><span>外观</span><div class=&quot;seg&quot; id=&quot;cAppearance&quot;>
+      <button data-v=&quot;light&quot; class=&quot;on&quot;>亮色</button><button data-v=&quot;dark&quot;>暗色</button></div></div>
+    <div class=&quot;ctl&quot;><span>查看</span><div class=&quot;seg&quot; id=&quot;cView&quot;>
+      <button data-v=&quot;both&quot; class=&quot;on&quot;>并排</button><button data-v=&quot;settings&quot;>设置页</button><button data-v=&quot;dashboard&quot;>仪表盘</button></div></div>
+    <div class=&quot;ctl&quot;><span>辅助</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw&quot; id=&quot;cLevels&quot;></div><span class=&quot;swlabel&quot;>层级标尺</span></div></div>
+    <div class=&quot;ctl&quot;><span>辅助</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw on&quot; id=&quot;cDesktop&quot;></div><span class=&quot;swlabel&quot;>桌面背景（看玻璃透不透）</span></div></div>
+  </div>
+
+  <p class=&quot;fallback&quot;>默认显示现行方案（6.1.1 / Build 22）。若上方切换无反应，可直接打开<a href=&quot;?theme=dark&quot;>暗色独立视图</a>、<a href=&quot;?plan=legacy&quot;>改版前原样</a>或<a href=&quot;?plan=legacy&amp;theme=dark&quot;>原样 · 暗色</a>；这些链接不依赖脚本。</p>
+
+  <div class=&quot;desktop&quot; id=&quot;desktop&quot;>
+    <div class=&quot;blob&quot;></div>
+    <div class=&quot;stage&quot; id=&quot;stage&quot;>
+
+      <!-- 设置窗口 -->
+      <div class=&quot;winbox&quot; id=&quot;boxSettings&quot;>
+        <div class=&quot;wincap&quot;><span>设置窗口 · 透明 NSWindow</span><em id=&quot;capSettings&quot;>现行方案 · 亮色</em></div>
+        <div class=&quot;win win-settings&quot; id=&quot;winSettings&quot; data-level=&quot;L0&quot;>
+          <div class=&quot;glass-base sampled&quot;></div>
+          <div class=&quot;glass-wash&quot;></div>
+          <span class=&quot;lvl&quot;>L0 窗口底</span>
+
+          <div class=&quot;win-chrome&quot; data-level=&quot;L1&quot;><span class=&quot;lvl&quot;>L1 顶栏</span>
+            <div class=&quot;lights&quot;><i></i><i></i><i></i></div>
+            <div class=&quot;wintitle&quot;><b>AIdente</b><small>通用</small><span class=&quot;spacer&quot;></span>
+              <div class=&quot;miniseg&quot;><span class=&quot;on&quot;>通用</span><span>仪表盘</span><span>充电</span></div></div>
+          </div>
+
+          <div class=&quot;win-body&quot;>
+            <div class=&quot;card settings&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>◈</div><div><b>界面材质</b>
+                <small>选择菜单浮层和设置窗口的透明与虚化程度。</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;picker&quot;><span>清晰实体</span><span class=&quot;on&quot;>毛玻璃</span><span>高斯柔化</span><span>液态玻璃</span></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot; style=&quot;font-size:11px;color:var(--ink2)&quot;>◈ 平衡透明度与清晰度</div></div>
+            </div>
+
+            <div class=&quot;card settings&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>A</div><div><b>语言</b><small>切换菜单栏和设置界面的显示语言</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;miniseg&quot; style=&quot;width:100%&quot;><span class=&quot;on&quot; style=&quot;flex:1;text-align:center&quot;>跟随系统</span>
+                <span style=&quot;flex:1;text-align:center&quot;>简体中文</span><span style=&quot;flex:1;text-align:center&quot;>English</span></div>
+            </div>
+
+            <div class=&quot;card settings&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>⏻</div><div><b>启动</b><small>让电池保护在登录后自动开始工作</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>登录时启动 Aidente</div><div class=&quot;sw tiny on&quot;></div></div>
+            </div>
+
+            <div class=&quot;card settings&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>▤</div><div><b>访问仪表盘</b><small>菜单栏图标被折叠时仍可打开完整仪表盘</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;note&quot;>双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。</div>
+              <div style=&quot;margin-top:10px&quot;><span class=&quot;btn&quot;>打开仪表盘</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 仪表盘 -->
+      <div class=&quot;winbox&quot; id=&quot;boxDashboard&quot;>
+        <div class=&quot;wincap&quot;><span>仪表盘 · borderless NSPanel</span><em id=&quot;capDashboard&quot;>现行方案 · 亮色</em></div>
+        <div class=&quot;win win-dashboard&quot; id=&quot;winDashboard&quot; data-level=&quot;L0&quot;>
+          <div class=&quot;glass-base sampled&quot;></div>
+          <div class=&quot;glass-wash&quot;></div>
+          <span class=&quot;lvl&quot;>L0 窗口底</span>
+
+          <div class=&quot;dash-header&quot;>
+            <div class=&quot;hdr-row&quot;><span class=&quot;title&quot;><b>电源已连接</b></span>
+              <div class=&quot;hdr-actions&quot;><i>↻</i><i>⚙</i><i>⏻</i></div></div>
+            <div class=&quot;timestr&quot;><span>系统运行时间：3 天 12 小时</span>
+              <span>电池剩余时间：2 小时 18 分</span></div>
+          </div>
+          <div class=&quot;divider&quot;></div>
+
+          <div class=&quot;win-body&quot;>
+            <div class=&quot;hero&quot; data-level=&quot;L3&quot;><span class=&quot;lvl&quot;>L3 强调卡</span>
+              <div><div class=&quot;lbl&quot;>电池健康度</div><div class=&quot;big&quot;>96%</div></div>
+              <span class=&quot;spacer&quot;></span><span class=&quot;tag&quot;>状态良好</span></div>
+
+            <div class=&quot;card dashboard&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>⚡</div><div><b>实时功率分流</b><small>适配器 · 系统使用</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>系统使用</div><span class=&quot;pill&quot;>18 W</span></div>
+            </div>
+
+            <div class=&quot;card dashboard&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>◷</div><div><b>容量与寿命趋势</b><small>近 30 天</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;note&quot;>设计容量 100 Wh · 当前满充 96 Wh</div>
+            </div>
+
+            <div class=&quot;card dashboard&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+              <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>✦</div><div><b>快捷养护</b><small>充电上限 80%</small></div></div>
+              <div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>暂停充电至明早</div><span class=&quot;btn&quot;>执行</span></div>
+            </div>
+          </div>
+
+          <!-- 现行方案：L1 底栏已删除，刷新 / 设置 / 退出三个按钮在上方 header 右上角 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class=&quot;readout&quot;>
+    <h4>生效层级与色值（<span id=&quot;rPlan&quot;>现行方案</span> · <span id=&quot;rAppearance&quot;>亮色</span>）</h4>
+    <table>
+      <thead><tr><th style=&quot;width:20%&quot;>层级</th><th style=&quot;width:40%&quot;>设置窗口</th><th>仪表盘</th></tr></thead>
+      <tbody id=&quot;levelRows&quot;></tbody>
+    </table>
+    <table style=&quot;margin-top:14px&quot;>
+      <thead><tr><th style=&quot;width:20%&quot;>检查项</th><th>结论</th></tr></thead>
+      <tbody>
+        <tr><td>两端窗口底</td><td id=&quot;rConsistency&quot; class=&quot;warn&quot;>—</td></tr>
+        <tr><td>材质来源</td><td id=&quot;rMaterial&quot;>—</td></tr>
+        <tr><td>本方案改动</td><td id=&quot;rChanges&quot;>—</td></tr>
+        <tr><td>可读性策略基线对照</td><td>亮色 L0 <span class=&quot;mono&quot;>#F6F6F6</span> / L1 <span class=&quot;mono&quot;>#F9F9F9</span> / L2 <span class=&quot;mono&quot;>#FBFBFB</span>，暗色 <span class=&quot;mono&quot;>#1B1B1B</span> / <span class=&quot;mono&quot;>#202020</span> / <span class=&quot;mono&quot;>#252525</span>；两端同值、全部实体、无渐变无模糊。</td></tr>
+      </tbody>
+    </table>
+    <p style=&quot;margin-top:12px;font-size:11.5px&quot;>原型用 <code>backdrop-filter</code> 近似 <code>NSVisualEffectView(.popover, .behindWindow)</code>，色值是按代码中的 alpha 叠加估算，不是像素级复刻。桌面背景可关掉，用来判断玻璃是否真的采到了背后内容。</p>
+    <div id=&quot;swatchBand&quot; style=&quot;margin-top:12px;font-size:11px;color:var(--doc2)&quot;></div>
+  </div>
+
+  <div class=&quot;plan&quot;>
+    <h2>二 · 现行方案与还原说明</h2>
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>00 现行方案 · 类液态玻璃 + 固定层级</span>
+      <p>思路：<strong>材质只负责氛围，层级交给中性色阶。</strong>保留仪表盘透桌面这一点通透感，把所有为了「让层次看得见」而自绘的渐变、描边、阴影和整体透明度删掉。控制条切到「改版前 · 原样」可逐项对照。</p>
+      <table>
+        <thead><tr><th style=&quot;width:18%&quot;>项</th><th style=&quot;width:34%&quot;>改版前原样</th><th style=&quot;width:30%&quot;>现行方案</th><th>解决什么</th></tr></thead>
+        <tbody>
+          <tr><td>窗口底渐变</td><td>公共对角渐变 <code>white .34 → jade .025 → black .025</code>；设置页另有垂直 <code>white .35 → black .02</code></td><td><strong>整段删除</strong>，只留均匀底色</td><td>同一卡片左右亮度漂移、正文对比度不稳</td></tr>
+          <tr><td>卡片层级信号</td><td>底色 + 渐变描边 + 阴影 + 内部分隔线，四重</td><td>底色抬升 + <strong>1pt 中性描边</strong>，仅一个信号</td><td>「group 组黑框」的框感</td></tr>
+          <tr><td>整体透明度</td><td>顶栏 <code>.98</code>，页脚再 <code>.72</code></td><td><strong>全部删除</strong>；半透明只作用于背景层，内容 alpha = 1</td><td>文字与图标跟着变淡</td></tr>
+          <tr><td>仪表盘底栏<strong>（本轮 B）</strong></td><td>页脚有 <code>#EDEDED @ .98 × .72</code> 背景层，是一条浮在玻璃上的浅色带</td><td><strong>背景整层透空</strong>，只留 1pt 顶边线，L0 玻璃直接透上来</td><td>底栏与自身窗口底天然同色；不用固定中性色去撞会随桌面变化的玻璃</td></tr>
+          <tr><td>L4 页脚控件</td><td>三个方块只有 1px 边框，在彩色玻璃上偏淡</td><td>只给<strong>控件本身</strong>加极淡半透明底：亮 <code>white .24</code>、暗 <code>white .055</code></td><td>按钮可辨，但底栏仍透空、不引入整条色带</td></tr>
+          <tr><td>层级色值</td><td>两端各抄一套、随档位变化</td><td>固定中性色阶，单调递增：亮 <code>#F4F5F6 / #F8F8F8 / #FCFCFC</code>，暗 <code>#232326 / #28282B / #2D2D31</code></td><td>L1 &amp;gt; L0、L2 &amp;gt; L0 恒定，L1/L2 两端同值</td></tr>
+          <tr><td>设置页 L0</td><td>透明 NSWindow 里 <code>.behindWindow</code> 采样不足，退化成灰</td><td>自动实体，色值取仪表盘玻璃的<strong>平均落点</strong></td><td>不假装能虚化；并排不突兀</td></tr>
+          <tr><td>次级文字</td><td>系统 <code>.secondary</code> 叠在半透明卡片上</td><td>卡片改实体后对比度可控，无需特判</td><td>浅色下低于 4.5:1 的风险</td></tr>
+        </tbody>
+      </table>
+      <div class=&quot;callout&quot;><p><strong>刻意保留：</strong>仪表盘 L0 的玻璃模糊（这套 UI 最值钱的部分）、L3 强调卡的语义渐变（层级契约里唯一允许 tint 的层）、已删除的四档 Picker（现为「外观」分段控件 + 不透明开关）、桌面背景与容器能力差异。把状态色收成竖条、把玻璃限制在 L0 属于<strong>上一轮优化案 B / C</strong>，不在这里。注意本页出现两个「方案 A / B」编号：本轮的 <strong>B = 底栏透空</strong>，上一轮的 <strong>B = 玻璃只铺窗口底</strong>，两者不是一回事。</p></div>
+      <p><strong>历史方案换算到代码是 8 处（现行实现已超出此范围，容器标志与偏好迁移均已改动）</strong>：删 <code>standardBackdrop</code> 的公共 <code>LinearGradient</code>；删 <code>lightSettingsBackdrop</code> 的 <code>.glass</code> 垂直渐变；<code>AidenteCard</code> 的 <code>strokeBorder(LinearGradient)</code> → 单色 1pt；<code>.shadow(...)</code> → 无；<code>AidenteChromeBar</code> 与页脚的 <code>.opacity()</code> → 只包背景；L0/L1/L2 换成本表的固定色值；<strong>仪表盘页脚背景改 <code>Color.clear</code>，只保留 1pt 顶边线</strong>；<strong>页脚按钮（L4）加极淡半透明底</strong>，明暗各一个常量。不改 <code>AidenteReadability</code>、不改偏好迁移、不改容器标志。</p>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>01 还原基准</span>
+      <p>「改版前」= <strong>可读性策略重构之前</strong>的工作区状态，即已经落地「浅色方案 B」「液态玻璃设计语言对齐」「Arcan 压边 + Reduce Transparency」「卡片近白化」之后、尚未删除四档选择器的那一版。不是 fork 原版 HEAD：原版浅色卡片走 <code>.regularMaterial</code>，而改版前已按当时那轮「方案 A」改成实体近白 <code>0.985</code>。<strong>注意区分：</strong>那轮的「方案 A」指卡片近白化，与本页现行方案（原「方案 A · 去噪 + 保通透」）是两个不同方案，只是编号撞了。</p>
+      <p>本原型只还原 <strong>.glass 毛玻璃</strong> 一档；高斯柔化、液态玻璃的分支不在范围内。系统「降低透明度」按关闭处理。</p>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>02 每一层的代码来源</span>
+      <table>
+        <thead><tr><th style=&quot;width:22%&quot;>层</th><th style=&quot;width:38%&quot;>设置窗口</th><th>仪表盘</th></tr></thead>
+        <tbody>
+          <tr><td>L0 窗口底</td><td><code>lightSettingsBackdrop</code>：近白 <code>0.975</code> 实体 + 垂直渐变 <code>white .35 → black .02</code>（亮色）；暗色走 <code>standardBackdrop</code> 的 <code>.popover</code> + 深棕 <code>.22</code> + 公共对角渐变</td><td><code>standardBackdrop</code>：<code>.popover</code> / <code>.behindWindow</code> + 深棕 <code>.22</code>（暗）/ <code>.035</code>（亮）+ 公共对角渐变</td></tr>
+          <tr><td>L1 顶栏 / 底栏</td><td><code>AidenteChromeBar</code>：<code>Color(white: 0.93)</code> / <code>rgb(.095,.09,.085)</code>，整体 <code>.opacity(0.98)</code></td><td>页眉<strong>无背景</strong>；页脚同一 <code>AidenteChromeBar</code> 再叠 <code>.opacity(0.72)</code></td></tr>
+          <tr><td>L2 卡片</td><td><code>AidenteCard</code> → <code>AidenteMaterialLayer</code>：亮色实体 <code>0.985</code>，暗色 <code>.regularMaterial</code> + <code>black .04</code>；渐变描边 + 阴影</td><td><code>PopoverCardBackground</code>：亮色 <code>white .92</code>、暗色 <code>white .045</code>，半透明 + 单色描边</td></tr>
+          <tr><td>L3 强调卡</td><td>—</td><td><code>statusHero</code>：亮色 <code>white .97 → heroTint .14</code>，暗色 <code>rgb(29,37,46) .95 → rgb(17,19,23) .92</code></td></tr>
+        </tbody>
+      </table>
+      <div class=&quot;callout&quot;><p><strong>关键点：</strong>设置窗口是 <code>isOpaque = false</code> 的透明 <code>NSWindow</code>，<code>.behindWindow</code> 采不到有效背景内容，所以方案 B 把它的亮色底改成了实体近白。仪表盘是 <code>NSPopover</code>，能采样桌面 —— 这就是两端在亮色下不一致的物理根因。</p></div>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>03 亮 / 暗两套色值</span>
+      <table>
+        <thead><tr><th style=&quot;width:20%&quot;>层</th><th style=&quot;width:40%&quot;>亮色</th><th>暗色</th></tr></thead>
+        <tbody>
+          <tr><td>设置 L0</td><td><span class=&quot;mono&quot;>#F9F9F9</span> 基底 + <span class=&quot;mono&quot;>white .35 → black .02</span> 渐变，实体不透明</td><td><span class=&quot;mono&quot;>rgba(58,58,62,.86)</span> + blur + <span class=&quot;mono&quot;>white .035 / warm .20 / black .18</span> 渐变</td></tr>
+          <tr><td>设置 L1</td><td><span class=&quot;mono&quot;>#EDEDED @ .98</span></td><td><span class=&quot;mono&quot;>#181716 @ .98</span></td></tr>
+          <tr><td>设置 L2</td><td><span class=&quot;mono&quot;>#FBFBFB</span> 实体</td><td><code>.regularMaterial</code> + <span class=&quot;mono&quot;>black .04</span></td></tr>
+          <tr><td>仪表盘 L0</td><td><span class=&quot;mono&quot;>rgba(255,255,255,.60)</span> + blur + <span class=&quot;mono&quot;>white .34 / jade .025 / black .025</span> 渐变</td><td><span class=&quot;mono&quot;>rgba(48,48,52,.84)</span> + blur + 同暗色公共渐变</td></tr>
+          <tr><td>仪表盘 L2</td><td><span class=&quot;mono&quot;>white .92</span> 半透明 + <span class=&quot;mono&quot;>black .10</span> 描边</td><td><span class=&quot;mono&quot;>white .045</span> 半透明 + <span class=&quot;mono&quot;>white .10</span> 描边</td></tr>
+          <tr><td>页脚 L1</td><td colspan=&quot;2&quot;>两端同材质，但仪表盘额外整体 <span class=&quot;mono&quot;>.opacity(0.72)</span>，比设置页顶栏更透</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>04 与改版后的差别</span>
+      <ul>
+        <li><strong>材质层数：</strong>改版前窗口底带公共对角渐变、顶栏带整体 <code>.98</code> 与页脚 <code>.72</code>、卡片带渐变描边与半透明；现行方案收敛为一组固定中性色阶，卡片只留 1pt 中性描边，仪表盘 L0 另叠类液态玻璃静态层。</li>
+        <li><strong>两端一致性：</strong>改版前亮色下设置页是实体近白、仪表盘是透桌面的玻璃；现行方案两端同类层同值，差异只由容器能力标志（能否采样背景）决定。</li>
+        <li><strong>用户可选项：</strong>改版前是四档分段选择器（本原型固定选中「毛玻璃」）；现行方案已删除四档，只保留「外观」自动 / 浅色 / 深色 分段控件（App 内材质开关已于 2026-11-15 移除）。</li>
+        <li><strong>通透感：</strong>早期「改版后不再透桌面」的推断已被推翻：现行方案把仪表盘三个容器的 <code>canSampleBackdrop</code> 恢复为 <code>true</code>，15 及更早走 <code>.behindWindow</code> 毛玻璃 + 自绘玻璃层，26+ 走系统液态玻璃；设置窗口仍固定实体。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>05 边界</span>
+      <ul>
+        <li>本文件是<strong>历史还原 + 现行方案对照原型</strong>，不是产品代码；现行实现已在 <code>AidenteTheme.swift</code> / <code>StatusBarManager.swift</code> / <code>DashboardPopoverView.swift</code> 落地，并已完整编译、输出 <code>Dist/Aidente-6.1.1.dmg</code>（6.1.1 / Build 22）。</li>
+        <li>CSS 的 <code>backdrop-filter</code> 只能近似系统材质：真实的 <code>NSVisualEffectView</code> 会随壁纸、外观、窗口活跃状态动态变化，透明 NSWindow 里还会退化成系统灰。</li>
+        <li>卡片渐变描边用 <code>mask</code> 近似 SwiftUI 的 <code>strokeBorder(LinearGradient)</code>；数值按代码 alpha 估算，不追求逐像素一致。</li>
+        <li><strong>方案 A 的层级承诺有边界：</strong>L1 / L2 在两端是固定实体同值，差值恒定；仪表盘 L0 是玻璃，合成色随壁纸变化，所以「L−L0 恒定」只在设置页这条实体基线上严格成立。原型刻意用了彩色桌面把这个差异暴露出来 —— 若希望两端 L0 也一致，需要把玻璃不透明度提高，或改用上一轮优化案 B（玻璃只铺窗口底、卡片全实体）。现行方案更进一步：仪表盘整条 L1 底栏已删除，三个按钮移到 header 右上角，并恢复三个容器的背景采样。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;foot&quot;>定稿参数见 <code>liquid-glass-proposal.html</code>；策略原型见 <code>readability-strategy.html</code>（均已对齐 6.1.1）。本文件可用 <code>?theme=dark</code> 打开暗色独立视图、<code>?plan=legacy</code> 打开改版前原样，两个参数可叠加。</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var state = {
+    plan: params.get(&quot;plan&quot;) === &quot;legacy&quot; ? &quot;legacy&quot; : &quot;a&quot;,
+    appearance: params.get(&quot;theme&quot;) === &quot;dark&quot; ? &quot;dark&quot; : &quot;light&quot;,
+    view: &quot;both&quot;,
+    levels: false,
+    desktop: true
+  };
+
+  var CHANGES = {
+    legacy: &quot;原样，未做改动：窗口底渐变、卡片渐变描边与阴影、顶栏 / 页脚整体透明度全部保留。&quot;,
+    a: &quot;现行 6.1.1：固定中性色阶 亮 #F4F5F6/#F8F8F8/#FCFCFC、暗 #232326/#28282B/#2D2D31；卡片只留 1pt 中性描边；仪表盘三容器 canSampleBackdrop = true，15 及更早走 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 走系统 glassEffect(.regular)；设置窗口仍为 false 走实体；删除 L1 底栏，刷新 / 设置 / 退出三个 25×20 控件移到 header 右上角；四档 Picker 换成外观分段控件 + 不透明开关。&quot;
+  };
+
+  var DATA = {
+    legacy: {
+      light: {
+        rows: [
+          [&quot;L0 窗口底&quot;, &quot;#F9F9F9&quot;, &quot;近白实体 + 白 .35→黑 .02 渐变&quot;, &quot;rgba(255,255,255,.60) + blur + 公共对角渐变&quot;, &quot;透桌面，半透明&quot;],
+          [&quot;L1 顶栏 / 底栏&quot;, &quot;#EDEDED&quot;, &quot;#EDEDED @ .98 + 阴影&quot;, &quot;页眉无背景；页脚 #EDEDED @ .98 × .72&quot;, &quot;页眉缺一层&quot;],
+          [&quot;L2 卡片&quot;, &quot;#FBFBFB&quot;, &quot;#FBFBFB 实体 + 渐变描边 + 阴影&quot;, &quot;white .92 半透明 + black .10 描边&quot;, &quot;一端实体 / 一端半透明&quot;],
+          [&quot;L3 强调卡&quot;, &quot;#E9F6EF&quot;, &quot;—&quot;, &quot;white .97 → heroTint .14 语义渐变&quot;, &quot;唯一允许 tint&quot;]
+        ],
+        consistency: &quot;不一致：设置页是实体近白，仪表盘是透桌面的玻璃；同一截图里 L0 差值不是固定值。&quot;,
+        material: &quot;.glass = NSVisualEffectView(.popover, .behindWindow) + 深棕 .035 + 公共对角渐变；设置窗口因透明 NSWindow 采样不足，亮色已按浅色方案 B 改为实体近白。&quot;,
+        sw: { a: &quot;#F9F9F9&quot;, b: &quot;#EDEDED&quot;, c: &quot;#FBFBFB&quot;, d: &quot;#EDEFF2&quot;, f: &quot;#F7F7F8&quot; },
+        cap: &quot;改版前 · 毛玻璃 · 亮色&quot;
+      },
+      dark: {
+        rows: [
+          [&quot;L0 窗口底&quot;, &quot;#3A3A3E&quot;, &quot;rgba(58,58,62,.86) + blur + 公共渐变&quot;, &quot;rgba(48,48,52,.84) + blur + 公共渐变&quot;, &quot;两端共用 standardBackdrop&quot;],
+          [&quot;L1 顶栏 / 底栏&quot;, &quot;#181716&quot;, &quot;#181716 @ .98 + white .14 分隔线&quot;, &quot;页眉无背景；页脚 #181716 @ .98 × .72&quot;, &quot;页眉缺一层&quot;],
+          [&quot;L2 卡片&quot;, &quot;#2C2C30&quot;, &quot;.regularMaterial + black .04 + 渐变描边&quot;, &quot;white .045 半透明 + white .10 描边&quot;, &quot;两端实现不同&quot;],
+          [&quot;L3 强调卡&quot;, &quot;#1D252E&quot;, &quot;—&quot;, &quot;rgb(29,37,46) .95 → rgb(17,19,23) .92&quot;, &quot;唯一允许 tint&quot;]
+        ],
+        consistency: &quot;不一致：窗口底虽共用同一 backdrop，但卡片分别用 AidenteMaterialLayer 与 PopoverCardBackground，透明度和描边都不同。&quot;,
+        material: &quot;.glass = NSVisualEffectView(.popover, .behindWindow) + 深棕 .22 + 公共对角渐变（white .035 / warm .20 / black .18）。&quot;,
+        sw: { a: &quot;#3A3A3E&quot;, b: &quot;#181716&quot;, c: &quot;#2C2C30&quot;, d: &quot;#303034&quot;, f: &quot;#26262A&quot; },
+        cap: &quot;改版前 · 毛玻璃 · 暗色&quot;
+      }
+    },
+    a: {
+      light: {
+        rows: [
+          [&quot;L0 窗口底&quot;, &quot;#F4F5F6&quot;, &quot;#F4F5F6 实体（玻璃平均落点），无渐变&quot;, &quot;rgba(255,255,255,.62) + blur，无渐变&quot;, &quot;仅仪表盘保留玻璃&quot;],
+          [&quot;L1 顶栏&quot;, &quot;#F8F8F8&quot;, &quot;设置页顶栏 #F8F8F8 + 1pt 分隔线，无阴影、无整体透明度&quot;, &quot;仪表盘已无 L1 底栏；三个按钮在 header 右上角&quot;, &quot;仪表盘不设 L1 底栏&quot;],
+          [&quot;L2 卡片&quot;, &quot;#FCFCFC&quot;, &quot;#FCFCFC 实体 + 1pt 中性描边，仅 1 个层级信号&quot;, &quot;#FCFCFC 实体 + 1pt 中性描边&quot;, &quot;两端同值&quot;],
+          [&quot;L3 强调卡&quot;, &quot;#E9F6EF&quot;, &quot;—&quot;, &quot;语义渐变按层级契约保留（L3 唯一允许 tint）&quot;, &quot;不在 A 范围&quot;]
+        ],
+        consistency: &quot;设置页 L1/L2 为固定实体（+4 / +8，/255，单调递增）；仪表盘无 L1 底栏，L2 卡片与设置页同值；仪表盘 L0 为系统材质叠加类液态玻璃层，合成色随桌面变化，不参与固定差值。&quot;,
+        material: &quot;仪表盘三容器 canSampleBackdrop = true：15 及更早用 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay 自绘静态层，26+ 用系统 glassEffect(.regular)；设置窗口仍为 false，走固定实体色阶。&quot;,
+        sw: { a: &quot;#F4F5F6&quot;, b: &quot;#F8F8F8&quot;, c: &quot;#FCFCFC&quot;, d: &quot;#EDEFF2&quot;, f: &quot;#FCFCFC&quot; },
+        cap: &quot;现行方案 · 亮色&quot;
+      },
+      dark: {
+        rows: [
+          [&quot;L0 窗口底&quot;, &quot;#232326&quot;, &quot;#232326 实体，无渐变&quot;, &quot;rgba(44,44,48,.80) + blur，无渐变&quot;, &quot;仅仪表盘保留玻璃&quot;],
+          [&quot;L1 顶栏&quot;, &quot;#28282B&quot;, &quot;设置页顶栏 #28282B + 1pt 分隔线，无阴影、无整体透明度&quot;, &quot;仪表盘已无 L1 底栏；三个按钮在 header 右上角&quot;, &quot;仪表盘不设 L1 底栏&quot;],
+          [&quot;L2 卡片&quot;, &quot;#2D2D31&quot;, &quot;#2D2D31 实体 + 1pt 中性描边，仅 1 个层级信号&quot;, &quot;#2D2D31 实体 + 1pt 中性描边&quot;, &quot;两端同值&quot;],
+          [&quot;L3 强调卡&quot;, &quot;#1D252E&quot;, &quot;—&quot;, &quot;语义渐变按层级契约保留（L3 唯一允许 tint）&quot;, &quot;不在 A 范围&quot;]
+        ],
+        consistency: &quot;设置页 L1/L2 为固定实体（+5 / +10，/255，单调递增）；仪表盘无 L1 底栏，L2 卡片与设置页同值；仪表盘 L0 为系统材质叠加类液态玻璃层，合成色随桌面变化，不参与固定差值。&quot;,
+        material: &quot;仪表盘三容器 canSampleBackdrop = true：15 及更早用 NSVisualEffectView(.popover, .behindWindow) + AidenteGlassOverlay，26+ 用系统 glassEffect(.regular)；设置窗口仍为 false，走暗色固定实体色阶。&quot;,
+        sw: { a: &quot;#232326&quot;, b: &quot;#28282B&quot;, c: &quot;#2D2D31&quot;, d: &quot;#2C2C30&quot;, f: &quot;#2D2D31&quot; },
+        cap: &quot;现行方案 · 暗色&quot;
+      }
+    }
+  };
+
+  function seg(id, key) {
+    var box = document.getElementById(id);
+    box.addEventListener(&quot;click&quot;, function (e) {
+      var b = e.target.closest(&quot;button&quot;); if (!b) return;
+      state[key] = b.getAttribute(&quot;data-v&quot;);
+      render();
+    });
+  }
+  function toggle(id, key) {
+    document.getElementById(id).addEventListener(&quot;click&quot;, function () {
+      state[key] = !state[key]; render();
+    });
+  }
+  seg(&quot;cPlan&quot;, &quot;plan&quot;);
+  seg(&quot;cAppearance&quot;, &quot;appearance&quot;);
+  seg(&quot;cView&quot;, &quot;view&quot;);
+  toggle(&quot;cLevels&quot;, &quot;levels&quot;);
+  toggle(&quot;cDesktop&quot;, &quot;desktop&quot;);
+
+  function render() {
+    document.documentElement.setAttribute(&quot;data-appearance&quot;, state.appearance);
+    document.documentElement.setAttribute(&quot;data-plan&quot;, state.plan);
+
+    [[&quot;cPlan&quot;, &quot;plan&quot;], [&quot;cAppearance&quot;, &quot;appearance&quot;], [&quot;cView&quot;, &quot;view&quot;]].forEach(function (p) {
+      Array.prototype.forEach.call(
+        document.getElementById(p[0]).querySelectorAll(&quot;button&quot;),
+        function (b) { b.classList.toggle(&quot;on&quot;, b.getAttribute(&quot;data-v&quot;) === state[p[1]]); }
+      );
+    });
+    [[&quot;cLevels&quot;, state.levels], [&quot;cDesktop&quot;, state.desktop]].forEach(function (p) {
+      document.getElementById(p[0]).classList.toggle(&quot;on&quot;, p[1]);
+    });
+
+    document.getElementById(&quot;desktop&quot;).classList.toggle(&quot;plain&quot;, !state.desktop);
+    // 方案 A 下设置页任何外观都不采样背景；原样只有暗色走 popover 材质。
+    // 仪表盘 L0 在两套方案里都保留玻璃。
+    document.querySelector(&quot;#winSettings > .glass-base&quot;)
+      .classList.toggle(
+        &quot;sampled&quot;,
+        state.plan === &quot;legacy&quot; &amp;&amp; state.appearance === &quot;dark&quot;
+      );
+    document.getElementById(&quot;stage&quot;).classList.toggle(&quot;show-levels&quot;, state.levels);
+    document.getElementById(&quot;winSettings&quot;).classList.toggle(&quot;show-levels&quot;, state.levels);
+    document.getElementById(&quot;winDashboard&quot;).classList.toggle(&quot;show-levels&quot;, state.levels);
+
+    document.getElementById(&quot;boxSettings&quot;).style.display =
+      (state.view === &quot;dashboard&quot;) ? &quot;none&quot; : &quot;&quot;;
+    document.getElementById(&quot;boxDashboard&quot;).style.display =
+      (state.view === &quot;settings&quot;) ? &quot;none&quot; : &quot;&quot;;
+
+    var d = DATA[state.plan][state.appearance];
+    var label = state.appearance === &quot;dark&quot; ? &quot;暗色&quot; : &quot;亮色&quot;;
+    document.getElementById(&quot;rPlan&quot;).textContent =
+      state.plan === &quot;a&quot; ? &quot;现行方案 · 6.1.1&quot; : &quot;改版前 · 原样&quot;;
+    document.getElementById(&quot;rAppearance&quot;).textContent = label;
+    document.getElementById(&quot;capSettings&quot;).textContent = d.cap;
+    document.getElementById(&quot;capDashboard&quot;).textContent = d.cap;
+    document.getElementById(&quot;rConsistency&quot;).textContent = d.consistency;
+    document.getElementById(&quot;rConsistency&quot;).className =
+      state.plan === &quot;a&quot; ? &quot;ok&quot; : &quot;warn&quot;;
+    document.getElementById(&quot;rMaterial&quot;).textContent = d.material;
+    document.getElementById(&quot;rChanges&quot;).textContent = CHANGES[state.plan];
+
+    var sw = d.sw;
+
+    var html = &quot;&quot;;
+    d.rows.forEach(function (r) {
+      html += &quot;<tr><td>&quot; + r[0] + &quot;</td><td>&quot; + r[2] + &quot;</td><td>&quot; + r[3] + &quot;</td></tr>&quot;;
+    });
+    document.getElementById(&quot;levelRows&quot;).innerHTML = html;
+
+    // 色带：左设置 / 右仪表盘，随外观切换
+    var band = document.getElementById(&quot;swatchBand&quot;);
+    if (band) {
+      band.innerHTML =
+        &quot;<div class='kv' style='gap:6px'>&quot; +
+        &quot;<span class='dot' style='background:&quot; + sw.a + &quot;'></span><span class='mono'>设置 L0 &quot; + sw.a + &quot;</span>&quot; +
+        &quot;<span class='dot' style='background:&quot; + sw.b + &quot;;margin-left:10px'></span><span class='mono'>L1 &quot; + sw.b + &quot;</span>&quot; +
+        &quot;<span class='dot' style='background:&quot; + sw.c + &quot;;margin-left:10px'></span><span class='mono'>L2 &quot; + sw.c + &quot;</span>&quot; +
+        &quot;<span class='dot' style='background:&quot; + sw.d + &quot;;margin-left:18px'></span><span class='mono'>仪表盘 L0 ≈&quot; + sw.d + &quot;</span>&quot; +
+        &quot;<span class='dot' style='background:&quot; + sw.f + &quot;;margin-left:10px'></span><span class='mono'>L2 ≈&quot; + sw.f + &quot;</span>&quot; +
+        &quot;</div>&quot;;
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
+" title="历史还原"></iframe>
+  </section>
+  <section class="doc" id="s02">
+    <header><span class="tag">02</span><div><h2>液态玻璃参数定稿</h2><p>liquid-glass-proposal.html 内容 · 方案 A 六层静态观感与 A/B/C 上限评审，AidenteGlassTokens 冻结参数来源</p></div></header>
+    <iframe loading="lazy" srcdoc="<!DOCTYPE html>
+<html lang=&quot;zh-CN&quot; data-appearance=&quot;light&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<title>AIdente · 方案 A「液态玻璃观感」原型 · 仅演示，不改造代码</title>
+<style>
+/* ============================================================
+   基准色阶沿用 gross-glass.html 的现行方案（与 AidenteTheme.swift 的
+   AidenteSurfaceTokens 一致）：
+   亮 L0 #F4F5F6 / L1 #F8F8F8 / L2 #FCFCFC
+   暗 L0 #232326 / L1 #28282B / L2 #2D2D31
+   ============================================================ */
+:root, html[data-appearance=&quot;light&quot;] {
+  --page:#EDEDF0; --doc:#1D1D1F; --doc2:#6E6E73; --paper:#FFFFFF;
+  --line:#DCDCE1; --chip:#E7E7EC; --chip-ink:#3A3A3F;
+  --ink:#1D1D1F; --ink2:#6E6E73; --accent:#0A84FF; --accent-soft:#E4F1FF;
+  --jade:#0E8A4F; --badge:rgba(10,132,255,.12);
+  --l0:#F4F5F6; --l1:#F8F8F8; --l2:#FCFCFC;
+  --stroke:rgba(0,0,0,.09); --divider:rgba(0,0,0,.10);
+  --control-fill:rgba(255,255,255,.24);
+  --hero:linear-gradient(90deg,#FFFFFF,rgba(14,138,79,.10));
+  --hero-ink:#0A6C3B;
+  --desktop-a:#C9DCF5; --desktop-b:#E8D9F2; --desktop-c:#F5E2CE;
+  --blob1:rgba(90,150,235,.55); --blob2:rgba(190,120,215,.45); --blob3:rgba(240,175,110,.45);
+  --winshadow:0 12px 32px rgba(0,0,0,.16);
+  --shadow-color:0 1px 3px rgba(0,0,0,.07);
+  /* glasswork 默认参数 */
+  --tint-rgb:255,255,255; --tint-a:.14;
+  --blur:2px; --sat:180%; --bright:1.06;
+  --rim-w:40px; --rim-a:.30; --light-a:.20;
+  --vol-shadow:0 1px 3px rgba(0,0,0,.07);
+  --bg-alpha:.06;          /* 采样预览时的玻璃底 alpha，对齐 glasswork light 6% 起 */
+  --lens-url:blur(0px);    /* 未启用折射时占位，避免 backdrop-filter 声明解析失败 */
+}
+html[data-appearance=&quot;dark&quot;] {
+  --page:#151517; --doc:#F5F5F7; --doc2:#98989D; --paper:#1D1D20;
+  --line:#333338; --chip:#2B2B30; --chip-ink:#D6D6DB;
+  --ink:#F5F5F7; --ink2:#98989D; --accent:#0A84FF; --accent-soft:#123049;
+  --jade:#37D07A; --badge:rgba(10,132,255,.22);
+  --l0:#232326; --l1:#28282B; --l2:#2D2D31;
+  --stroke:rgba(255,255,255,.10); --divider:rgba(255,255,255,.14);
+  --control-fill:rgba(255,255,255,.055);
+  --hero:linear-gradient(90deg,#2A3138,#20262C);
+  --hero-ink:#7FE0A8;
+  --desktop-a:#233045; --desktop-b:#3A2B47; --desktop-c:#443325;
+  --blob1:rgba(70,120,210,.50); --blob2:rgba(150,80,190,.42); --blob3:rgba(200,130,70,.38);
+  --winshadow:0 12px 32px rgba(0,0,0,.55);
+  --shadow-color:0 1px 3px rgba(0,0,0,.32);
+  --tint-rgb:30,30,34; --tint-a:.24;
+  --blur:2px; --sat:160%; --bright:.80;
+  --vol-shadow:0 1px 3px rgba(0,0,0,.32);
+  --bg-alpha:.16;          /* glasswork dark 16% 起 */
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--doc);line-height:1.65;
+  font-family:-apple-system,BlinkMacSystemFont,&quot;SF Pro Text&quot;,&quot;PingFang SC&quot;,&quot;Helvetica Neue&quot;,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.page{max-width:1180px;margin:0 auto;padding:38px 28px 80px}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--doc2);text-transform:uppercase}
+h1{font-size:29px;line-height:1.25;margin:10px 0 8px;letter-spacing:-.02em}
+.lede{font-size:14.5px;color:var(--doc2);max-width:900px;margin:0}
+h2{font-size:19px;margin:38px 0 12px;letter-spacing:-.01em}
+h3{font-size:14px;margin:20px 0 6px}
+p{margin:8px 0;font-size:13.5px;color:var(--doc2)}
+strong{color:var(--doc);font-weight:600}
+code{font-size:11.5px;background:var(--chip);padding:1px 5px;border-radius:4px;color:var(--chip-ink)}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+a:hover{opacity:.72}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:14px}
+.tagline{display:inline-block;font-size:11px;color:var(--accent);background:var(--badge);
+  padding:3px 9px;border-radius:6px;font-weight:600;margin-bottom:10px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:12px 0}
+.callout p{margin:0}
+.warnbox{border-left:3px solid #D97706;padding:4px 0 4px 14px;margin:12px 0}
+.warnbox p{margin:0}
+
+/* ---------- 控制条 ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:flex-end;
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ctl>span{font-size:11px;color:var(--doc2)}
+.seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--chip-ink);font:inherit;font-size:12px;
+  padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--paper);color:var(--doc);box-shadow:var(--shadow-color);font-weight:600}
+.switchrow{display:flex;align-items:center;gap:8px;height:30px}
+.sw{width:36px;height:21px;border-radius:999px;background:var(--chip);position:relative;
+  cursor:pointer;transition:background .16s;flex:none;border:1px solid var(--line)}
+.sw::after{content:&quot;&quot;;position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.22);transition:transform .16s}
+.sw.on{background:var(--accent);border-color:var(--accent)}
+.sw.on::after{transform:translateX(15px)}
+.swlabel{font-size:12px;color:var(--doc2);white-space:nowrap}
+.sliders{display:flex;flex-wrap:wrap;gap:14px 24px;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:14px}
+.sld{display:flex;flex-direction:column;gap:5px;width:158px}
+.sld label{font-size:11px;color:var(--doc2);display:flex;justify-content:space-between}
+.sld label b{color:var(--doc);font-variant-numeric:tabular-nums;font-weight:600}
+.sld input{width:100%;accent-color:var(--accent);margin:0}
+.layers{display:flex;flex-wrap:wrap;gap:10px 20px;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:16px}
+.layers .switchrow{height:26px}
+.layers .sw{width:32px;height:19px}
+.layers .sw::after{width:13px;height:13px}
+.layers .sw.on::after{transform:translateX(13px)}
+.layers .swlabel{font-size:11.5px}
+
+/* ---------- 舞台 ---------- */
+.desktop{position:relative;border-radius:18px;padding:24px 20px 26px;overflow:hidden;
+  background:linear-gradient(135deg,var(--desktop-a),var(--desktop-b) 55%,var(--desktop-c));
+  border:1px solid var(--stroke)}
+.desktop::before,.desktop::after{content:&quot;&quot;;position:absolute;border-radius:50%;filter:blur(46px);pointer-events:none}
+.desktop::before{width:340px;height:300px;left:-60px;top:-90px;background:var(--blob1)}
+.desktop::after{width:380px;height:280px;right:-80px;bottom:-110px;background:var(--blob3)}
+.blob{position:absolute;width:300px;height:240px;right:16%;top:20%;border-radius:50%;
+  background:var(--blob2);filter:blur(52px);pointer-events:none}
+.desktop.plain{background:var(--page)}
+.desktop.plain::before,.desktop.plain::after,.desktop.plain .blob{display:none}
+.stage{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;position:relative;z-index:1}
+.winbox{flex:1 1 330px;min-width:310px;max-width:440px}
+.wincap{font-size:11px;color:var(--doc2);margin:0 0 8px 4px;display:flex;justify-content:space-between;gap:8px}
+.wincap em{font-style:normal;color:var(--accent);font-weight:600}
+
+/* ---------- 窗口骨架 ---------- */
+/* 圆角统一在一个变量上。backdrop-filter 元素不会继承祖先的
+   overflow:hidden 圆角裁剪，所以玻璃底与两个高光层都必须自己带圆角；
+   inset:0 位于 1px border 的 padding box 内，内圆角比外圆角小 1px。 */
+.win{--win-radius:15px;--win-inner-radius:calc(var(--win-radius) - 1px);
+  position:relative;border-radius:var(--win-radius);overflow:hidden;box-shadow:var(--winshadow);
+  border:1px solid var(--stroke);color:var(--ink)}
+.win .glass-base{position:absolute;inset:0;pointer-events:none;background:var(--l0);z-index:0;
+  border-radius:var(--win-inner-radius)}
+.win>*:not(.glass-base){position:relative;z-index:1}
+/* header 对齐 DashboardPopoverView.swift:150-184：
+   标题行（20pt）+ 右上角三个 FooterButton，下方两行 10pt .secondary 时间串，
+   header 下仅一条 1pt 分隔线，之后直接是滚动内容，没有 L1 底栏。 */
+.dash-header{padding:10px 14px;border-bottom:1px solid var(--divider)}
+.hdr-row{display:flex;align-items:baseline;gap:10px}
+.hdr-row .title{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.hdr-actions{display:flex;gap:6px;margin-left:auto}
+/* FooterButton：25x20、圆角 6、controlFill 底 + 1pt 描边、11.5pt .secondary 图标
+   （DashboardPopoverView.swift:1409-1435） */
+.hdr-actions i{width:25px;height:20px;border-radius:6px;border:1px solid var(--stroke);
+  background:var(--control-fill);display:grid;place-items:center;font-style:normal;
+  font-size:11.5px;font-weight:600;color:var(--ink2);line-height:1}
+.timestr{font-size:10px;color:var(--ink2);margin-top:6px;line-height:1.5}
+.timestr span{display:block}
+.win-body{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+.hero{background:var(--hero);border:1px solid rgba(14,138,79,.24);border-radius:12px;padding:12px 13px;
+  display:flex;align-items:center;gap:12px}
+.hero .big{font-size:21px;font-weight:700;letter-spacing:-.02em}
+.hero .lbl{font-size:10.5px;color:var(--ink2)}
+.hero .spacer{flex:1}
+.hero .tag{font-size:11px;color:var(--hero-ink);font-weight:600}
+.card{border-radius:12px;padding:12px 13px;position:relative;background:var(--l2);
+  border:1px solid var(--stroke)}
+.card-h{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.glyph{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);display:grid;
+  place-items:center;font-size:13px;color:var(--accent);flex:none}
+.glyph.v{background:rgba(140,90,240,.14);color:#8C5AF0}
+.glyph.g{background:rgba(14,138,79,.14);color:var(--jade)}
+.card-h b{font-size:12.5px;display:block}
+.card-h small{font-size:10.5px;color:var(--ink2);display:block}
+.rule{height:1px;background:var(--stroke);margin:9px 0}
+.row{display:flex;align-items:center;gap:10px;padding:4px 0}
+.row .txt{flex:1;font-size:11.5px}
+.note{font-size:10.5px;color:var(--ink2);line-height:1.55}
+.pill{font-size:10px;color:var(--accent);background:var(--badge);padding:3px 8px;border-radius:999px;font-weight:600}
+.btn{font-size:11px;border:1px solid var(--stroke);background:var(--l1);padding:4px 10px;border-radius:8px}
+/* 已移除 L1 底栏：刷新 / 设置 / 退出三个按钮现在位于 header 右上角。 */
+
+/* ============================================================
+   方案 A 的六层静态近似 —— 全部是可以用 SwiftUI Canvas /
+   LinearGradient / strokeBorder 落地的东西，没有真实折射
+   ============================================================ */
+/* 基准：现状窗口保持实体色 + 1pt 中性描边（对应 canSampleBackdrop=false） */
+.win.baseline .glass-base{background:var(--l0)}
+
+/* ② 模糊与提亮：仅在「采样背景」开启时生效（浏览器 backdrop-filter） */
+.win.plan-a.sample .glass-base{
+  background:rgba(var(--tint-rgb),var(--bg-alpha));
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat)) brightness(var(--bright));
+  backdrop-filter:blur(var(--blur)) saturate(var(--sat)) brightness(var(--bright));
+}
+.win.plan-a:not(.sample) .glass-base{background:var(--l0)}
+
+/* ① 体积阴影（默认关：项目已明确去噪、删阴影） */
+.win.plan-a.layer-shadow{box-shadow:var(--winshadow),var(--vol-shadow)}
+
+/* ③ 边缘增厚：内侧一圈明暗对比，近似 rim 的「厚玻璃」感，非位移 */
+.win.plan-a.layer-rim .glass-base{
+  box-shadow:inset 0 0 0 1px rgba(var(--tint-rgb),calc(var(--rim-a) * .55)),
+    inset 0 0 var(--rim-w) rgba(0,0,0,calc(var(--rim-a) * .16));
+}
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-rim .glass-base{
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,calc(var(--rim-a) * .22)),
+    inset 0 0 var(--rim-w) rgba(0,0,0,calc(var(--rim-a) * .34));
+}
+
+/* ⑤ 边缘光：左上 + 右下双高光 + 内缩柔光 + 顶部高光渐变 */
+.win.plan-a.layer-light::before{
+  content:&quot;&quot;;position:absolute;inset:0;border-radius:var(--win-inner-radius);pointer-events:none;z-index:2;
+  padding:1px;
+  background:linear-gradient(135deg,
+    rgba(255,255,255,var(--light-a)) 0%,
+    rgba(255,255,255,0) 26%,
+    rgba(255,255,255,0) 70%,
+    rgba(255,255,255,calc(var(--light-a) * .55)) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+}
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-light::before{
+  background:linear-gradient(135deg,
+    rgba(255,255,255,calc(var(--light-a) * .38)) 0%,
+    rgba(255,255,255,0) 26%,
+    rgba(255,255,255,0) 70%,
+    rgba(255,255,255,calc(var(--light-a) * .18)) 100%);
+}
+.win.plan-a.layer-light::after{
+  content:&quot;&quot;;position:absolute;inset:0;border-radius:var(--win-inner-radius);pointer-events:none;z-index:2;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,calc(var(--light-a) * .30)) 0%,rgba(255,255,255,0) 16%),
+    radial-gradient(130% 70% at 50% 0%,rgba(255,255,255,calc(var(--light-a) * .14)),rgba(255,255,255,0) 62%);
+  box-shadow:inset 0 0 0 calc(var(--rim-w) / 8) rgba(255,255,255,calc(var(--light-a) * .07));
+}
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-light::after{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,calc(var(--light-a) * .12)) 0%,rgba(255,255,255,0) 16%),
+    radial-gradient(130% 70% at 50% 0%,rgba(255,255,255,calc(var(--light-a) * .05)),rgba(255,255,255,0) 62%);
+}
+
+/* ④ tint：半透明色层，叠在玻璃/实体底之上 */
+.win.plan-a.layer-tint .glass-base{
+  background-image:linear-gradient(rgba(var(--tint-rgb),var(--tint-a)),rgba(var(--tint-rgb),var(--tint-a)));
+}
+
+/* ⑥ 文字染色：亮玻璃 multiply / 暗玻璃 add，只作用在文字，不染卡片底 */
+.win.plan-a.layer-ink .card-h b,.win.plan-a.layer-ink .row .txt,
+.win.plan-a.layer-ink .note,.win.plan-a.layer-ink .hdr-row .title,.win.plan-a.layer-ink .hero .big{
+  mix-blend-mode:multiply;
+}
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-ink .card-h b,
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-ink .row .txt,
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-ink .note,
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-ink .hdr-row .title,
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-ink .hero .big{mix-blend-mode:screen}
+
+/* 卡片也吃一层轻量边缘光，让玻璃感贯穿 L2 */
+.win.plan-a.layer-light .card{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,calc(var(--light-a) * .42));
+}
+html[data-appearance=&quot;dark&quot;] .win.plan-a.layer-light .card{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,calc(var(--light-a) * .14));
+}
+
+/* 真折射概念对照：需要采样背景 + Chromium 的 backdrop-filter url() */
+.win.plan-a.refract .glass-base{ -webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat)) brightness(var(--bright)) var(--lens-url,); }
+.win.plan-a.refract .glass-base{ backdrop-filter:blur(var(--blur)) saturate(var(--sat)) brightness(var(--bright)) var(--lens-url,); }
+
+/* ---------- 读数 ---------- */
+.readout{margin-top:18px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.readout h4{margin:0 0 10px;font-size:13px;color:var(--doc)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--doc2);font-weight:500;font-size:11px}
+td{color:var(--doc)}
+tbody tr:last-child td{border-bottom:0}
+.mono{font-variant-numeric:tabular-nums}
+.hint{font-size:11.5px;color:var(--doc2);margin-top:10px}
+ol,ul{margin:8px 0;padding-left:20px}
+li{font-size:13.5px;color:var(--doc2);margin:5px 0}
+li strong{color:var(--doc)}
+.foot{margin-top:42px;font-size:11.5px;color:var(--doc2);border-top:1px solid var(--line);padding-top:16px}
+@media(max-width:820px){.page{padding:24px 16px 60px}.stage{flex-direction:column}.winbox{max-width:none}}
+</style>
+</head>
+<body>
+<div class=&quot;page&quot;>
+
+  <header style=&quot;margin-bottom:24px&quot;>
+    <div class=&quot;eyebrow&quot;>AIdente · 方案 A 效果原型 · 2026-11-07</div>
+    <h1>「液态玻璃观感」· 现状 vs 方案 A</h1>
+    <p class=&quot;lede&quot;>这是一份<strong>纯 HTML 静态原型，不改动任何 Swift 代码、不编译</strong>。左边是当前线上状态（<code>canSampleBackdrop=false</code> → 实体色 + 1pt 中性描边），右边是方案 A：在现有材质之上叠加 <a href=&quot;https://github.com/kubai087/glasswork&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;>glasswork</a> 六层里<strong>能用 SwiftUI 自绘的静态部分</strong>——边缘增厚、tint、三处边缘光、1pt 渐变描边、文字染色。默认保持实体底，因为这才是 A 方案的真实落地状态。</p>
+  </header>
+
+  <h2>一 · 交互原型</h2>
+  <div class=&quot;controls&quot;>
+    <div class=&quot;ctl&quot;><span>外观</span><div class=&quot;seg&quot; id=&quot;cAppearance&quot;>
+      <button data-v=&quot;light&quot; class=&quot;on&quot;>浅色</button><button data-v=&quot;dark&quot;>深色</button></div></div>
+    <div class=&quot;ctl&quot;><span>桌面背景</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw on&quot; id=&quot;cDesktop&quot;></div><span class=&quot;swlabel&quot;>彩色（看透不透）</span></div></div>
+    <div class=&quot;ctl&quot;><span>方案 B 预览 · 恢复背景采样</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw&quot; id=&quot;cSample&quot;></div><span class=&quot;swlabel&quot;>给 A 窗口挂 backdrop-filter</span></div></div>
+    <div class=&quot;ctl&quot;><span>方案 C 概念对照 · 真折射</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw&quot; id=&quot;cRefract&quot;></div><span class=&quot;swlabel&quot;>位移图（仅 Chromium）</span></div></div>
+  </div>
+
+  <div class=&quot;sliders&quot;>
+    <div class=&quot;sld&quot;><label>Tint 强度 <b id=&quot;vTint&quot;>0.14</b></label>
+      <input type=&quot;range&quot; id=&quot;sTint&quot; min=&quot;0&quot; max=&quot;0.42&quot; step=&quot;0.01&quot; value=&quot;0.14&quot;></div>
+    <div class=&quot;sld&quot;><label>Blur <b id=&quot;vBlur&quot;>2 px</b></label>
+      <input type=&quot;range&quot; id=&quot;sBlur&quot; min=&quot;0&quot; max=&quot;12&quot; step=&quot;0.5&quot; value=&quot;2&quot;></div>
+    <div class=&quot;sld&quot;><label>Saturation <b id=&quot;vSat&quot;>180 %</b></label>
+      <input type=&quot;range&quot; id=&quot;sSat&quot; min=&quot;100&quot; max=&quot;220&quot; step=&quot;5&quot; value=&quot;180&quot;></div>
+    <div class=&quot;sld&quot;><label>Brightness <b id=&quot;vBright&quot;>1.06</b></label>
+      <input type=&quot;range&quot; id=&quot;sBright&quot; min=&quot;0.6&quot; max=&quot;1.3&quot; step=&quot;0.02&quot; value=&quot;1.06&quot;></div>
+    <div class=&quot;sld&quot;><label>Rim 宽度 <b id=&quot;vRim&quot;>40 px</b></label>
+      <input type=&quot;range&quot; id=&quot;sRim&quot; min=&quot;8&quot; max=&quot;72&quot; step=&quot;2&quot; value=&quot;40&quot;></div>
+    <div class=&quot;sld&quot;><label>边缘光强度 <b id=&quot;vLight&quot;>0.20</b></label>
+      <input type=&quot;range&quot; id=&quot;sLight&quot; min=&quot;0&quot; max=&quot;1&quot; step=&quot;0.05&quot; value=&quot;0.20&quot;></div>
+    <div class=&quot;sld&quot;><label>Dispersion <b id=&quot;vDisp&quot;>0.15</b></label>
+      <input type=&quot;range&quot; id=&quot;sDisp&quot; min=&quot;0&quot; max=&quot;0.4&quot; step=&quot;0.01&quot; value=&quot;0.15&quot;></div>
+  </div>
+
+  <div class=&quot;layers&quot;>
+    <span style=&quot;font-size:11px;color:var(--doc2);align-self:center;margin-right:2px&quot;>分层（逐层看贡献）：</span>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw&quot; id=&quot;lShadow&quot;></div><span class=&quot;swlabel&quot;>① 体积阴影</span></div>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw on&quot; id=&quot;lBlur&quot;></div><span class=&quot;swlabel&quot;>② 模糊与提亮</span></div>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw on&quot; id=&quot;lRim&quot;></div><span class=&quot;swlabel&quot;>③ 边缘增厚</span></div>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw on&quot; id=&quot;lTint&quot;></div><span class=&quot;swlabel&quot;>④ Tint</span></div>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw on&quot; id=&quot;lLight&quot;></div><span class=&quot;swlabel&quot;>⑤ 边缘光</span></div>
+    <div class=&quot;switchrow&quot;><div class=&quot;sw on&quot; id=&quot;lInk&quot;></div><span class=&quot;swlabel&quot;>⑥ 文字染色</span></div>
+  </div>
+
+  <div class=&quot;desktop&quot; id=&quot;desktop&quot;>
+    <div class=&quot;blob&quot;></div>
+    <div class=&quot;stage&quot;>
+
+      <!-- 现状 -->
+      <div class=&quot;winbox&quot;>
+        <div class=&quot;wincap&quot;><span>当前 6.1 · 实体色</span><em>baseline</em></div>
+        <div class=&quot;win baseline&quot; id=&quot;winBaseline&quot;>
+          <div class=&quot;glass-base&quot;></div>
+          <div class=&quot;dash-header&quot;>
+            <div class=&quot;hdr-row&quot;><span class=&quot;title&quot;>电源已连接</span>
+              <div class=&quot;hdr-actions&quot;><i>↻</i><i>⚙</i><i>⏻</i></div></div>
+            <div class=&quot;timestr&quot;><span>系统运行时间：3 天 12 小时</span>
+              <span>电池剩余时间：2 小时 18 分</span></div>
+          </div>
+          <div class=&quot;win-body&quot;>
+            <div class=&quot;hero&quot;><div><div class=&quot;lbl&quot;>电池健康度</div><div class=&quot;big&quot;>96%</div></div>
+              <span class=&quot;spacer&quot;></span><span class=&quot;tag&quot;>状态良好</span></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>⚡</div><div><b>实时功率分流</b>
+              <small>适配器 · 系统使用</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>系统使用</div><span class=&quot;pill&quot;>18 W</span></div></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>◷</div><div><b>容量与寿命趋势</b>
+              <small>近 30 天</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;note&quot;>设计容量 100 Wh · 当前满充 96 Wh</div></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>✦</div><div><b>快捷养护</b>
+              <small>充电上限 80%</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>暂停充电至明早</div><span class=&quot;btn&quot;>执行</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 方案 A -->
+      <div class=&quot;winbox&quot;>
+        <div class=&quot;wincap&quot;><span>方案 A · 液态玻璃观感</span><em id=&quot;capMode&quot;>实体底 · 静态层</em></div>
+        <div class=&quot;win plan-a layer-blur layer-rim layer-tint layer-light layer-ink&quot; id=&quot;winPlanA&quot;>
+          <div class=&quot;glass-base&quot;></div>
+          <div class=&quot;dash-header&quot;>
+            <div class=&quot;hdr-row&quot;><span class=&quot;title&quot;>电源已连接</span>
+              <div class=&quot;hdr-actions&quot;><i>↻</i><i>⚙</i><i>⏻</i></div></div>
+            <div class=&quot;timestr&quot;><span>系统运行时间：3 天 12 小时</span>
+              <span>电池剩余时间：2 小时 18 分</span></div>
+          </div>
+          <div class=&quot;win-body&quot;>
+            <div class=&quot;hero&quot;><div><div class=&quot;lbl&quot;>电池健康度</div><div class=&quot;big&quot;>96%</div></div>
+              <span class=&quot;spacer&quot;></span><span class=&quot;tag&quot;>状态良好</span></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>⚡</div><div><b>实时功率分流</b>
+              <small>适配器 · 系统使用</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>系统使用</div><span class=&quot;pill&quot;>18 W</span></div></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>◷</div><div><b>容量与寿命趋势</b>
+              <small>近 30 天</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;note&quot;>设计容量 100 Wh · 当前满充 96 Wh</div></div>
+            <div class=&quot;card&quot;><div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>✦</div><div><b>快捷养护</b>
+              <small>充电上限 80%</small></div></div><div class=&quot;rule&quot;></div>
+              <div class=&quot;row&quot;><div class=&quot;txt&quot;>暂停充电至明早</div><span class=&quot;btn&quot;>执行</span></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class=&quot;hint&quot; id=&quot;lensHint&quot;></p>
+
+  <div class=&quot;readout&quot;>
+    <h4>当前参数与落地映射</h4>
+    <table>
+      <thead><tr><th style=&quot;width:24%&quot;>层 / 参数</th><th style=&quot;width:30%&quot;>原型当前值</th><th>搬到 SwiftUI 的位置</th></tr></thead>
+      <tbody>
+        <tr><td>④ Tint</td><td class=&quot;mono&quot; id=&quot;rTint&quot;>—</td>
+          <td><code>AidenteTheme.swift:90</code> <code>glassTint(scheme:)</code>，现为固定 <code>0.14</code>；改成随外观/背景密度取值的常量</td></tr>
+        <tr><td>② 模糊 / 饱和 / 亮度</td><td class=&quot;mono&quot; id=&quot;rBlur&quot;>—</td>
+          <td>原生由 <code>NSVisualEffectView(.popover)</code> 提供，App 不可调；A 方案里这一层<strong>实际不生效</strong>，只在 B 预览里演示</td></tr>
+        <tr><td>③ Rim 宽度</td><td class=&quot;mono&quot; id=&quot;rRim&quot;>—</td>
+          <td><code>AidenteLevelSurface</code>（<code>:309-331</code>）内新增 <code>Canvas</code> 的 inset 渐变，常量建议 <code>rimWidth</code></td></tr>
+        <tr><td>⑤ 边缘光</td><td class=&quot;mono&quot; id=&quot;rLight&quot;>—</td>
+          <td>同上，<code>LinearGradient</code> 135° + <code>strokeBorder</code> 的 mask，常量 <code>rimLightAlpha</code></td></tr>
+        <tr><td>1pt 描边</td><td class=&quot;mono&quot;>rgba <span id=&quot;rStroke&quot;>—</span></td>
+          <td><code>:72-76</code> <code>stroke(scheme:)</code>，亮 <code>0.09</code> / 暗 <code>0.10</code>，A 方案改为角向渐变而非均一色</td></tr>
+        <tr><td>Dispersion / 位移</td><td class=&quot;mono&quot; id=&quot;rDisp&quot;>—</td>
+          <td><strong>A 方案不含</strong>；真折射需 Metal / <code>CIDisplacementDistortion</code> + 实时 backdrop 纹理（方案 C）</td></tr>
+      </tbody>
+    </table>
+    <p class=&quot;hint&quot; id=&quot;contrastNote&quot;></p>
+  </div>
+
+  <h2>二 · 这个原型能说明什么</h2>
+  <div class=&quot;panel&quot;>
+    <span class=&quot;tagline&quot;>能看到</span>
+    <p>方案 A 的视觉增量集中在<strong>边缘</strong>：一圈增厚的明暗、左上/右下的高光、内缩柔光，加上 tint 让底色不再是死板的纯色。叠在实体 L0 上时，它更像「磨砂厚玻璃板」而非 Apple 的液态玻璃——因为<strong>没有折射背后的内容</strong>，这是 A 方案与真玻璃的根本差别。</p>
+    <div class=&quot;callout&quot;><p>把「方案 B 预览」打开，右侧会换成浏览器 <code>backdrop-filter</code> 真毛玻璃；再打开「方案 C 概念对照」，会用 SVG 位移图做出边缘内缩与 RGB 色散。这两个开关展示的是<strong>A 方案之外的上限</strong>，帮你判断 A 的观感够不够。</p></div>
+    <p>逐层关掉再看：关掉 ⑤ 边缘光后基本回到现状，说明这层贡献最大；关掉 ③ 边缘增厚则玻璃立刻变「薄」。若你觉得差别太弱，A 方案可能不值得做，可以直接考虑 B。</p>
+  </div>
+
+  <div class=&quot;panel&quot;>
+    <span class=&quot;tagline&quot;>搬得动 / 搬不动</span>
+    <ul>
+      <li><strong>能直接用 SwiftUI 落地</strong>：tint 半透明层、1pt 渐变描边、三处边缘光、内侧明暗圈、顶部高光渐变——全部是 <code>Canvas</code> + <code>LinearGradient</code> + <code>strokeBorder</code>，不依赖系统版本，macOS 14 起可用。</li>
+      <li><strong>搬不动</strong>：<code>backdrop-filter</code> 与 SVG <code>feDisplacementMap</code> 是浏览器合成能力。AppKit 的 <code>NSVisualEffectView</code> 由系统内部合成，App 取不到模糊后的位图，所以「在毛玻璃上叠折射」这条路不通。</li>
+      <li><strong>真折射的代价</strong>：需要实时 backdrop 纹理（ScreenCaptureKit，macOS 14+ 要屏幕录制权限、常驻 GPU 开销）或静态壁纸图（多屏/动态壁纸失真）。对常驻菜单栏的电池工具不划算。</li>
+    </ul>
+  </div>
+
+  <div class=&quot;panel&quot;>
+    <span class=&quot;tagline&quot;>落地前要处理的约束</span>
+    <ol>
+      <li><strong>先恢复采样能力</strong>：<code>AidenteTheme.swift:270-273</code> 里 <code>!canSampleBackdrop → .opaque</code>，而 <code>StatusBarManager.swift:234 / 360 / 397</code> 三处都传 <code>false</code>。不先动这里，任何玻璃改造都只是画在纯色底上。</li>
+      <li><strong>保持版本分支单一</strong>：<code>:318-323</code> 的 <code>#available(macOS 26, *)</code> 分支不能被覆盖，别让仿玻璃和系统 <code>glassEffect</code> 叠成两份；CHANGELOG.md:50 记的 26+ 实机验收缺口仍在。</li>
+      <li><strong>去噪约定</strong>：项目已明确删阴影、只留 1pt 描边，所以 ① 体积阴影默认关闭。若要开，属于新增设计决策。</li>
+      <li><strong>可读性</strong>：<code>AidenteReadability</code> 那套 opaque 回退与文字对比度承诺要重新验证，高光别压到 <code>.secondary</code> 灰字上。</li>
+      <li><strong>许可</strong>：<a href=&quot;https://github.com/kubai087/glasswork&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;>glasswork</a>（<code>github.com/kubai087/glasswork</code>）代码 MIT 可用，但其 <code>NOTICE</code> 明确 macOS 壁纸素材 © Apple 不在许可内。本原型桌面背景是<strong>自绘 CSS 渐变</strong>，未使用任何素材；移植时也只能搬算法。</li>
+    </ol>
+    <div class=&quot;warnbox&quot;><p>原型里的 <code>backdrop-filter</code> 是对 <code>NSVisualEffectView</code> 的近似，色值是按 alpha 叠加估算，不是像素级复刻；原生效果以实机为准。本文件不参与构建，也不写入 CHANGELOG。</p></div>
+  </div>
+
+  <div class=&quot;foot&quot;>AIdente · 方案 A 观感原型 · 仅用于效果评审，未改动任何 Swift 源码、未编译、未发行。</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = function (id) { return document.getElementById(id); };
+  const root = document.documentElement;
+  const winA = $('winPlanA');
+  const state = {
+    appearance: 'light', desktop: true, sample: false, refract: false,
+    tint: .14, blur: 2, sat: 180, bright: 1.06, rim: 40, light: .20, disp: .15
+  };
+  const layerIds = { lShadow: 'shadow', lBlur: 'blur', lRim: 'rim', lTint: 'tint', lLight: 'light', lInk: 'ink' };
+
+  function css(name, value) { root.style.setProperty(name, value); }
+
+  function applyVars() {
+    css('--tint-a', state.tint);
+    css('--blur', state.blur + 'px');
+    css('--sat', state.sat + '%');
+    css('--bright', state.bright);
+    css('--rim-w', state.rim + 'px');
+    css('--rim-a', (state.light * .55).toFixed(3));
+    css('--light-a', state.light);
+    const dark = state.appearance === 'dark';
+    if (dark &amp;&amp; state.tint === .14) { /* 深色默认 tint 由 CSS 变量给出 */ }
+    $('vTint').textContent = state.tint.toFixed(2);
+    $('vBlur').textContent = state.blur + ' px';
+    $('vSat').textContent = state.sat + ' %';
+    $('vBright').textContent = state.bright.toFixed(2);
+    $('vRim').textContent = state.rim + ' px';
+    $('vLight').textContent = state.light.toFixed(2);
+    $('vDisp').textContent = state.disp.toFixed(2);
+    $('rTint').textContent = 'rgba(' + (dark ? '30,30,34' : '255,255,255') + ', ' + state.tint + ')';
+    $('rBlur').textContent = state.blur + 'px / ' + state.sat + '% / ' + state.bright.toFixed(2);
+    $('rRim').textContent = state.rim + 'px';
+    $('rLight').textContent = state.light.toFixed(2);
+    $('rStroke').textContent = dark ? '255,255,255,.10' : '0,0,0,.09';
+    $('rDisp').textContent = state.disp.toFixed(2) + '（仅概念对照）';
+    $('contrastNote').textContent = '当前 L0 底：' + (dark ? '#232326' : '#F4F5F6') +
+      '，文字 ' + (dark ? '#F5F5F7' : '#1D1D1F') + '。tint 越高，玻璃越「实」，文字对比度越稳但通透感越弱；建议不超过 0.24。';
+  }
+
+  function applyClasses() {
+    Object.keys(layerIds).forEach(function (id) {
+      winA.classList.toggle('layer-' + layerIds[id], $(id).classList.contains('on'));
+    });
+    winA.classList.toggle('sample', state.sample);
+    winA.classList.toggle('refract', state.refract);
+    $('desktop').classList.toggle('plain', !state.desktop);
+    $('capMode').textContent = state.refract ? '真折射概念（C）'
+      : state.sample ? '毛玻璃底（B 预览）' : '实体底 · 静态层（A 本体）';
+    // ② 关掉时移除模糊参数（保留 backdrop-filter 只是为了采样透明）
+    if (!($('lBlur').classList.contains('on'))) {
+      css('--blur', '0px'); css('--sat', '100%'); css('--bright', '1');
+    } else {
+      css('--blur', state.blur + 'px'); css('--sat', state.sat + '%'); css('--bright', state.bright);
+    }
+  }
+
+  // ---------- 简化位移图：整面生成一张 R/G 编码图，边缘向内弯 ----------
+  var lensSvg = null, lensTimer = null;
+  var supportsLens = (typeof CSS !== 'undefined' &amp;&amp; CSS.supports &amp;&amp;
+    CSS.supports('backdrop-filter', 'url(#a)'));
+
+  function displacementURL(w, h, rim, power, disp) {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(c.width, c.height);
+    const W = c.width, H = c.height;
+    const bezel = Math.max(4, Math.min(rim, Math.min(W, H) / 3.5));
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        const dx = Math.min(x, W - 1 - x), dy = Math.min(y, H - 1 - y);
+        const d = Math.min(dx, dy);
+        const depth = Math.min(1, d / bezel);
+        const s = Math.pow(1 - depth, power);
+        let nx = 0, ny = 0;
+        if (dx < bezel &amp;&amp; dy < bezel) { nx = x < W / 2 ? 1 : -1; ny = y < H / 2 ? 1 : -1; }
+        else if (dx <= dy) { nx = x < W / 2 ? 1 : -1; }
+        else { ny = y < H / 2 ? 1 : -1; }
+        if (nx &amp;&amp; ny) { const L = Math.hypot(nx, ny); nx /= L; ny /= L; }
+        const i = (y * W + x) * 4;
+        img.data[i] = Math.round(128 + nx * s * 127);
+        img.data[i + 1] = Math.round(128 + ny * s * 127);
+        img.data[i + 2] = 128;
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return { url: c.toDataURL('image/png'), scale: 2 * 1.1 * bezel };
+  }
+
+  function buildLens() {
+    if (!supportsLens) {
+      $('lensHint').textContent = '当前浏览器不支持 backdrop-filter: url()，真折射未生效（glasswork 的 lens.js 同样只在 Chromium 有效）。可忽略此开关。';
+      css('--lens-url', 'blur(0px)');
+      return;
+    }
+    if (!state.refract) {
+      $('lensHint').textContent = '';
+      css('--lens-url', 'blur(0px)');
+      return;
+    }
+    const r = winA.getBoundingClientRect();
+    const W = r.width, H = r.height;
+    const made = displacementURL(W, H, state.rim, 2.6, state.disp);
+    const NS = 'http://www.w3.org/2000/svg';
+    if (lensSvg) lensSvg.remove();
+    lensSvg = document.createElementNS(NS, 'svg');
+    lensSvg.setAttribute('width', '0'); lensSvg.setAttribute('height', '0');
+    lensSvg.style.cssText = 'position:absolute;pointer-events:none';
+    const filter = document.createElementNS(NS, 'filter');
+    filter.setAttribute('id', 'aidenteLens');
+    filter.setAttribute('filterUnits', 'userSpaceOnUse');
+    filter.setAttribute('color-interpolation-filters', 'sRGB');
+    filter.setAttribute('x', '0'); filter.setAttribute('y', '0');
+    filter.setAttribute('width', W); filter.setAttribute('height', H);
+    const feImage = document.createElementNS(NS, 'feImage');
+    feImage.setAttribute('href', made.url);
+    feImage.setAttribute('x', '0'); feImage.setAttribute('y', '0');
+    feImage.setAttribute('width', W); feImage.setAttribute('height', H);
+    feImage.setAttribute('preserveAspectRatio', 'none');
+    feImage.setAttribute('result', 'map');
+    filter.appendChild(feImage);
+    if (state.disp > 0) {
+      ['r', 'g', 'b'].forEach(function (name, ch) {
+        const dm = document.createElementNS(NS, 'feDisplacementMap');
+        dm.setAttribute('in', 'SourceGraphic'); dm.setAttribute('in2', 'map');
+        dm.setAttribute('xChannelSelector', 'R'); dm.setAttribute('yChannelSelector', 'G');
+        dm.setAttribute('scale', (made.scale * (1 + (1 - ch) * state.disp)).toFixed(1));
+        dm.setAttribute('result', 'd' + name);
+        filter.appendChild(dm);
+        const cm = document.createElementNS(NS, 'feColorMatrix');
+        cm.setAttribute('in', 'd' + name);
+        cm.setAttribute('type', 'matrix');
+        const v = new Array(20).fill(0); v[ch * 6] = 1; v[18] = 1;
+        cm.setAttribute('values', v.join(' '));
+        cm.setAttribute('result', name);
+        filter.appendChild(cm);
+      });
+      const b1 = document.createElementNS(NS, 'feBlend');
+      b1.setAttribute('in', 'r'); b1.setAttribute('in2', 'g');
+      b1.setAttribute('mode', 'screen'); b1.setAttribute('result', 'rg');
+      filter.appendChild(b1);
+      const b2 = document.createElementNS(NS, 'feBlend');
+      b2.setAttribute('in', 'rg'); b2.setAttribute('in2', 'b'); b2.setAttribute('mode', 'screen');
+      filter.appendChild(b2);
+    } else {
+      const dm = document.createElementNS(NS, 'feDisplacementMap');
+      dm.setAttribute('in', 'SourceGraphic'); dm.setAttribute('in2', 'map');
+      dm.setAttribute('xChannelSelector', 'R'); dm.setAttribute('yChannelSelector', 'G');
+      dm.setAttribute('scale', made.scale.toFixed(1));
+      filter.appendChild(dm);
+    }
+    lensSvg.appendChild(filter);
+    document.body.appendChild(lensSvg);
+    css('--lens-url', 'url(#aidenteLens)');
+    $('lensHint').textContent = '真折射概念对照已生效：位移图 ' + Math.round(W) + '×' + Math.round(H) +
+      '，bezel ' + Math.round(Math.min(state.rim, Math.min(W, H) / 3.5)) +
+      'px，scale ' + made.scale.toFixed(1) + '，色散 ' + state.disp.toFixed(2) +
+      '。这是浏览器 SVG filter，原生需 Metal / CIDisplacementDistortion + 实时背景纹理。';
+  }
+
+  function scheduleLens() {
+    clearTimeout(lensTimer);
+    lensTimer = setTimeout(buildLens, 140);
+  }
+
+  // ---------- 绑定 ----------
+  $('cAppearance').addEventListener('click', function (e) {
+    const b = e.target.closest('button'); if (!b) return;
+    state.appearance = b.dataset.v;
+    root.setAttribute('data-appearance', state.appearance);
+    [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); });
+    // 深浅默认 tint 不同，跟随 glasswork 建议区间
+    state.tint = state.appearance === 'dark' ? .24 : .14;
+    state.sat = state.appearance === 'dark' ? 160 : 180;
+    state.bright = state.appearance === 'dark' ? .80 : 1.06;
+    $('sTint').value = state.tint; $('sSat').value = state.sat; $('sBright').value = state.bright;
+    applyVars(); applyClasses(); scheduleLens();
+  });
+
+  function bindSwitch(id, key, after) {
+    $(id).addEventListener('click', function () {
+      this.classList.toggle('on');
+      state[key] = this.classList.contains('on');
+      if (after) after();
+    });
+  }
+  bindSwitch('cDesktop', 'desktop', applyClasses);
+  bindSwitch('cSample', 'sample', function () { applyClasses(); scheduleLens(); });
+  bindSwitch('cRefract', 'refract', function () {
+    // C 概念对照需要 B 的采样底才看得见
+    if (state.refract &amp;&amp; !state.sample) {
+      state.sample = true; $('cSample').classList.add('on');
+    }
+    applyClasses(); scheduleLens();
+  });
+  Object.keys(layerIds).forEach(function (id) {
+    $(id).addEventListener('click', function () { this.classList.toggle('on'); applyClasses(); });
+  });
+
+  const sliders = [
+    ['sTint', 'tint', parseFloat], ['sBlur', 'blur', parseFloat], ['sSat', 'sat', parseFloat],
+    ['sBright', 'bright', parseFloat], ['sRim', 'rim', parseFloat],
+    ['sLight', 'light', parseFloat], ['sDisp', 'disp', parseFloat]
+  ];
+  sliders.forEach(function (row) {
+    $(row[0]).addEventListener('input', function () {
+      state[row[1]] = row[2](this.value);
+      applyVars(); applyClasses();
+      if (row[1] === 'rim' || row[1] === 'disp') scheduleLens();
+    });
+  });
+
+  // 位移图尺寸需要跟着窗口尺寸重算
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(function () { if (state.refract) scheduleLens(); }).observe(winA);
+  }
+
+  applyVars(); applyClasses(); buildLens();
+})();
+</script>
+</body>
+</html>
+" title="液态玻璃参数定稿"></iframe>
+  </section>
+  <section class="doc" id="s03">
+    <header><span class="tag">03</span><div><h2>可读性策略</h2><p>readability-strategy.html 内容 · 从「材质选择器」到「可读性策略」的完整决策与层级契约</p></div></header>
+    <iframe loading="lazy" srcdoc="<!DOCTYPE html>
+<html lang=&quot;zh-CN&quot; data-appearance=&quot;light&quot;>
+<head>
+<meta charset=&quot;utf-8&quot;>
+<meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;>
+<title>AIdente · 可读性策略 · 现行方案（6.1.1）与交互原型</title>
+<style>
+:root, html[data-appearance=&quot;light&quot;] {
+  --page: #EDEDF0; --doc: #1D1D1F; --doc2: #6E6E73; --paper: #FFFFFF;
+  --line: #DCDCE1; --chip: #E7E7EC; --chip-ink: #3A3A3F;
+  --l0: #F4F5F6; --l1: #F8F8F8; --l2: #FCFCFC; --l3: #E9F6EF;
+  --ink: #1D1D1F; --ink2: #6E6E73; --stroke: rgba(0,0,0,.10);
+  --accent: #0A84FF; --accent-soft: #E4F1FF; --jade: #0E8A4F;
+  --shadow: 0 1px 3px rgba(0,0,0,.07); --winshadow: 0 12px 32px rgba(0,0,0,.11);
+  --badge: rgba(10,132,255,.12);
+}
+html[data-appearance=&quot;dark&quot;] {
+  --page: #151517; --doc: #F5F5F7; --doc2: #98989D; --paper: #1D1D20;
+  --line: #333338; --chip: #2B2B30; --chip-ink: #D6D6DB;
+  --l0: #232326; --l1: #28282B; --l2: #2D2D31; --l3: #1A2E24;
+  --ink: #F5F5F7; --ink2: #98989D; --stroke: rgba(255,255,255,.10);
+  --accent: #0A84FF; --accent-soft: #123049; --jade: #37D07A;
+  --shadow: 0 1px 3px rgba(0,0,0,.32); --winshadow: 0 12px 32px rgba(0,0,0,.45);
+  --badge: rgba(10,132,255,.22);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--doc);
+  font-family: -apple-system, BlinkMacSystemFont, &quot;SF Pro Text&quot;, &quot;PingFang SC&quot;, &quot;Helvetica Neue&quot;, sans-serif;
+  -webkit-font-smoothing: antialiased; line-height: 1.65; }
+.page { max-width: 1180px; margin: 0 auto; padding: 40px 28px 80px; }
+.doc-head { margin-bottom: 28px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--doc2); text-transform: uppercase; }
+h1 { font-size: 30px; line-height: 1.25; margin: 10px 0 8px; letter-spacing: -.02em; }
+.lede { font-size: 15px; color: var(--doc2); max-width: 780px; margin: 0; }
+h2 { font-size: 20px; margin: 44px 0 14px; letter-spacing: -.01em; }
+h3 { font-size: 15px; margin: 26px 0 8px; }
+p { margin: 8px 0; font-size: 14px; color: var(--doc2); }
+strong { color: var(--doc); font-weight: 600; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+
+/* ---------- 原型控制条 ---------- */
+.controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; }
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.ctl > span { font-size: 11px; color: var(--doc2); letter-spacing: .02em; }
+.seg { display: inline-flex; background: var(--chip); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--chip-ink); font: inherit; font-size: 12px;
+  padding: 5px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--paper); color: var(--doc); box-shadow: var(--shadow); font-weight: 600; }
+.switchrow { display: flex; align-items: center; gap: 9px; height: 30px; }
+.sw { width: 38px; height: 22px; border-radius: 999px; background: var(--chip); position: relative;
+  cursor: pointer; transition: background .16s; flex: none; border: 1px solid var(--line); }
+.sw::after { content: &quot;&quot;; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.22); transition: transform .16s; }
+.sw.on { background: var(--accent); border-color: var(--accent); }
+.sw.on::after { transform: translateX(16px); }
+.swlabel { font-size: 12px; color: var(--doc2); }
+
+/* ---------- 原型舞台 ---------- */
+.fallback { font-size: 11.5px; color: var(--doc2); margin: -6px 0 18px 4px; }
+.fallback a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--stroke); }
+.stage { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+.winbox { flex: 1 1 340px; min-width: 320px; }
+.wincap { font-size: 11px; color: var(--doc2); margin: 0 0 8px 4px; display: flex; justify-content: space-between; }
+.wincap em { font-style: normal; color: var(--accent); font-weight: 600; }
+.win { background: var(--l0); border: 1px solid var(--stroke); border-radius: 14px;
+  box-shadow: var(--winshadow); overflow: hidden; position: relative; }
+.win-chrome { background: var(--l1); border-bottom: 1px solid var(--stroke); padding: 13px 15px 12px; }
+.lights { display: flex; gap: 6px; margin-bottom: 12px; }
+.lights i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #FF5F57; } .lights i:nth-child(2) { background: #FEBC2E; }
+.lights i:nth-child(3) { background: #28C840; }
+.wintitle { display: flex; align-items: center; gap: 9px; }
+.wintitle b { font-size: 14px; color: var(--ink); }
+.wintitle small { font-size: 10.5px; color: var(--ink2); }
+.wintitle .spacer { flex: 1; }
+.miniseg { display: inline-flex; background: var(--chip); border-radius: 7px; padding: 2px; gap: 2px; }
+.miniseg span { font-size: 10px; color: var(--ink2); padding: 3px 8px; border-radius: 5px; }
+.miniseg span.on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+.win-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--l2); border: 1px solid var(--stroke); border-radius: 12px; padding: 13px 14px;
+  box-shadow: var(--shadow); position: relative; }
+.card-h { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.glyph { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft);
+  display: grid; place-items: center; font-size: 13px; color: var(--accent); flex: none; }
+.glyph.v { background: rgba(140,90,240,.14); color: #8C5AF0; }
+.glyph.g { background: rgba(14,138,79,.14); color: var(--jade); }
+.card-h b { font-size: 12.5px; color: var(--ink); display: block; }
+.card-h small { font-size: 10.5px; color: var(--ink2); display: block; }
+.rule { height: 1px; background: var(--stroke); margin: 10px 0; }
+.row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.row .txt { flex: 1; font-size: 11.5px; color: var(--ink); }
+.row .sub { font-size: 10px; color: var(--ink2); }
+.note { font-size: 10.5px; color: var(--ink2); line-height: 1.55; }
+.pill { font-size: 10px; color: var(--accent); background: var(--badge); padding: 3px 8px; border-radius: 999px; font-weight: 600; }
+.btn { font-size: 11px; color: var(--ink); border: 1px solid var(--stroke); background: var(--l1);
+  padding: 5px 11px; border-radius: 8px; display: inline-block; }
+.divider { height: 1px; background: var(--stroke); }
+.hero { background: var(--l3); border: 1px solid rgba(14,138,79,.24); border-radius: 12px; padding: 13px 14px;
+  display: flex; align-items: center; gap: 12px; }
+.hero .big { font-size: 21px; font-weight: 700; color: var(--ink); letter-spacing: -.02em; }
+.hero .lbl { font-size: 10.5px; color: var(--ink2); }
+.hero .spacer { flex: 1; }
+.hero .tag { font-size: 11px; color: var(--jade); font-weight: 600; }
+.footer { background: var(--l1); border-top: 1px solid var(--stroke); padding: 10px 14px;
+  display: flex; justify-content: flex-end; gap: 8px; }
+.footer i { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--stroke); display: block; }
+.lvl { display: none; position: absolute; top: -9px; right: 8px; font-size: 9px; font-weight: 700;
+  letter-spacing: .06em; color: #fff; background: var(--accent); padding: 1px 6px; border-radius: 5px; z-index: 3; }
+.show-levels .lvl { display: block; }
+.win > .lvl { top: 6px; right: 8px; }
+
+/* ---------- 状态面板 ---------- */
+.readout { margin-top: 18px; background: var(--paper); border: 1px solid var(--line);
+  border-radius: 14px; padding: 16px 18px; }
+.readout h4 { margin: 0 0 10px; font-size: 13px; color: var(--doc); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--doc2); font-weight: 500; font-size: 11px; letter-spacing: .02em; }
+td { color: var(--doc); }
+tbody tr:last-child td { border-bottom: 0; }
+.kv { display: flex; gap: 8px; align-items: center; }
+.dot { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--stroke); display: inline-block; }
+.mono { font-variant-numeric: tabular-nums; }
+.ok { color: var(--jade); font-weight: 600; }
+
+/* ---------- 方案正文 ---------- */
+.plan { margin-top: 8px; }
+.plan .panel { margin-bottom: 16px; }
+.plan h2 { margin-top: 40px; }
+ol, ul { margin: 8px 0 8px 0; padding-left: 20px; }
+li { font-size: 14px; color: var(--doc2); margin: 5px 0; }
+li strong { color: var(--doc); }
+.tagline { display: inline-block; font-size: 11px; color: var(--accent); background: var(--badge);
+  padding: 3px 9px; border-radius: 6px; font-weight: 600; margin-bottom: 10px; }
+.callout { border-left: 3px solid var(--accent); padding: 6px 0 6px 14px; margin: 14px 0; }
+.callout p { margin: 0; }
+.foot { margin-top: 50px; font-size: 11.5px; color: var(--doc2); border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 780px) { .page { padding: 24px 16px 60px; } .stage { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class=&quot;page&quot;>
+
+  <header class=&quot;doc-head&quot;>
+    <div class=&quot;eyebrow&quot;>AIdente · 设计提案 · 2026-11-06 / 2026-11-08 已按 6.1.1 落地状态核对</div>
+    <h1>从「材质选择器」到「可读性策略」</h1>
+    <p class=&quot;lede&quot;>一份完整方案与可交互原型，现已落地。核心不变：材质由 macOS 决定，app 只承诺可读性；窗口底、顶栏、卡片共用一套基线 + 固定层级偏移（亮 <code>#F4F5F6 / #F8F8F8 / #FCFCFC</code>、暗 <code>#232326 / #28282B / #2D2D31</code>）。下方原型可切换明暗、系统版本、系统开关与容器，实时查看层级色值与生效策略。</p>
+  </header>
+
+  <div class=&quot;panel&quot; style=&quot;margin:0 0 22px;border-left:3px solid var(--accent)&quot;>
+    <span class=&quot;tagline&quot;>现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
+    <p>四档「界面材质」选择器已删除，设置页为「外观」自动 / 浅色 / 深色 分段控件，材质完全跟随系统「降低透明度」（App 内材质覆盖开关已移除）；仪表盘三个容器 <code>canSampleBackdrop = true</code>，15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 用系统 <code>glassEffect(.regular)</code>；设置窗口仍为 <code>false</code>。仪表盘<strong>无 L1 底栏</strong>，三个按钮在 header 右上角。下方 01–10 节为现行方案说明与验收清单；定稿参数见 <code>liquid-glass-proposal.html</code>。</p>
+  </div>
+
+  <!-- ================= 交互原型 ================= -->
+  <h2>一 · 交互原型</h2>
+  <div class=&quot;controls&quot;>
+    <div class=&quot;ctl&quot;><span>外观</span><div class=&quot;seg&quot; id=&quot;cAppearance&quot;>
+      <button data-v=&quot;light&quot; class=&quot;on&quot;>亮色</button><button data-v=&quot;dark&quot;>暗色</button></div></div>
+    <div class=&quot;ctl&quot;><span>系统版本</span><div class=&quot;seg&quot; id=&quot;cOS&quot;>
+      <button data-v=&quot;15&quot; class=&quot;on&quot;>macOS 15</button><button data-v=&quot;26&quot;>macOS 26+</button></div></div>
+    <div class=&quot;ctl&quot;><span>查看</span><div class=&quot;seg&quot; id=&quot;cView&quot;>
+      <button data-v=&quot;both&quot; class=&quot;on&quot;>并排</button><button data-v=&quot;settings&quot;>设置页</button><button data-v=&quot;dashboard&quot;>仪表盘</button></div></div>
+    <div class=&quot;ctl&quot;><span>系统开关</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw&quot; id=&quot;cRT&quot;></div><span class=&quot;swlabel&quot;>降低透明度</span></div></div>
+    <div class=&quot;ctl&quot;><span>辅助</span><div class=&quot;switchrow&quot;>
+      <div class=&quot;sw&quot; id=&quot;cLevels&quot;></div><span class=&quot;swlabel&quot;>显示层级标尺</span></div></div>
+  </div>
+
+  <p class=&quot;fallback&quot;>若上方切换无反应，可直接打开<a href=&quot;?theme=dark&quot;>暗色独立视图</a>；此链接不依赖脚本。</p>
+
+  <div class=&quot;stage&quot; id=&quot;stage&quot;>
+    <!-- 设置窗口 -->
+    <div class=&quot;winbox&quot; id=&quot;boxSettings&quot;>
+      <div class=&quot;wincap&quot;><span>设置窗口 · 透明 NSWindow</span><em id=&quot;capSettings&quot;></em></div>
+      <div class=&quot;win&quot; id=&quot;winSettings&quot; data-level=&quot;L0&quot;>
+        <span class=&quot;lvl&quot;>L0 窗口底</span>
+        <div class=&quot;win-chrome&quot; data-level=&quot;L1&quot;><span class=&quot;lvl&quot;>L1 顶栏</span>
+          <div class=&quot;lights&quot;><i></i><i></i><i></i></div>
+          <div class=&quot;wintitle&quot;><b>AIdente</b><small>通用</small><span class=&quot;spacer&quot;></span>
+            <div class=&quot;miniseg&quot;><span class=&quot;on&quot;>通用</span><span>仪表盘</span><span>充电</span></div></div>
+        </div>
+        <div class=&quot;win-body&quot;>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>◈</div><div><b>外观与可读性</b>
+              <small>界面材质由 macOS 决定，文字对比度始终优先</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;row&quot;><div class=&quot;txt&quot;>跟随系统<span class=&quot;sub&quot;> · 默认</span></div>
+              <span class=&quot;pill&quot; id=&quot;strategyPill&quot;>兼容材质</span></div>
+            <div class=&quot;note&quot; id=&quot;strategyNote&quot;>当前系统使用兼容材质。升级到 macOS 26 及以上后，将自动采用系统材质。</div>
+            <div class=&quot;note&quot;>系统「降低透明度」开启时自动使用不透明背景；App 内不提供材质覆盖开关。</div>
+          </div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>A</div><div><b>语言</b><small>切换菜单栏和设置界面的显示语言</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;miniseg&quot; style=&quot;width:100%&quot;><span class=&quot;on&quot; style=&quot;flex:1;text-align:center&quot;>跟随系统</span>
+              <span style=&quot;flex:1;text-align:center&quot;>简体中文</span><span style=&quot;flex:1;text-align:center&quot;>English</span></div>
+          </div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>⏻</div><div><b>启动</b><small>让电池保护在登录后自动开始工作</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;row&quot;><div class=&quot;txt&quot;>登录时启动 Aidente</div><div class=&quot;sw on tiny&quot;></div></div>
+          </div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>▤</div><div><b>访问仪表盘</b><small>菜单栏图标被折叠时仍可打开完整仪表盘</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;note&quot;>双击「应用程序」文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。</div>
+            <div style=&quot;margin-top:10px&quot;><span class=&quot;btn&quot;>打开仪表盘</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 仪表盘 -->
+    <div class=&quot;winbox&quot; id=&quot;boxDashboard&quot;>
+      <div class=&quot;wincap&quot;><span>仪表盘 · NSPopover</span><em id=&quot;capDashboard&quot;></em></div>
+      <div class=&quot;win&quot; id=&quot;winDashboard&quot; data-level=&quot;L0&quot;>
+        <span class=&quot;lvl&quot;>L0 窗口底</span>
+        <div class=&quot;win-chrome&quot; data-level=&quot;L1&quot;><span class=&quot;lvl&quot;>L1 顶栏</span>
+          <div class=&quot;wintitle&quot;><b>电源已连接</b><small>·</small><b>85%</b><span class=&quot;spacer&quot;></span>
+            <span class=&quot;pill&quot; id=&quot;dashPill&quot;>兼容材质</span></div>
+        </div>
+        <div class=&quot;divider&quot;></div>
+        <div class=&quot;win-body&quot;>
+          <div class=&quot;hero&quot; data-level=&quot;L3&quot;><span class=&quot;lvl&quot;>L3 强调卡</span>
+            <div><div class=&quot;lbl&quot;>电池健康度</div><div class=&quot;big&quot;>96%</div></div>
+            <span class=&quot;spacer&quot;></span><span class=&quot;tag&quot;>状态良好</span></div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph&quot;>⚡</div><div><b>实时功率分流</b><small>适配器 · 系统使用</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;row&quot;><div class=&quot;txt&quot;>系统使用</div><div class=&quot;pill&quot;>18 W</div></div>
+          </div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph g&quot;>◷</div><div><b>容量与寿命趋势</b><small>近 30 天</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;note&quot;>设计容量 100 Wh · 当前满充 96 Wh</div>
+          </div>
+
+          <div class=&quot;card&quot; data-level=&quot;L2&quot;><span class=&quot;lvl&quot;>L2 卡片</span>
+            <div class=&quot;card-h&quot;><div class=&quot;glyph v&quot;>✦</div><div><b>快捷养护</b><small>充电上限 80%</small></div></div>
+            <div class=&quot;rule&quot;></div>
+            <div class=&quot;row&quot;><div class=&quot;txt&quot;>暂停充电至明早</div><span class=&quot;btn&quot;>执行</span></div>
+          </div>
+        </div>
+        <div class=&quot;footer&quot; data-level=&quot;L1&quot;><span class=&quot;lvl&quot;>L1 底栏</span><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 状态读数 -->
+  <div class=&quot;readout&quot;>
+    <h4>生效状态与层级色值</h4>
+    <table>
+      <thead><tr><th style=&quot;width:24%&quot;>项</th><th>设置窗口（透明 NSWindow）</th><th>仪表盘（NSPopover）</th></tr></thead>
+      <tbody>
+        <tr><td>能否采样背景内容</td><td>否 · 能力降级</td><td class=&quot;ok&quot;>是 · 可用系统材质</td></tr>
+        <tr><td>当前生效策略</td><td id=&quot;rSettings&quot;>—</td><td id=&quot;rDashboard&quot;>—</td></tr>
+        <tr><td>覆盖优先级</td><td colspan=&quot;2&quot; id=&quot;rPriority&quot;>—</td></tr>
+      </tbody>
+    </table>
+    <table style=&quot;margin-top:14px&quot;>
+      <thead><tr><th style=&quot;width:24%&quot;>层级</th><th>色值</th><th>相对 L0 的偏移</th><th>是否随档 / 容器 / 开关变化</th></tr></thead>
+      <tbody id=&quot;levelRows&quot;></tbody>
+    </table>
+    <p style=&quot;margin-top:12px;font-size:11.5px&quot;>原型刻意不使用渐变、玻璃模糊或重阴影：窗口底只给基色，顶栏只给 1pt 边界，卡片只给抬升。层级差恒定是本方案唯一的硬指标。</p>
+  </div>
+
+  <!-- ================= 方案正文 ================= -->
+  <div class=&quot;plan&quot;>
+    <h2>二 · 完整方案</h2>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>01 变更摘要</span>
+      <h3 style=&quot;margin-top:4px&quot;>一句话</h3>
+      <p>删除四档「界面材质」选择器，改为「外观」自动 / 浅色 / 深色 分段控件；把材质从用户选项降级为实现细节，把「可读性」提升为 app 的唯一承诺。<strong>本方案已于 6.1.1 / Build 22 落地</strong>：仪表盘三个容器恢复背景采样并叠加类液态玻璃静态层，macOS 26+ 改用系统 <code>glassEffect(.regular)</code>。方案落地时附带的 App 内材质覆盖开关已于 2026-11-15 移除，材质现在完全跟随系统「降低透明度」。</p>
+      <div class=&quot;callout&quot;><p><strong>结果：</strong>渲染路径从 4 档 × 2 外观 × 5 层级 × 2 容器 × 3 系统状态 ≈ 240 条，收敛为「1 个基线 + 5 个固定层级偏移 + 1 次整体变换」，约 12 个常量。</p></div>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>02 为什么要改</span>
+      <ol>
+        <li><strong>四个不是四个主题。</strong> 它们只是「一根透明度轴上的三个刻度 + 一条版本兼容说明」。切换时其他视觉变量全不变，用户感受不到「换了主题」，只觉得「没变化」或「色差不对」。</li>
+        <li><strong>维度混用。</strong> 前三档讲视觉效果，第四档讲工程策略；而 Liquid Glass 在 Apple 那边根本不是用户选项，是用 26 SDK 重编译自动获得的系统材质。</li>
+        <li><strong>设计承诺不可兑现。</strong> 玻璃需要背后有内容可折射。设置窗口是透明 NSWindow，behindWindow 采不到有效内容，「更明显的背景虚化」物理上做不到；修到最后只能变成固定近白，名字就成了谎话。（此结论只约束设置窗口：仪表盘改用 borderless NSPanel 后已恢复 <code>canSampleBackdrop = true</code>，见 05。）</li>
+        <li><strong>层级各自实现材质。</strong> 窗口底带渐变、顶栏带整体透明度、卡片带半透明与三层高光 —— 每个容器各自抄一份数值，必然漂移。今晚的「中灰卡片 vs 近白窗口底（248 / 193，差 55 级）」就是结果。</li>
+      </ol>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>03 目标模型</span>
+      <p>材质设计不是「四档 × 明暗 × 两端」，而是「<strong>一个基线 × 一组固定的层级偏移</strong>」。</p>
+      <table>
+        <thead><tr><th style=&quot;width:20%&quot;>维度</th><th style=&quot;width:30%&quot;>取值</th><th>允许改</th><th>不允许改</th></tr></thead>
+        <tbody>
+          <tr><td>档位</td><td>取消</td><td>由系统决定基线渲染方式</td><td>层级差值</td></tr>
+          <tr><td>外观</td><td>亮 / 暗</td><td>基线 token 的两套值</td><td>层级方向、层级差</td></tr>
+          <tr><td>层级</td><td>L0 窗口底 / L1 顶栏 / L2 卡片 / L3 强调卡 / L4 控件</td><td>只准固定偏移</td><td>各自实现一套材质</td></tr>
+          <tr><td>容器</td><td>NSPopover / 透明 NSWindow</td><td>只提供「能否采样背景」标志</td><td>各自抄一份色值</td></tr>
+          <tr><td>系统状态</td><td>降低透明度 / 增强对比度</td><td>整栈一次性变换</td><td>每层各自判断</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>04 层级契约</span>
+      <table>
+        <thead><tr><th style=&quot;width:16%&quot;>层</th><th style=&quot;width:22%&quot;>职责</th><th style=&quot;width:30%&quot;>允许的效果</th><th>与下一层的固定关系</th></tr></thead>
+        <tbody>
+          <tr><td>L0 窗口底</td><td>只给基色</td><td>纯色；不叠渐变、高光、模糊</td><td>基线</td></tr>
+          <tr><td>L1 顶栏</td><td>只给边界</td><td>1pt 分隔线 + 极弱阴影</td><td>亮度 ±2%，不重复材质、不设整体透明度</td></tr>
+          <tr><td>L2 卡片</td><td>只给抬升</td><td>+亮度、1pt 描边、柔和阴影</td><td>比 L0 高 2–3%，单调递增</td></tr>
+          <tr><td>L3 强调卡</td><td>语义色</td><td>唯一允许使用 tint</td><td>亮度不低于 L2，色相独立</td></tr>
+          <tr><td>L4 控件</td><td>交给系统</td><td>app 不覆盖外观</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class=&quot;callout&quot;><p><strong>硬约束：</strong>L1−L0、L2−L0 的差值在两外观、两容器、所有系统状态下恒定。用户从 15 升到 26，感知到的应该是「整套栈一起换了质感」，而不是某几层悄悄变了。</p></div>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>05 容器能力降级</span>
+      <p>「跟随系统」不等于两端用同一套渲染。容器只声明一个能力标志：</p>
+      <ul>
+        <li>仪表盘（borderless NSPanel / 独立仪表盘窗口 / 预览面板）：<code>canSampleBackdrop = true</code>，已恢复背景采样。macOS 26+ 用系统 <code>glassEffect(.regular)</code>；15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（无真折射 / 色散）。</li>
+        <li>设置窗口（标准 titled NSWindow）：<code>canSampleBackdrop = false</code>，任何系统版本下都走固定中性色阶的实体基线（亮 <code>#F4F5F6</code> / 暗 <code>#232326</code>）。</li>
+        <li>因此「玻璃虚化」不再作为一个可见选项存在，能力不足时静默降级，不向用户解释技术细节。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>06 系统状态优先级</span>
+      <table>
+        <thead><tr><th style=&quot;width:12%&quot;>优先级</th><th>条件</th><th>结果</th></tr></thead>
+        <tbody>
+          <tr><td>1（最高）</td><td>系统「降低透明度」开启</td><td>整栈强制实体，忽略容器能力</td></tr>
+          <tr><td>2</td><td>容器不能采样背景</td><td>该容器单独回退到实体基线</td></tr>
+          <tr><td>3（默认）</td><td>跟随系统</td><td>26+ 系统 glassEffect / 15 及更早 .behindWindow + 自绘类液态玻璃层</td></tr>
+        </tbody>
+      </table>
+      <p>「增强对比度」只加粗描边与分隔线，不改层级亮度差；「减少动态效果」影响过渡动画，不影响颜色。</p>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>07 设置页信息架构（现行 6.1.1）</span>
+      <ul>
+        <li>卡片标题「外观」：<strong>自动 / 浅色 / 深色</strong> 分段控件（全局生效），无 App 内材质开关。</li>
+        <li>四档材质选择器与「macOS 26 / 27」版本标签已移除；版本适配是实现细节，不出现在设置页。</li>
+        <li>副标题为静态文案：「选择浅色、深色，或跟随系统。」</li>
+        <li>旧四档译名与版本说明已从设置页移除，版本兼容信息可在「关于」页保留一行。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>08 数据与迁移</span>
+      <p>6.1.1 曾提供 App 内材质覆盖开关及一次性偏好迁移；两者已于 2026-11-15 一并删除，偏好键、迁移标记与对应诊断字段都不再存在。</p>
+      <ul>
+        <li>不再读取或写入任何材质偏好；界面材质完全由 macOS 与容器能力决定。</li>
+        <li>诊断信息只上报当前生效策略与来源，不再上报已删除的开关状态。</li>
+        <li>系统「降低透明度」与容器不可采样仍会自动降级为不透明，无需用户配置。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>09 验收标准（编译已通过，实机项见下）</span>
+      <table>
+        <thead><tr><th style=&quot;width:26%&quot;>检查项</th><th>通过条件</th></tr></thead>
+        <tbody>
+          <tr><td>层级差恒定</td><td>同一张截图取窗口底 / 顶栏 / 卡片 / 强调卡四点，L1−L0 与 L2−L0 在两外观、两容器、所有开关组合下数值一致</td></tr>
+          <tr><td>两端一致</td><td>并排截图里，设置页与仪表盘的同类层级色值差 ≤ 1%</td></tr>
+          <tr><td>系统开关</td><td>开启「降低透明度」后所有层 alpha = 1、无渐变、无模糊，且 app 覆盖开关不改变结果</td></tr>
+          <tr><td>版本分支</td><td>15.8.2 上 fallback 与不透明降级观感一致；26+ 上使用真正的系统材质（需实机或 26 环境验证）</td></tr>
+          <tr><td>文字对比度</td><td>正文在两外观、两容器下 ≥ 4.5:1；不透明模式下 ≥ 7:1</td></tr>
+          <tr><td>迁移</td><td>旧值「清晰实体」升级后开关为开启；其余为关闭；重复启动不重复迁移</td></tr>
+          <tr><td>回归</td><td>仪表盘动态高度、功率流图、状态栏图标、显示开关等既有行为不受影响</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class=&quot;panel&quot;>
+      <span class=&quot;tagline&quot;>10 风险与边界</span>
+      <ul>
+        <li><strong>已推翻的早期推断：</strong>早期方案曾假设「仪表盘不再透桌面壁纸」。现行方案把仪表盘三个容器的 <code>canSampleBackdrop</code> 恢复为 <code>true</code>，15 及更早走 <code>.behindWindow</code> + 自绘类液态玻璃层，26+ 走系统液态玻璃；因此视觉增量不再是「变平」，而是边缘增厚与三处高光。</li>
+        <li><strong>26+ 验证缺口（仍在）：</strong>系统材质 API 可编译，但实机是 15.8.2；<code>glassEffect(.regular)</code> 与「26+ 不叠自绘层」的分支只能在 26 环境实机核对。另 borderless NSPanel 的 <code>.behindWindow</code> 是否真采到桌面背景也尚未实机验证。</li>
+        <li><strong>构建约束：</strong>部署目标仍是 macOS 14，版本分支必须做可用性门控；项目仍用 swiftc 直接构建，不引入新的包依赖。</li>
+        <li><strong>早期「不做的事」已部分解除：</strong>应用图标已按 Apple 模板重制并补齐 1024 档、状态栏图标已重绘、版本已定为 6.1.1 / Build 22 并输出 <code>Dist/Aidente-6.1.1.dmg</code>；仍保持不加新主题色、不引入第三方材质库。未提交 / 推送 / 打标签 / 发 Release。</li>
+      </ul>
+    </div>
+
+    <div class=&quot;foot&quot;>本文件保留 2026-11-06 以来的可读性策略说明与可交互原型，并已按 <strong>6.1.1 / Build 22</strong> 的真实落地状态更新色值与结论；实施已完成且完整编译、输出 DMG。定稿参数见 <code>liquid-glass-proposal.html</code>，实现以 <code>AidenteTheme.swift</code> 的单一 token 源为准。</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var state = { appearance: params.get(&quot;theme&quot;) === &quot;dark&quot; ? &quot;dark&quot; : &quot;light&quot;,
+    os: &quot;15&quot;, view: &quot;both&quot;, rt: false, levels: false };
+  var LEVELS = {
+    light: [
+      { name: &quot;L0 窗口底&quot;, hex: &quot;#F4F5F6&quot;, rgb: 244, delta: &quot;基线&quot; },
+      { name: &quot;L1 顶栏&quot;, hex: &quot;#F8F8F8&quot;, rgb: 248, delta: &quot;+4 / 255 ≈ 1.6%&quot; },
+      { name: &quot;L2 卡片&quot;, hex: &quot;#FCFCFC&quot;, rgb: 252, delta: &quot;+8 / 255 ≈ 3.1%&quot; },
+      { name: &quot;L3 强调卡&quot;, hex: &quot;#E9F6EF&quot;, rgb: null, delta: &quot;语义色，亮度不低于 L2&quot; }
+    ],
+    dark: [
+      { name: &quot;L0 窗口底&quot;, hex: &quot;#232326&quot;, rgb: 35, delta: &quot;基线&quot; },
+      { name: &quot;L1 顶栏&quot;, hex: &quot;#28282B&quot;, rgb: 40, delta: &quot;+5 / 255 ≈ 2.0%&quot; },
+      { name: &quot;L2 卡片&quot;, hex: &quot;#2D2D31&quot;, rgb: 45, delta: &quot;+10 / 255 ≈ 3.9%&quot; },
+      { name: &quot;L3 强调卡&quot;, hex: &quot;#1A2E24&quot;, rgb: null, delta: &quot;语义色，亮度不低于 L2&quot; }
+    ]
+  };
+
+  function seg(id, key) {
+    var box = document.getElementById(id);
+    box.addEventListener(&quot;click&quot;, function (e) {
+      var b = e.target.closest(&quot;button&quot;); if (!b) return;
+      state[key] = b.getAttribute(&quot;data-v&quot;);
+      Array.prototype.forEach.call(box.querySelectorAll(&quot;button&quot;), function (x) { x.classList.remove(&quot;on&quot;); });
+      b.classList.add(&quot;on&quot;); render();
+    });
+  }
+  function toggle(id, key) {
+    var el = document.getElementById(id);
+    el.addEventListener(&quot;click&quot;, function () { state[key] = !state[key]; render(); });
+  }
+  seg(&quot;cAppearance&quot;, &quot;appearance&quot;);
+  seg(&quot;cOS&quot;, &quot;os&quot;);
+  seg(&quot;cView&quot;, &quot;view&quot;);
+  toggle(&quot;cRT&quot;, &quot;rt&quot;);
+  toggle(&quot;cLevels&quot;, &quot;levels&quot;);
+
+  function effective(opaque) { return opaque ? &quot;不透明（强制实体）&quot; : null; }
+
+  function render() {
+    document.documentElement.setAttribute(&quot;data-appearance&quot;, state.appearance);
+    [[&quot;cAppearance&quot;, &quot;appearance&quot;], [&quot;cOS&quot;, &quot;os&quot;], [&quot;cView&quot;, &quot;view&quot;]].forEach(function (p) {
+      Array.prototype.forEach.call(
+        document.getElementById(p[0]).querySelectorAll(&quot;button&quot;),
+        function (b) { b.classList.toggle(&quot;on&quot;, b.getAttribute(&quot;data-v&quot;) === state[p[1]]); }
+      );
+    });
+    var opaque = state.rt;
+    var forced = effective(opaque);
+
+    // 容器策略
+    var sText, dText, pill;
+    if (forced) { sText = forced; dText = forced; pill = &quot;不透明&quot;; }
+    else {
+      sText = &quot;实体近白（能力降级）&quot;;
+      dText = state.os === &quot;26&quot; ? &quot;系统材质 · Liquid Glass&quot; : &quot;系统材质 · 兼容材质&quot;;
+      pill = state.os === &quot;26&quot; ? &quot;系统材质 26&quot; : &quot;兼容材质&quot;;
+    }
+    document.getElementById(&quot;rSettings&quot;).textContent = sText;
+    document.getElementById(&quot;rDashboard&quot;).textContent = dText;
+    document.getElementById(&quot;capSettings&quot;).textContent = forced ? &quot;不透明&quot; : &quot;能力降级&quot;;
+    document.getElementById(&quot;capDashboard&quot;).textContent = forced ? &quot;不透明&quot; : (state.os === &quot;26&quot; ? &quot;系统材质 26+&quot; : &quot;兼容材质 15&quot;);
+    document.getElementById(&quot;strategyPill&quot;).textContent = pill;
+    document.getElementById(&quot;dashPill&quot;).textContent = pill;
+    document.getElementById(&quot;strategyNote&quot;).textContent = forced
+      ? &quot;当前使用不透明背景，所有界面层均为实体，文字对比度最高。&quot;
+      : (state.os === &quot;26&quot;
+        ? &quot;界面材质由系统提供，并在受支持的界面上自动采用系统材质。&quot;
+        : &quot;当前系统使用兼容材质。升级到 macOS 26 及以上后，将自动采用系统材质。&quot;);
+
+    var priority;
+    if (state.rt) priority = &quot;系统「降低透明度」优先：强制实体，容器能力被忽略&quot;;
+    else priority = &quot;默认跟随系统；设置窗口因无法采样背景而单独降级为实体&quot;;
+    document.getElementById(&quot;rPriority&quot;).textContent = priority;
+
+    // 视图切换
+    document.getElementById(&quot;boxSettings&quot;).style.display =
+      (state.view === &quot;dashboard&quot;) ? &quot;none&quot; : &quot;&quot;;
+    document.getElementById(&quot;boxDashboard&quot;).style.display =
+      (state.view === &quot;settings&quot;) ? &quot;none&quot; : &quot;&quot;;
+
+    // 开关状态
+    [[&quot;cRT&quot;, state.rt], [&quot;cLevels&quot;, state.levels]].forEach(function (p) {
+      document.getElementById(p[0]).classList.toggle(&quot;on&quot;, p[1]);
+    });
+    var stage = document.getElementById(&quot;stage&quot;);
+    stage.classList.toggle(&quot;show-levels&quot;, state.levels);
+    document.getElementById(&quot;winSettings&quot;).classList.toggle(&quot;show-levels&quot;, state.levels);
+    document.getElementById(&quot;winDashboard&quot;).classList.toggle(&quot;show-levels&quot;, state.levels);
+
+    // 层级读数
+    var rows = &quot;&quot;;
+    LEVELS[state.appearance].forEach(function (l) {
+      rows += &quot;<tr><td>&quot; + l.name + &quot;</td><td><span class='kv'><span class='dot' style='background:&quot; +
+        l.hex + &quot;'></span><span class='mono'>&quot; + l.hex + &quot;</span></span></td><td class='mono'>&quot; +
+        l.delta + &quot;</td><td class='ok'>恒定，不变</td></tr>&quot;;
+    });
+    document.getElementById(&quot;levelRows&quot;).innerHTML = rows;
+  }
+  render();
+})();
+</script>
+</body>
+</html>
+" title="可读性策略"></iframe>
+  </section>
+
+  <section class="doc" id="s04">
+    <header><span class="tag">04</span><div><h2>现行状态（6.1.5 / Build 26）</h2><p>2026-11-16 已发行的落地结论，取代前三节中被推翻的部分</p></div></header>
+    <div class="panel">
+      <h3>仪表盘卡片透出 L0 玻璃</h3>
+      <ul>
+        <li>普通卡片与 hero 渐变半透明绘制，透出窗口已采样的系统材质；填充透明度<b>浅色 0.3 / 深色 0.4</b>（<code>AidenteSurfaceTokens.dashboardCardAlpha</code>）。</li>
+        <li>系统开启「降低透明度」或容器无法采样背景时自动回到不透明；玻璃只在 L0 采一次，卡片只做半透明，不碰 <code>.withinWindow</code>、不做双重模糊。</li>
+        <li>实验依据：<code>dashboard-card-glass-prototype.html</code>（alpha 单变量实验，拖滑块验证）。</li>
+      </ul>
+      <h3>L0 染色</h3>
+      <ul>
+        <li><code>glassTint</code> 浅色<b>完全透明</b>（白色提亮会冲平桌面轮廓）、深色保留 <code>rgb(30,30,34) 0.24</code> 的磨砂感。AppKit <code>.popover</code> 自带染色。</li>
+      </ul>
+      <h3>浅色彩色前景加深</h3>
+      <ul>
+        <li>五组 ink 色（coral / amber / jade / ocean / violet）+ <code>legibleTextTint(_:scheme:)</code>：浅色下仪表盘全部彩色<b>文字与小图标</b>映射到加深色，深色不变；进度条、渐变、徽章底、图例色块等装饰色仍用原色。</li>
+      </ul>
+      <h3>已删除的开关</h3>
+      <ul>
+        <li>「始终使用不透明背景」及其 key、迁移、诊断字段已全链路删除（02 节文档中提到的该开关描述即此条的历史痕迹）；材质完全跟随系统「降低透明度」。</li>
+      </ul>
+      <h3>设置页配色（独立分支，不属玻璃族）</h3>
+      <ul>
+        <li>浅色右栏底 <code>#EDEEF0</code>（<code>detailPaneColor</code>）、卡片专用 <code>#F5F5F7</code>（<code>AidenteSurfaceTokens.settingsCardColor</code>，经 <code>aidenteUsesSettingsCardFill</code> 环境开关，仅设置窗口生效）；全局 L2 token 与仪表盘、菜单卡片不变。</li>
+        <li>设置页结构与控件的基线见 <code>settings-redesign-prototype.html</code>。</li>
+      </ul>
+      <h3>源码锚点</h3>
+      <ul>
+        <li><code>Aidente/Views/AidenteTheme.swift</code>：<code>AidenteSurfaceTokens</code>（色阶 / tint / cardAlpha / settingsCardColor）、<code>AidenteGlassOverlay</code>（边缘增厚 / 内缩柔光 / 角向描边）、<code>AidenteLevelSurface</code>（唯一绘制入口）。</li>
+      </ul>
+    </div>
+  </section>
+  <footer>本文档不参与构建。三节 iframe 内为原文件原文（含已过时表述，按档案原貌保留）；以第 04 节与 CHANGELOG <code>[6.1.5]</code> 为准。</footer>
+</body>
+</html>
