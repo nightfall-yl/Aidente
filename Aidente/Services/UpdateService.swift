@@ -878,9 +878,12 @@ final class UpdateService {
         helper.refreshStatus()
 
         if helper.isInstalled, updatedVersion != nil {
-            // 10 × 0.75 s = 7.5 s ceiling; with the daemon's 0.5 s watcher
-            // interval the pin usually converges within the first two checks.
-            for _ in 0..<10 {
+            // Wait out the daemon's re-pin first (it lands ~2 s after the
+            // swap), then poll a bounded window — feedback lands in a
+            // deliberate 3–5 s band: long enough to never race the pin,
+            // short enough to feel responsive.
+            try? await Task.sleep(for: .milliseconds(2000))
+            for _ in 0..<5 {
                 helper.refreshStatus()
                 if helper.isInstalled { break }
                 try? await Task.sleep(for: .milliseconds(750))
