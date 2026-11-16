@@ -22,6 +22,21 @@ public protocol FirmwareLimitRegisters {
     func writeUpper(_ value: UInt32) throws
 }
 
+extension FirmwareLimitRegisters {
+    /// The ONLY sanctioned write sequence for the bfF0/bfD0/bfE0 interval:
+    /// deactivate first, then upper, then lower, then re-activate last. The
+    /// percentages are little-endian (matching SMCKit's native UInt32 codec on
+    /// Apple Silicon, unlike conventional big-endian SMC keys). Writing a live
+    /// interval in any other order can trigger charging against a half-updated
+    /// threshold — call this instead of the individual register writes.
+    func writeInterval(_ state: FirmwareChargeLimitState) throws {
+        try writeActivation(0)
+        try writeUpper(state.upper)
+        try writeLower(state.lower)
+        try writeActivation(state.activation)
+    }
+}
+
 public struct SMCFirmwareLimitRegisters: FirmwareLimitRegisters {
     public init() {}
     public func readActivation() throws -> UInt8 { try SMCKit.shared.read("bfF0") }
@@ -64,17 +79,27 @@ public struct FirmwareChargeLimitController<Registers: FirmwareLimitRegisters> {
         }
         let previous = try read()
         guard previous != target else { return }
-        var changed = false
         do {
-            try registers.writeActivation(0)
-            changed = true
-            try registers.writeUpper(target.upper)
-            try registers.writeLower(target.lower)
-            try registers.writeActivation(target.activation)
+            // Sanctioned sequence: deactivate, upper, lower, activate last.
+            try registers.writeInterval(target)
             guard try read() == target else { throw SMCBatteryError.stateVerificationFailed }
         } catch {
             let originalError = error
-            guard changed else { throw originalError }
+            // `writeInterval` deactivates first, so the firmware was touched
+            // iff any register no longer matches the previous state; only
+            // then is a rollback attempt meaningful (a denied first write
+            // must rethrow untouched, not mask as a restore failure).
+            let touched: Bool
+            if let activation = try? registers.readActivation(),
+               let lower = try? registers.readLower(),
+               let upper = try? registers.readUpper() {
+                touched = activation != previous.activation
+                    || lower != previous.lower
+                    || upper != previous.upper
+            } else {
+                touched = true // cannot read back: assume touched, try to restore
+            }
+            guard touched else { throw originalError }
             do {
                 try write(previous)
                 guard try read() == previous else { throw SMCBatteryError.stateVerificationFailed }
@@ -87,10 +112,7 @@ public struct FirmwareChargeLimitController<Registers: FirmwareLimitRegisters> {
 
     private func write(_ state: FirmwareChargeLimitState) throws {
         // Updating a live interval can trigger charging against a half-updated
-        // threshold. Disable it, write upper then lower, and activate last.
-        try registers.writeActivation(0)
-        try registers.writeUpper(state.upper)
-        try registers.writeLower(state.lower)
-        try registers.writeActivation(state.activation)
+        // threshold; always go through the sanctioned write sequence.
+        try registers.writeInterval(state)
     }
 }

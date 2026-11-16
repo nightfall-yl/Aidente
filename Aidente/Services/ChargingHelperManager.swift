@@ -1,6 +1,6 @@
 import Foundation
 import AidenteShared
-import ServiceManagement
+import CryptoKit
 import os.log
 
 enum ChargingHelperStatus { case notInstalled, requiresApproval, installed }
@@ -73,13 +73,6 @@ final class ChargingHelperManager {
             if force || !isInstalled {
                 disconnect()
                 try await LocalControlInstaller.run(uninstall: false)
-                // Only after successful authorized installation retire the old
-                // embedded registration. Cancelled authorization changes nothing.
-                let old = SMAppService.daemon(plistName: "com.aidente.app.control.plist")
-                if old.status == .enabled || old.status == .requiresApproval {
-                    do { try await old.unregister() }
-                    catch { logger.warning("Legacy unregister failed: \(error.localizedDescription, privacy: .public)") }
-                }
             }
             refreshStatus()
             guard isInstalled else { throw XPCError.helperUnavailable }
@@ -159,6 +152,75 @@ final class ChargingHelperManager {
         verified = false
     }
     func recoverAfterTransportFailure(_ error: Error) { disconnect() }
+
+    /// Announces a pending self-update (方案 C): the installed daemon re-pins
+    /// its client manifest after the updater swaps /Applications, so the user
+    /// does not re-authorize. Only attempted when the installed daemon binary
+    /// is byte-identical to this build's — older daemons predate
+    /// `schedulePinRefresh` and probing them with an unknown selector would be
+    /// undefined; those updates simply fall back to the re-authorization flow.
+    func schedulePinRefreshIfCompatible(expectedVersion: String) async {
+        refreshStatus()
+        guard isInstalled else { return }
+        let bundledDaemon = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/AidenteControl")
+        guard let bundledSHA = Self.fileSHA256(at: bundledDaemon),
+              let installedSHA = Self.fileSHA256(
+                  at: URL(fileURLWithPath: LocalControlIdentity.executable)
+              ),
+              bundledSHA == installedSHA
+        else { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            // One-shot completion guarded by a lock: the reply handler, the
+            // error handler and the timeout race on the same continuation.
+            let completion = ContinuationOnce()
+            let helper = getHelper { [weak self] error in
+                completion.finish {
+                    self?.logger.notice("PIN_REFRESH_SEND_FAILED \(error.localizedDescription, privacy: .public)")
+                }
+            }
+            _ = helper?.schedulePinRefresh(expectedVersion: expectedVersion, reply: { _, _ in
+                completion.finish {}
+            })
+            // Nothing to talk to (daemon mid-restart, etc.): time out quickly.
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                completion.finish {}
+            }
+            completion.attachResume {
+                continuation.resume()
+            }
+        }
+    }
+
+    /// Runs the first caller's action once, then resumes the continuation once;
+    /// later callers (reply vs error handler vs timeout race) are no-ops.
+    private final class ContinuationOnce: @unchecked Sendable {
+        private let lock = NSLock()
+        private var finished = false
+        private var resume: (() -> Void)?
+        func attachResume(_ action: @escaping () -> Void) {
+            lock.lock()
+            resume = action
+            let already = finished
+            lock.unlock()
+            if already { action() }
+        }
+        func finish(_ action: () -> Void) {
+            lock.lock()
+            let first = !finished
+            finished = true
+            let pending = resume
+            lock.unlock()
+            if first {
+                action()
+                pending?()
+            }
+        }
+    }
+
+    private static func fileSHA256(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
     // Retained diagnostic CLI: verifies integrity, not a paid certificate.
     func validateSigningIdentity() throws { _ = try LocalControlInstaller.clientCDHash() }
 }

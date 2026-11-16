@@ -6,6 +6,8 @@ import IOKit
 import IOKit.pwr_mgt
 import Darwin
 import SMCKit
+import Security
+import CryptoKit
 
 private enum Constants {
     static let subsystem = "com.aidente.app.control"
@@ -245,6 +247,139 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
 
     func ping(reply: @escaping @Sendable (Bool, String?) -> Void) {
         reply(true, nil)
+    }
+
+    // MARK: - Update-time client pin refresh (方案 C)
+    //
+    // The updater replaces /Applications/Aidente.app with a new ad-hoc build,
+    // so the client cdhash changes and the pinned manifest would reject the
+    // relaunched app. Only the *currently authorized* app can announce the
+    // update over its already-pinned connection; the daemon then watches for
+    // the swap and re-pins itself — but only after re-validating the new
+    // bundle. Any failure keeps the old pin, and the next launch falls back to
+    // the normal re-authorization prompt.
+
+    private let pinRefreshQueue = DispatchQueue(label: "com.aidente.app.control.pinrefresh", qos: .utility)
+    private var pinRefreshGeneration = 0
+
+    func schedulePinRefresh(expectedVersion: String, reply: @escaping @Sendable (Bool, String?) -> Void) {
+        pinRefreshGeneration += 1
+        let generation = pinRefreshGeneration
+        logger.notice("PIN_REFRESH_SCHEDULED \(expectedVersion, privacy: .public)")
+        pinRefreshQueue.async { [weak self] in
+            self?.watchForClientSwap(expectedVersion: expectedVersion, generation: generation)
+        }
+        reply(true, nil)
+    }
+
+    private func watchForClientSwap(expectedVersion: String, generation: Int) {
+        let clientPath = LocalControlIdentity.clientPath
+        let bundleURL = URL(fileURLWithPath: LocalControlIdentity.clientPath, isDirectory: true)
+        let manifestURL = URL(fileURLWithPath: LocalControlIdentity.manifest)
+        // 60 × 2 s = 120 s: enough for the updater's 60 s parent-exit window
+        // plus the swap itself. Expiring without a swap (failed update, user
+        // rollback) is a no-op — the old pin stays valid.
+        for _ in 0..<60 {
+            guard pinRefreshGeneration == generation else { return }
+            guard let pinned = clientPinnedIdentity() else {
+                logger.error("PIN_REFRESH_NO_MANIFEST")
+                return
+            }
+            guard FileManager.default.fileExists(atPath: clientPath) else {
+                sleep(2)
+                continue
+            }
+            guard let candidate = codeIdentity(at: bundleURL) else {
+                logger.notice("PIN_REFRESH_CANDIDATE_UNREADABLE")
+                sleep(2)
+                continue
+            }
+            if candidate.cdHash == pinned.cdHash {
+                sleep(2) // not swapped yet (or rolled back)
+                continue
+            }
+            // The cdhash moved — validate the replacement before re-pinning.
+            guard candidate.identifier == "com.aidente.app",
+                  candidate.version == expectedVersion,
+                  verifyCodeSignature(at: bundleURL),
+                  let sha = fileSHA256(at: URL(fileURLWithPath: clientPath))
+            else {
+                logger.error("PIN_REFRESH_VALIDATION_FAILED")
+                return
+            }
+            guard updateClientPin(cdHash: candidate.cdHash, sha256: sha, manifestURL: manifestURL) else {
+                logger.error("PIN_REFRESH_WRITE_FAILED")
+                return
+            }
+            logger.notice("PIN_REFRESHED \(candidate.cdHash, privacy: .public) version=\(expectedVersion, privacy: .public)")
+            // Restart so the listener re-reads the manifest: exiting releases
+            // the mach port and launchd starts a fresh daemon on demand with
+            // the new pin in effect.
+            Thread.sleep(forTimeInterval: 0.5)
+            exit(0)
+        }
+        logger.notice("PIN_REFRESH_EXPIRED")
+    }
+
+    private struct CodeIdentity {
+        let cdHash: String
+        let identifier: String?
+        let version: String?
+    }
+
+    private func codeIdentity(at bundleURL: URL) -> CodeIdentity? {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundleURL as CFURL, SecCSFlags(), &staticCode) == errSecSuccess,
+              let code = staticCode
+        else { return nil }
+        var information: CFDictionary?
+        guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &information) == errSecSuccess,
+              let details = information as? [String: Any],
+              let cdHashData = details[kSecCodeInfoUnique as String] as? Data
+        else { return nil }
+        let cdHash = cdHashData.map { String(format: "%02x", $0) }.joined()
+        let version = (Bundle(url: bundleURL)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+        return CodeIdentity(cdHash: cdHash, identifier: details[kSecCodeInfoIdentifier as String] as? String, version: version)
+    }
+
+    private func verifyCodeSignature(at bundleURL: URL) -> Bool {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        process.arguments = ["--verify", "--deep", "--strict", bundleURL.path]
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+
+    private func fileSHA256(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func clientPinnedIdentity() -> (cdHash: String, sha256: String)? {
+        guard let manifest = NSDictionary(contentsOfFile: LocalControlIdentity.manifest),
+              let cdHash = manifest["clientCDHash"] as? String,
+              let sha256 = manifest["clientSHA256"] as? String
+        else { return nil }
+        return (cdHash, sha256)
+    }
+
+    private func updateClientPin(cdHash: String, sha256: String, manifestURL: URL) -> Bool {
+        guard let manifest = NSDictionary(contentsOfFile: manifestURL.path) as? [String: Any] else {
+            return false
+        }
+        var updated = manifest
+        updated["clientCDHash"] = cdHash
+        updated["clientSHA256"] = sha256
+        let plist = NSDictionary(dictionary: updated)
+        return plist.write(to: manifestURL, atomically: true)
     }
 
     func manageBatteryCharging(enabled: Bool, reply: @escaping @Sendable (Bool, String?) -> Void) {

@@ -716,6 +716,12 @@ final class UpdateService {
             workingDirectory = nil
 
             phase = .installing(release)
+            // 方案 C: let the installed daemon re-pin the new build's cdhash
+            // after the swap, sparing a re-authorization. Best effort — any
+            // failure falls back to the normal re-authorization prompt.
+            await ChargingHelperManager.shared.schedulePinRefreshIfCompatible(
+                expectedVersion: release.version
+            )
             try launchUpdater(
                 release: release,
                 installedApplicationURL: installLocation,

@@ -197,8 +197,7 @@ fi
 mkdir -p \
     "$app_dir/Contents/MacOS" \
     "$app_dir/Contents/Resources" \
-    "$app_dir/Contents/XPCServices/com.aidente.app.reader.xpc/Contents/MacOS" \
-    "$app_dir/Contents/Library/LaunchDaemons"
+    "$app_dir/Contents/XPCServices/com.aidente.app.reader.xpc/Contents/MacOS"
 
 cp "$build_dir/Aidente" "$app_dir/Contents/MacOS/Aidente"
 cp "$project_dir/BuildSupport/Info.plist" "$app_dir/Contents/Info.plist"
@@ -213,14 +212,46 @@ cp "$build_dir/AidenteReader" "$reader_dir/Contents/MacOS/AidenteReader"
 cp "$project_dir/BuildSupport/ReaderInfo.plist" "$reader_dir/Contents/Info.plist"
 
 cp "$build_dir/AidenteControl" "$app_dir/Contents/MacOS/AidenteControl"
-# 0.2.0 registered this legacy relative path. Keep a signed compatibility
-# copy for one upgrade cycle so macOS background-item metadata cached from the
-# Keep a signed copy in the launch-daemon directory for macOS background-item
-# registration compatibility.
-cp "$build_dir/AidenteControl" "$app_dir/Contents/Library/LaunchDaemons/AidenteControl"
-cp \
-    "$project_dir/ChargingHelper/com.aidente.app.control.plist" \
-    "$app_dir/Contents/Library/LaunchDaemons/com.aidente.app.control.plist"
+
+# Single source of truth for the local service identity:
+# Shared/LocalControlIdentity.swift. Render the launchd manifest from those
+# constants so install_local_control.sh stays data-driven (it derives label,
+# helper destination and plist path from this file at install time).
+identity_file="$project_dir/Shared/LocalControlIdentity.swift"
+identity_label=$(sed -n 's/.*static let label = "\(.*\)"/\1/p' "$identity_file")
+identity_directory=$(sed -n 's/.*static let directory = "\(.*\)"/\1/p' "$identity_file")
+if [[ -z "$identity_label" || -z "$identity_directory" ]]; then
+    print -u2 "build_app.sh: could not parse LocalControlIdentity constants"
+    exit 1
+fi
+if [[ "$identity_label" != *.local ]]; then
+    print -u2 "build_app.sh: unexpected LocalControlIdentity.label format: $identity_label"
+    exit 1
+fi
+# Data-driven guard: the installer must contain no hardcoded service label —
+# it resolves everything from the manifest rendered below.
+if grep -q "$identity_label" "$project_dir/BuildSupport/install_local_control.sh"; then
+    print -u2 "build_app.sh: install_local_control.sh hardcodes the service label; keep it data-driven"
+    exit 1
+fi
+launchd_manifest="$app_dir/Contents/Resources/install-launchd.plist"
+cat > "$launchd_manifest" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>$identity_label</string>
+<key>ProgramArguments</key><array><string>$identity_directory/AidenteControl</string><string>--local-service</string></array>
+<key>MachServices</key><dict><key>$identity_label</key><true/></dict>
+<key>RunAtLoad</key><false/>
+</dict></plist>
+PLIST
+plutil -lint "$launchd_manifest" >/dev/null
+for required_key in "$identity_label" "$identity_directory/AidenteControl" "<key>MachServices</key>"; do
+    grep -q "$required_key" "$launchd_manifest" || {
+        print -u2 "build_app.sh: rendered launchd manifest is missing $required_key"
+        exit 1
+    }
+done
 
 cp \
     "$project_dir/BuildSupport/Aidente.icns" \
@@ -238,12 +269,6 @@ codesign \
     "${signing_options[@]}" \
     --identifier com.aidente.app.control \
     "$app_dir/Contents/MacOS/AidenteControl"
-codesign \
-    --force \
-    --sign "$signing_identity" \
-    "${signing_options[@]}" \
-    --identifier com.aidente.app.control \
-    "$app_dir/Contents/Library/LaunchDaemons/AidenteControl"
 codesign \
     --force \
     --sign "$signing_identity" \

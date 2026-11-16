@@ -13,6 +13,46 @@ This project does not contain AlDente Pro code, assets, activation logic, or
 modified binaries. It implements similar battery-care workflows from public
 behavior descriptions and GPL-compatible open-source foundations.
 
+## Version 6.1.5 (Build 26)
+
+Outline of everything shipped since 6.1 (exclusive); intermediate rework is
+not listed:
+
+**Materials and appearance**
+
+- Materials converge to a single rendering entry, following system appearance
+  and Reduce Transparency; in-app material overrides were removed.
+- Dashboard cards reveal the window's L0 glass; colored foregrounds use
+  deepened inks in light mode for readability.
+
+**Dashboard**
+
+- Replaced `NSPopover` with a borderless `NSPanel`; outside clicks close it
+  reliably.
+- Long-press editing: hide cards, drag to reorder, with a dock for closed
+  cards.
+- Menu-bar battery icon redrawn in the macOS 15 monochrome template style;
+  fixed inactive display dimming on multi-screen setups.
+
+**Settings**
+
+- Restructured into a System Settings–style split window: glassy sidebar,
+  solid detail pane, no titlebar.
+- "Permission Management" became "Sleep Management"; the control service is
+  auto-detected at launch with one-click re-authorization.
+- Pinned plain-text header doubles as a drag handle, with back / forward
+  buttons backed by a history stack.
+- Dedicated light-mode palette; interface copy completed in Chinese and
+  English.
+
+**Engineering**
+
+- App icon rebuilt on the macOS template; fixed the `@Observable` macro build
+  failure with Swift 6.2.4 and the macOS 15.x SDK.
+
+The charging-policy core is unchanged. See the
+[6.1.5 release notes](BuildSupport/release-notes-6.1.5.md).
+
 ## Version 6.1 (Build 21)
 
 The menu-bar battery is horizontal with left-to-right fill. Dark digits and
@@ -41,47 +81,6 @@ Short observations on the affected machine showed zero battery power while
 the adapter supplied the system, including limit changes and sleep/wake
 transitions. Sustained sleep, full charge cycles and other firmware remain
 unverified. See [6.1 release notes](BuildSupport/release-notes-6.1.md).
-
-## Version 6.0.2 (Build 20)
-
-- Narrow vertical menu-bar battery with bottom-up fill. Icon-only menu width
-  decreases from 33 to 19 points, or from 37 to 25 points with the percentage
-  inside. Combined battery/power mode sizes the item to the actual wattage text.
-- Charging and adapter control are one serialized, verified transaction. Holding
-  a charge limit requests that the adapter remain connected; firmware may still
-  draw battery power above the ceiling. Normal mode resumes 2 percentage
-  points below the limit; sailing mode retains its configured range.
-- Automatic discharge defaults to off. Explicitly saved preferences are preserved.
-  When enabled, it starts on power connection or a limit change only if more than
-  1 point above the limit, and does not restart for normal charging overshoot.
-- The privileged helper acknowledges system sleep after applying/readback of the
-  sleep policy, including when unplugged before sleep. Wake keeps the hold until
-  the app sends a fresh policy. A low-frequency watchdog repairs register drift
-  while the daemon is able to run; it does not poll during deep sleep.
-- Charging control uses an explicitly authorized local LaunchDaemon with pinned
-  client/helper identities. Updated app/helper binaries require renewed
-  administrator authorization. Background polling never prompts for a password.
-  Wake re-probes hardware capabilities and XPC failures no longer leave capability
-  loading hung.
-- Capability-based selection of old `CH0B/CH0C`, `CHTE`, and new firmware-managed
-  `bfF0/bfD0/bfE0` controls (not selection by macOS version number). The firmware
-  interval is applied proactively while charging. A hold uses the configured
-  ceiling or captures the current raw capacity if it is lower, without chasing
-  subsequent drops. New firmware may run from battery above that ceiling;
-  adapter-only power is not guaranteed. The original interval is saved and
-  restored when management is disabled. Failed writes are read back and rolled
-  back rather than reported as success.
-- Diagnostics include requested/applied adapter and charging state, plus power
-  event and hardware-key logs.
-
-Firmware-specific sleep persistence
-must still be checked on affected machines; this is not a blanket compatibility
-claim for all macOS 26/27 firmware.
-
-Newer firmware shipped with macOS 15.8/26.7 and macOS 27 betas may remove or
-restrict charging registers. Aidente reports the unsupported control instead of
-silently substituting adapter disconnection (which would cycle the battery).
-Re-registering the helper cannot grant Apple's private firmware entitlements.
 
 ## Requirements
 

@@ -8,11 +8,63 @@ test "$(id -u)" = 0 || { echo 'Administrator authorization required' >&2; exit 1
 mode=${1:-}
 case "$mode" in install|uninstall) ;; *) exit 64;; esac
 base=/Library/PrivilegedHelperTools
-dest=$base/com.aidente.app.local
-plist=/Library/LaunchDaemons/com.aidente.app.control.local.plist
-label=com.aidente.app.control.local
 app=/Applications/Aidente.app
 fail() { echo "Aidente installer: $1" >&2; exit 65; }
+
+# Single source of truth: Shared/LocalControlIdentity.swift. build_app.sh
+# renders the launchd manifest from those constants into
+# Contents/Resources/install-launchd.plist; this script derives label, helper
+# destination and system plist path from that manifest and hardcodes nothing.
+label=''
+dest=''
+plist=''
+bundled_manifest="$app/Contents/Resources/install-launchd.plist"
+installed_plist=''
+resolve_installed_daemon() {
+    # Locate an already-installed Aidente daemon without hardcoding its label:
+    # any LaunchDaemons plist whose ProgramArguments[0] runs AidenteControl
+    # from the privileged helper tools directory.
+    for candidate in /Library/LaunchDaemons/*.plist; do
+        test -f "$candidate" || continue
+        prog=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:0' "$candidate" 2>/dev/null) || continue
+        case "$prog" in "$base"/*/AidenteControl)
+            installed_plist=$candidate
+            label=$(/usr/libexec/PlistBuddy -c 'Print :Label' "$candidate")
+            dest=${prog%/*}
+            plist=$candidate
+            return 0
+        ;; esac
+    done
+    return 1
+}
+case "$mode" in
+    install)
+        test ! -L "$app" && test -d "$app" || fail 'Aidente must be a real application in /Applications'
+        test -f "$bundled_manifest" || fail 'Bundled launchd manifest missing'
+        label=$(/usr/libexec/PlistBuddy -c 'Print :Label' "$bundled_manifest")
+        prog=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:0' "$bundled_manifest")
+        mach=$(/usr/libexec/PlistBuddy -c "Print :MachServices:$label" "$bundled_manifest" 2>/dev/null) || true
+        test "$label" != '' || fail 'Bundled launchd manifest has no label'
+        test "$mach" = true || fail 'Bundled launchd manifest MachServices mismatch'
+        case "$prog" in "$base"/*/AidenteControl) ;;
+            *) fail 'Bundled launchd manifest points outside the helper tools directory';;
+        esac
+        dest=${prog%/*}
+        plist="/Library/LaunchDaemons/$label.plist"
+    ;;
+    uninstall)
+        # The app may already be gone; resolve from the installed daemon instead.
+        if resolve_installed_daemon; then
+            : # label / dest / plist populated
+        else
+            # Fallback: a helper directory may linger without its launchd plist.
+            for candidate in "$base"/*/AidenteControl; do
+                test -x "$candidate" || continue
+                dest=${candidate%/AidenteControl}
+            done
+        fi
+    ;;
+esac
 
 # Reject redirected or user-writable privileged destinations.
 safe_directory() {
@@ -94,20 +146,11 @@ chmod 755 "$stage/new-service" "$stage/new-service/AidenteControl"
 /usr/libexec/PlistBuddy -c "Add :clientSHA256 string $client_sha" "$stage/new-service/client.plist"
 /usr/libexec/PlistBuddy -c "Add :helperSHA256 string $helper_sha" "$stage/new-service/client.plist"
 chmod 644 "$stage/new-service/client.plist"
-cat > "$stage/new-launch.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>Label</key><string>com.aidente.app.control.local</string>
-<key>ProgramArguments</key><array><string>/Library/PrivilegedHelperTools/com.aidente.app.local/AidenteControl</string><string>--local-service</string></array>
-<key>MachServices</key><dict><key>com.aidente.app.control.local</key><true/></dict>
-<key>RunAtLoad</key><false/>
-</dict></plist>
-PLIST
+# Launchd manifest comes from the bundle, rendered by build_app.sh from
+# Shared/LocalControlIdentity.swift (single source of truth).
+cp "$bundled_manifest" "$stage/new-launch.plist"
 chmod 644 "$stage/new-launch.plist"
 plutil -lint "$stage/new-launch.plist"
-# Only Aidente services are affected; do not clear the global BTM database.
-launchctl bootout system/com.aidente.app.control >/dev/null 2>&1 || true
 launchctl bootout "system/$label" >/dev/null 2>&1 || true
 changed=1
 if test -e "$dest"; then mv "$dest" "$stage/previous-service"; fi

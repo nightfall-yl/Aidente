@@ -221,16 +221,12 @@ if restoreLocalDefaults {
     exit(1)
 }
 let delegate = ServiceDelegate(helper: helper)
-let listener = NSXPCListener(
-    machServiceName: localService ? LocalControlIdentity.label : "com.aidente.app.control"
-)
-if localService {
-    guard let requirement = localClientRequirement() else {
-        logger.fault("LOCAL_CLIENT_IDENTITY_MISSING")
-        exit(78)
-    }
-    listener.setConnectionCodeSigningRequirement(requirement)
+let listener = NSXPCListener(machServiceName: LocalControlIdentity.label)
+guard let requirement = localClientRequirement() else {
+    logger.fault("LOCAL_CLIENT_IDENTITY_MISSING")
+    exit(78)
 }
+listener.setConnectionCodeSigningRequirement(requirement)
 listener.delegate = delegate
 listener.resume()
 

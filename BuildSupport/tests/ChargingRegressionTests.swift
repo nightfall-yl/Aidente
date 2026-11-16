@@ -55,9 +55,17 @@ final class SimulatedBattery: BatteryPowerControlling {
 @main struct ChargingRegressionTests {
     static func main() throws {
         var checks = 0
+        // Named coverage groups: when a firmware-policy change lands, check
+        // the summary line still reports non-zero counts for BF REGISTER
+        // ORDER, BF ROLLBACK, BF ROUNDING and BF CODEC ENDIANNESS — those
+        // are the invariants of the bfF0/bfD0/bfE0 write sequence.
+        var groups: [String: Int] = [:]
+        var currentGroup = "policy"
+        func group(_ name: String) { currentGroup = name }
         func check(_ condition: @autoclosure () -> Bool, _ name: String) {
             precondition(condition(), name)
             checks += 1
+            groups[currentGroup, default: 0] += 1
         }
         var normal = ChargeLimitPolicy()
         var firmwareHold = FirmwareHoldPolicy()
@@ -87,6 +95,7 @@ final class SimulatedBattery: BatteryPowerControlling {
         check(reached.lower(rechargeBelow: 70, upper: 80) == 70,
               "A new charge cycle applies the latest lower threshold")
         var fractionalHold = FirmwareHoldPolicy()
+        group("BF ROUNDING")
         check(fractionalHold.upper(charging: false, ceiling: 60, percentage: 54.663355) == 55,
               "The observed 54.66% battery must not get a 54% discharge ceiling")
         check(fractionalHold.upper(charging: false, ceiling: 50, percentage: 54.32) == 55,
@@ -209,6 +218,7 @@ final class SimulatedBattery: BatteryPowerControlling {
         check(!noSleepOverride.effective.charging, "Manual pause survives sleep with sleep option disabled")
 
         let hardware = SimulatedBattery()
+        group("battery hardware")
         hardware.discharging = true
         try hardware.applyPowerState(charging: false, adapter: true)
         check(hardware.writes == ["discharge=false", "inhibit=true"], "Restore adapter BEFORE pausing")
@@ -226,6 +236,7 @@ final class SimulatedBattery: BatteryPowerControlling {
             preconditionFailure("Readback must reject ignored firmware writes")
         } catch SMCBatteryError.stateVerificationFailed { checks += 1 }
         let holdRegisters = SimulatedFirmware()
+        group("BF REGISTER ORDER")
         let holdController = FirmwareChargeLimitController(registers: holdRegisters)
         var aboveTargetHold = FirmwareHoldPolicy()
         let heldUpper = aboveTargetHold.upper(charging: false, ceiling: 60, percentage: 90)
@@ -253,6 +264,7 @@ final class SimulatedBattery: BatteryPowerControlling {
         try firmwareControl.set(lower: 75, upper: 80)
         check(firmware.operations.isEmpty, "Stable firmware interval requires no writes")
         let baseline = firmware.state
+        group("BF ROLLBACK")
         firmware.failNextLowerWrite = true
         do {
             try firmwareControl.set(lower: 40, upper: 50)
@@ -286,8 +298,14 @@ final class SimulatedBattery: BatteryPowerControlling {
             } catch SMCBatteryError.unsupportedCapability { checks += 1 }
         }
         let encoded = try UInt32(80).encode()
+        group("BF CODEC ENDIANNESS")
         check(withUnsafeBytes(of: encoded) { Array($0.prefix(4)) } == [80, 0, 0, 0],
               "Firmware percentage codec must be little endian")
-        print("PASS: \(checks) charging, sleep, firmware, rollback and readback checks")
+        let groupSummary = groups
+            .filter { $0.key.hasPrefix("BF ") }
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key): \($0.value)" }
+            .joined(separator: ", ")
+        print("PASS: \(checks) charging, sleep, firmware, rollback and readback checks (\(groupSummary))")
     }
 }
