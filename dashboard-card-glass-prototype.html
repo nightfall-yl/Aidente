@@ -232,14 +232,14 @@ html[data-l0="off"] .l0 { -webkit-backdrop-filter: none; backdrop-filter: none; 
     <span><i style="background:linear-gradient(0deg,#EDEDF0,#D7B8EC)"></i>已模糊的桌面（经 L0 采样）</span>
   </div>
 
-  <h2>对应到 Swift 的改动点</h2>
+  <h2>Swift 已落地现状（方案 A，6.1.5 已发行）</h2>
   <div class="panel">
     <ul>
-      <li><strong>主改动</strong>：<code>AidenteSurfaceTokens.color(.card)</code> 或新增一个只给仪表盘卡片用的 level，把不透明 token 色改成带 alpha 的版本；<code>AidenteLevelSurface</code> 的非玻璃分支照常画，alpha 由调用方给。</li>
-      <li><strong>第二条路径</strong>：hero 卡与部分卡是硬编码渐变（<code>DashboardPopoverView.swift:695-710</code>），要一起改成半透明 token，否则只有普通卡透、hero 不透。</li>
-      <li><strong>降级必须保留</strong>：系统「降低透明度」开启或容器无法采样背景时，alpha 强制回 1、L0 也回实色——原型里切「系统降低透明度 → 开启」就是这一态。App 内不再提供材质覆盖开关。</li>
+      <li><strong>主改动已落地</strong>：<code>AidenteSurfaceTokens.dashboardCardAlpha(scheme:)</code>（浅 <code>0.3</code> / 深 <code>0.4</code>）+ <code>AidenteLevelSurface</code>（<code>AidenteTheme.swift</code> :448/:459），普通卡从半透明 token 色透出 L0 玻璃；只有仪表盘 opt-in，设置页另走 <code>settingsCardColor</code> 实色不受影响。浅色 alpha 更薄的原因：半透白会提亮并抹平浅色壁纸轮廓，深色只是压暗、轮廓保留，同一 alpha 浅色显"奶白"、深色显"透"。</li>
+      <li><strong>hero 卡同款</strong>：<code>DashboardPopoverView.swift</code> 的 <code>heroCardFillAlpha</code>（:129）让 hero 自绘渐变也乘同一 alpha（渐变 <code>fill</code> 约在 :721-726），与普通卡共享同一 readability 门控，普通卡透、hero 不透的问题不存在。</li>
+      <li><strong>降级已成立</strong>：系统「降低透明度」开启或容器无法采样背景时，alpha 强制回 1、L0 也回实色（<code>AidenteReadability.dashboardCardAlpha</code> 门控）——原型里切「系统降低透明度 → 开启」就是这一态。App 内材质覆盖开关已删除，材质完全跟随系统。</li>
       <li><strong>不碰 <code>.withinWindow</code></strong>：玻璃只在 L0 采一次，卡片只做半透明，避免双重模糊与发灰。</li>
-      <li><strong>待定取舍</strong>：alpha 取值需要在浅色壁纸 + 浅色主题下验证文字对比度；建议给浅/深两套默认值（原型里用 0.55 演示，真实值可能更高）。</li>
+      <li><strong>浅色文字补偿</strong>：新增五组 ink 色（coral / amber / jade / ocean / violet）与 <code>legibleTextTint(_:scheme:)</code>，浅色下把彩色<strong>文字与小图标</strong>映射到加深色，深色不变；进度条、渐变、徽章底、描边等装饰色仍用原色。</li>
     </ul>
   </div>
 </div>

@@ -21,7 +21,7 @@
     --sel-text: #ffffff;
     --field: #ffffff;
     --search-bg: rgba(0, 0, 0, 0.06);
-    /* 侧栏 tab 徽章尺寸：唯一来源。状态文案徽章跟随此值，JS 用 getComputedStyle 读取。 */
+    /* 导航栏 tab 徽章尺寸：唯一来源。状态文案徽章跟随此值，JS 用 getComputedStyle 读取。 */
     --tab-badge-size: 22px;
     /* 设置页玻璃化原型变量（对齐 Swift AidenteSurfaceTokens / AidenteReadability） */
     --side-fill: rgba(236, 236, 238, .60);      /* 侧栏玻璃材质（比内容区深） */
@@ -461,19 +461,19 @@ const C = {
   heat:        ['#ff972e', '#fa574d'], // 高温保护字面量    = [amber, coral]
 };
 /* 2026-11-11 设计规则：卡内徽章三档 —— 28（标题行 / 卡头）、
-   26（选项行、Inset）、TAB_BADGE_SIZE（状态文案，始终跟随侧栏 tab，当前 22px）；
+   26（选项行、Inset）、TAB_BADGE_SIZE（状态文案，始终跟随导航栏 tab，当前 22px）；
    sheet 标题徽章 34 属卡外元素，不受此限（右栏页头徽章已移除，仅留纯标题）。
    尺寸唯一来源是 CSS 变量 --tab-badge-size：侧栏 .nav-icon、状态文案 .notice .ib 与
    iconBadge() 的内联宽高都取它，改一处即同步，不再单独写死数字。
    详情区按元素分两类。
-   徽章 = 色对渐变实底、恒定不随主题切换；侧栏 tab 饱和 100%，详情区降到 90%。
+   徽章 = 色对渐变实底、恒定不随主题切换；导航栏 tab 饱和 100%，详情区降到 90%。
    状态文案、动作按钮 = 首色半透明叠在卡片背景 var(--card) 上，跟随主题变化：
    浅色卡片上显淡、深色卡片上随底色变深。文字仍用 var(--text) 等系统语义色。
    例外：状态文案徽章与「添加计划任务」sheet 的行徽章用 legacy 式
    （首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的
    legacyStyle: true（AidenteTheme.swift:911 / AutomationSettingsView.swift:120）。 */
 
-/* 侧栏 tab 徽章尺寸：只从 CSS 变量读取；状态文案徽章共用，不写死 22。 */
+/* 导航栏 tab 徽章尺寸：只从 CSS 变量读取；状态文案徽章共用，不写死 22。 */
 const TAB_BADGE_SIZE = parseFloat(
   getComputedStyle(document.documentElement).getPropertyValue('--tab-badge-size'));
 const pal = k => C[k];
@@ -500,7 +500,7 @@ function badge(k, colors) {
 }
 /* 2026-11-11 规则：详情区徽章绘制对齐侧栏（135° 渐变实底 + 白图标，
    无半透明底 / 描边 / 阴影 / 尾色图标），但色对饱和度降到 90% 且恒定不随主题切换。
-   侧栏 tab 徽章保持 100% 饱和。 */
+   导航栏 tab 徽章保持 100% 饱和。 */
 const BADGE_SATURATION = 0.9;
 function iconBadge(k, colors, size) {
   const ico = Math.round(size * 0.46);
@@ -1148,7 +1148,7 @@ document.getElementById('appBadge').innerHTML = svg('bolt');
 
 /* ---------- 规则说明 ---------- */
 function renderLegend() {
-  /* 直接遍历 TABS：色块顺序、取色、标签都与侧栏 tab 一一对应。
+  /* 直接遍历 TABS：色块顺序、取色、标签都与导航栏 tab 一一对应。
      t.colors 是色对名（general/dashboard/…），与 pal() = C[k] 同源。
      注意 tab 与色对是交叉的（仪表盘用 chargingColors 绿、充电管理用
      dashboardColors 紫），由 TABS 自身表达，不再手写映射导致错位。
@@ -1161,16 +1161,16 @@ function renderLegend() {
     `<span class="sw"><i style="background:linear-gradient(135deg,${pal(k)[0]},${pal(k)[1]})"></i>${label}</span>`
   ).join('');
   document.getElementById('legend').innerHTML =
-    `<b>窗口框架</b>：无横贯标题栏，交通灯浮在侧栏左上角，左右分栏与 1pt 竖线从窗口顶部贯通到底；框架是稳定骨架，玻璃 / 实色、浅 / 深只是框架内的细节变换，切 tab 不动框架。`
-    + `<br>· <b>左栏</b>：主徽章左缘 <code>16pt</code>、「Aidente」文字 <code>18pt</code> bold，徽章 + 文字中心线在交通灯中心下方 <code>51pt</code>（y=83pt）；导航区已与主徽章解耦，无补偿偏移、自然排在头部之后。交通灯中心距顶 <code>32pt</code>、最左缘 <code>20pt</code>，用透明 <code>NSTitlebarAccessoryViewController</code> 撑高 titlebar，使按钮留在点击热区内。`
-    + `<br>· <b>右栏</b>：页头固定不滚动、实色遮挡下方卡片，只有卡片与 sheet 预览滚动；页头为纯标题 <code>18pt</code>（无徽章 / 副标题），文字中心距窗口顶 <code>32pt</code>、下方横线距中心 <code>32pt</code>，整块页头可拖动窗口。标题左侧有<b>前进 / 后退按钮</b>（参考 macOS 系统设置窗口顶部的返回 / 前进）：<b>平时无底色，可用=图标加深</b>（浅色炭灰 <code>#535353</code>），<b>鼠标悬停时才出现卡片色圆角底</b> <code>var(--card)</code>（系统截图采样悬停底约 <code>#DBDCDC</code>，非蓝色）、不可用=图标浅灰禁用且悬停无反馈；无描边阴影。两按钮始终占位，标题不随状态跳动；标题左缘随按钮右移到约 <code>88px</code>（不再对齐交通灯 20pt，已接受此位移）。历史栈每次打开窗口重置为 <code>[通用]</code>，此时两个按钮都不可用；点左栏 tab 入栈并截断前方分支，点后退 / 前进只移指针。浅色底色 <code>#EDEEF0</code>（略偏灰、不过白）；1pt 竖线用不透明窗口底 + 中性描边，避免透出桌面成黑线。`
+    `<b>术语</b>：导航栏 tab（导航区 7 项）；页标题（右边栏纯标题 <code>18pt</code>）；卡片 = 卡头（徽章 + 标题）、行 / Inset、卡内元素；状态文案 = 卡内说明状态的文字行；状态点 = 其前 8px 圆点；动作按钮 = 所有按钮与按钮组；数值读数 = 只读数字，用系统文字色；toggle（开关）。`
+    + `<br><b>窗口框架</b>：无横贯标题栏，交通灯浮在侧栏左上角，左右分栏与 1pt 竖线从窗口顶部贯通到底；框架是稳定骨架，玻璃 / 实色、浅 / 深只是框架内的细节变换，切 tab 不动框架。`
+    + `<br>· <b>左栏</b>：交通灯中心距顶 <code>32pt</code>、最左缘 <code>20pt</code>，用透明 <code>NSTitlebarAccessoryViewController</code> 撑高 titlebar，使按钮留在点击热区内。默认位置由 AppKit 私有标题栏布局给出，Swift 用 <code>setFrameOrigin</code> 改当前 frame，从当前 x 重算偏移保证收敛不漂移；AppKit 在改标题、resize、切外观、切语言等事件会重排拉回默认位置，需在对应时机反复重贴。主徽章左缘 <code>16pt</code>、「Aidente」文字 <code>18pt</code> bold，徽章 + 文字中心线在交通灯中心下方 <code>51pt</code>（y=83pt）。导航区与主徽章解耦，无补偿偏移、自然排在头部之后。`
+    + `<br>· <b>右栏</b>：页头固定不滚动、实色遮挡下方卡片，只有卡片与 sheet 预览滚动；页头为纯标题 <code>18pt</code>（无徽章 / 副标题），文字中心距窗口顶 <code>32pt</code>、下方横线距中心 <code>32pt</code>，整块页头可拖动窗口。标题左侧有<b>前进 / 后退按钮</b>（参考 macOS 系统设置窗口顶部的返回 / 前进）：<b>平时无底色，可用=图标加深</b>（浅色炭灰 <code>#535353</code>），<b>鼠标悬停时才出现卡片色圆角底</b> <code>var(--card)</code>（系统截图采样悬停底约 <code>#DBDCDC</code>，非蓝色）、不可用=图标浅灰禁用且悬停无反馈；无描边阴影。两按钮始终占位，标题不随状态跳动；标题左缘随按钮右移到约 <code>88px</code>。历史栈每次打开窗口重置为 <code>[通用]</code>，此时两个按钮都不可用；点导航栏 tab 入栈并截断前方分支，点后退 / 前进只移指针。浅色底色 <code>#EDEEF0</code>（略偏灰、不过白）；1pt 竖线用不透明窗口底 + 中性描边，避免透出桌面成黑线。`
+    + `<br><b>类液态玻璃</b>：<b>右栏（编辑栏）</b>降低透明度恒开 → 内容区与卡片永远实色、不采样玻璃，文字对比度始终可测；<b>左栏（导航栏）</b>降低透明度恒关 → 单独用 <code>backdrop-filter</code> 采样身后桌面（一次），玻璃恒开、无 UI 开关。左栏（导航栏）由四层叠加：chrome 底 + 实时玻璃 + side-fill 染色（浅 <code>rgba(236,236,238,.60)</code> / 深 <code>rgba(52,52,56,.50)</code>）+ glassTint（浅 <code>clear</code> / 深 <code>rgb(30,30,34) .24</code>）。左栏（导航栏）文字用系统色 <code>var(--text)</code>、徽章为实底渐变，玻璃下可读，不需要 ink 补偿。`
     + `<br><b>配色规则</b>`
     + `<br>· 卡内同色：每张卡由卡头选定色对，行徽章、开关行、状态点、状态文案、动作按钮全部继承，无强调色 / 状态色例外；相邻卡允许同色 / 相近色。唯一例外：<b>数值读数用系统文字色</b> <code>var(--text)</code>，与行标签一致，不随卡色。`
-    + `<br>· 徽章恒定：色对 135° 渐变实底 + 白图标，不随主题切换；侧栏 tab 饱和 100%，详情区徽章同款绘制但饱和 90%。例外：状态文案徽章与「添加计划任务」sheet 行徽章为 legacy 式（首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的 legacyStyle: true。`
+    + `<br>· 徽章恒定：色对 135° 渐变实底 + 白图标，不随主题切换；导航栏 tab 饱和 100%，详情区徽章同款绘制但饱和 90%。例外：状态文案徽章与「添加计划任务」sheet 行徽章为 legacy 式（首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的 legacyStyle: true。`
     + `<br>· 跟随主题的部分：开关开态 = 首色实底、关态 = 首色 16% 半透明；动作按钮 = 首色 20% 底 / 34% 描边；状态文案 = 首色 7.5% 底 / 20% 描边——三者叠在卡背景上随主题变。`
-    + `<br>· 徽章尺寸三档：卡头 <code>28</code>、行 / Inset <code>26</code>、状态文案 = 侧栏 tab（唯一来源 <code>--tab-badge-size</code>，当前 22px）；sheet 标题徽章 <code>34</code> 属卡外元素、不受此限，右栏页头徽章已移除仅留纯标题。状态文案的徽章与文字垂直居中，换行时容器上下等量延伸。`
-    + `<br><b>玻璃化（左右分治）</b>：<b>右栏</b>降低透明度恒开 → 内容区与卡片永远实色、不采样玻璃，文字对比度始终可测；<b>左栏</b>降低透明度恒关 → 侧栏单独用 <code>backdrop-filter</code> 采样身后桌面（一次），「左栏玻璃」开关只切这里。侧栏由四层叠加：chrome 底 + 实时玻璃 + side-fill 染色（浅 <code>rgba(236,236,238,.60)</code> / 深 <code>rgba(52,52,56,.50)</code>）+ glassTint（浅 <code>clear</code> / 深 <code>rgb(30,30,34) .24</code>）。侧栏文字用系统色 <code>var(--text)</code>、徽章为实底渐变，玻璃下仍可读，不需要仪表盘那套 ink 补偿。`
-    + `<br><b>术语</b>：侧栏 tab（左边栏 7 项）；页标题（右边栏纯标题 <code>18pt</code>，右栏页头已无徽章 / 副标题）；卡片 = 卡头（徽章 + 标题）、行 / Inset、卡内元素；状态文案 = 卡内说明状态的文字行；状态点 = 其前 8px 圆点；动作按钮 = 所有按钮与按钮组；数值读数 = 只读数字，用系统文字色；toggle（开关）。`
+    + `<br>· 徽章尺寸三档：卡头 <code>28</code>、行 / Inset <code>26</code>、状态文案 = 导航栏 tab（唯一来源 <code>--tab-badge-size</code>，当前 22px）。状态文案的徽章与文字垂直居中，换行时容器上下等量延伸。`
     + `<div class="swatches">${sw}</div>`;
 }
 
