@@ -37,6 +37,7 @@
 
 - **应用内更新免重新授权**：授权 App 在退出前经 XPC 预告版本，后台守护进程观察换包（0.5 秒轮询），对新包完成 bundle id / 版本 / 签名校验后自行刷新 pin 并重启；更新后的 App 直连，不再弹管理员重新授权。预告只能经已授权连接发起，手动替换 /Applications 仍需重授权；守护进程版本不含该能力时自动回落旧流程。更新后启动先等待重 pin 收敛（约 2 秒）再弹提示，成功反馈落在 3–5 秒区间，不再出现「更新完成却弹重授权」的竞态。
 - **修复守护进程读取新包版本失败**：新包路径误用可执行文件路径当 bundle 目录，版本恒读为 nil，校验被拒导致重 pin 失效。
+- **修复无缝更新后「充电管理」页残留「后台控制服务登记失败」提示**：更新经 daemon 自动 re-pin 后充电控制已生效、无需重新授权，但 re-pin 收敛窗口期内 `prepareForControl` 记录的一次 `registrationError` 未被清除（`clearTransientFailure()` 原本只清 `failure`）。现补清 `registrationError`，并给该提示加 `manageCharging && !helperManager.isInstalled` 显示条件，服务已匹配当前应用时不再显示过期提示。
 
 **充电控制服务**
 

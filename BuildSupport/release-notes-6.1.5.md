@@ -23,3 +23,12 @@
 `zsh BuildSupport/build_app.sh` 完整构建 Exit 0，`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`；`zsh BuildSupport/test_charging.sh` 138 项充电 / 睡眠 / 固件 / 回滚 / 回读检查通过（本轮无充电策略改动，回归为纯逻辑确认）；`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.5.dmg`，`hdiutil verify` 结果为 VALID。bundle 内 `Info.plist` 为 **6.1.5 / 26**。
 
 设置页窗口框架与页头导航按钮的交互项（交通灯点击、页头拖拽、前进 / 后退流转）在实机上以常规使用验证为准。
+
+## SHA-256
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `Aidente-6.1.5-macOS-arm64.zip` | `e3d258c9baee7d9ecea7f54cd08a3134ed6018856c81c9e4efcb11b4d06866ad` |
+| `Aidente-6.1.5.dmg` | `2effbacb9b19b1935e5b4af8c3bf87554623256ea687c8efb8498001d63d0c2c` |
+
+完整清单见附件 `SHA256SUMS-6.1.5.txt`，本地可用 `shasum -a 256 -c SHA256SUMS-6.1.5.txt` 校验。

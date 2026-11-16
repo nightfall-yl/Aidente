@@ -47,6 +47,7 @@ final class ChargingHelperManager {
     func clearTransientFailure() {
         guard isInstalled else { return }
         failure = nil
+        registrationError = nil
         disconnect()
     }
     // Startup and polling NEVER request administrator privileges.

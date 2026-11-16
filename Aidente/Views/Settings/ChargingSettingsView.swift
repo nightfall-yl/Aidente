@@ -86,7 +86,8 @@ struct ChargingSettingsView: View {
                     )
                 }
 
-                if let registrationError = helperManager.registrationError {
+                if manageCharging, !helperManager.isInstalled,
+                   let registrationError = helperManager.registrationError {
                     AidenteNotice(
                         text: AidenteL10n.t(
                             "后台控制服务登记失败：\(registrationError)",
