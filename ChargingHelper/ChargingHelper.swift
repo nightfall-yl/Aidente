@@ -376,7 +376,11 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
               let cdHashData = details[kSecCodeInfoUnique as String] as? Data
         else { return nil }
         let cdHash = cdHashData.map { String(format: "%02x", $0) }.joined()
-        let version = (Bundle(url: bundleURL)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+        // Read the version straight from Info.plist: Bundle(url:) has been
+        // observed returning nil info values for a freshly swapped bundle
+        // inside the root daemon (no UI session), which failed validation.
+        let info = NSDictionary(contentsOf: bundleURL.appendingPathComponent("Contents/Info.plist"))
+        let version = info?["CFBundleShortVersionString"] as? String
         return CodeIdentity(cdHash: cdHash, identifier: details[kSecCodeInfoIdentifier as String] as? String, version: version)
     }
 
