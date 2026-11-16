@@ -11,6 +11,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// back to the NSAppearance captured at window creation and the page
     /// stops refreshing (dark stays dark, light stays light).
     private var appearanceObservation: Task<Void, Never>?
+    /// Language switches rewrite the window title (`SettingsView.updateWindowTitle`),
+    /// and AppKit re-tiles the titlebar on `setTitle`, snapping the traffic
+    /// lights back to the stock position with no resize/becomeKey callback.
+    /// This observation re-applies the custom position after that relayout.
+    private var languageObservation: Task<Void, Never>?
     private var systemAppearanceObservation: NSKeyValueObservation?
     private let capabilities: DeviceCapabilities
     private let chargeManager: ChargeManager
@@ -50,12 +55,30 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 self?.applyAppearance()
             }
         }
+        languageObservation = Task { [weak self] in
+            for await _ in Defaults.updates([.appLanguage], initial: false) {
+                await self?.repositionAfterTitleRelayout()
+            }
+        }
         // While「自动」is selected, follow live system appearance flips.
         systemAppearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             Task { @MainActor in
                 self?.applyAppearance()
             }
         }
+    }
+
+    /// The title change lands one async hop later (`DispatchQueue.main.async`
+    /// in `updateWindowTitle`), and AppKit's titlebar re-tile follows it.
+    /// Yield a few main-queue hops so the re-tile has finished before the
+    /// buttons are moved back; the recompute-from-current-x logic in
+    /// `positionTrafficLights()` makes repeated calls converge, not drift.
+    private func repositionAfterTitleRelayout() async {
+        guard window != nil else { return }
+        for _ in 0..<3 {
+            await MainActor.run { }
+        }
+        positionTrafficLights()
     }
 
     private func applyAppearance() {
@@ -110,6 +133,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     deinit {
         appearanceObservation?.cancel()
+        languageObservation?.cancel()
         systemAppearanceObservation?.invalidate()
     }
 
