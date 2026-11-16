@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-appearance="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIdente · 仪表盘卡片毛玻璃原型（方案 A · 透出 L0 玻璃）</title>
+<style>
+:root, html[data-appearance="light"] {
+  --page: #EDEDF0; --doc: #1D1D1F; --doc2: #6E6E73; --paper: #FFFFFF;
+  --line: #DCDCE1; --chip: #E7E7EC; --chip-ink: #3A3A3F;
+  --ink: #1D1D1F; --ink2: #6E6E73; --stroke: rgba(0,0,0,.10);
+  --accent: #0A84FF; --accent-soft: #E4F1FF; --jade: #0E8A4F;
+  --card-rgb: 252,252,252;           /* L2 token color (.card) */
+  --l0-tint: rgba(255,255,255,.14);
+  --card-stroke: rgba(0,0,0,.10);
+  --hero-ink: #0A6C3B;
+  --winshadow: 0 12px 32px rgba(0,0,0,.16);
+  --desk-a: #9FC4F0; --desk-b: #D7B8EC; --desk-c: #F3CBA6;
+  --blob1: rgba(60,130,230,.75); --blob2: rgba(170,90,215,.65); --blob3: rgba(240,165,80,.7);
+  --onwin: #1D1D1F; --onwin2: #6E6E73;
+}
+html[data-appearance="dark"] {
+  --page: #151517; --doc: #F5F5F7; --doc2: #98989D; --paper: #1D1D20;
+  --line: #333338; --chip: #2B2B30; --chip-ink: #D6D6DB;
+  --ink: #F5F5F7; --ink2: #98989D; --stroke: rgba(255,255,255,.10);
+  --accent: #0A84FF; --accent-soft: #123049; --jade: #37D07A;
+  --card-rgb: 45,45,49;
+  --l0-tint: rgba(30,30,34,.26);
+  --card-stroke: rgba(255,255,255,.09);
+  --hero-ink: #7FE0A8;
+  --winshadow: 0 12px 32px rgba(0,0,0,.55);
+  --desk-a: #1E2C44; --desk-b: #3A2B4A; --desk-c: #4A3524;
+  --blob1: rgba(60,120,215,.7); --blob2: rgba(150,80,190,.6); --blob3: rgba(210,130,60,.6);
+  --onwin: #F5F5F7; --onwin2: #9A9AA0;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--doc);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased; line-height: 1.6; }
+.page { max-width: 1000px; margin: 0 auto; padding: 36px 26px 72px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--doc2); text-transform: uppercase; }
+h1 { font-size: 27px; line-height: 1.25; margin: 8px 0 6px; letter-spacing: -.02em; }
+.lede { font-size: 14px; color: var(--doc2); margin: 0 0 4px; max-width: 780px; }
+h2 { font-size: 17px; margin: 30px 0 10px; letter-spacing: -.01em; }
+p { font-size: 13px; color: var(--doc2); margin: 6px 0; }
+strong { color: var(--doc); font-weight: 600; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  background: var(--chip); color: var(--chip-ink); padding: 1px 5px; border-radius: 5px; }
+
+/* 控制条 */
+.controls { display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: flex-end;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 15px 18px; margin: 18px 0 14px; }
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.ctl > span { font-size: 11px; color: var(--doc2); }
+.seg { display: inline-flex; background: var(--chip); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--chip-ink); font: inherit; font-size: 12px;
+  padding: 5px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--paper); color: var(--doc); box-shadow: 0 1px 2px rgba(0,0,0,.10); font-weight: 600; }
+.range { display: flex; align-items: center; gap: 10px; height: 30px; }
+.range input[type=range] { width: 150px; accent-color: var(--accent); }
+.range b { font-size: 13px; color: var(--doc); min-width: 40px; font-variant-numeric: tabular-nums; }
+.sw { width: 38px; height: 22px; border-radius: 999px; background: var(--chip); position: relative;
+  cursor: pointer; transition: background .16s; flex: none; border: 1px solid var(--line); }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.22); transition: transform .16s; }
+.sw.on { background: var(--accent); border-color: var(--accent); }
+.sw.on::after { transform: translateX(16px); }
+.switchrow { display: flex; align-items: center; gap: 9px; height: 30px; }
+.switchrow span { font-size: 12px; color: var(--doc2); }
+
+/* 舞台 = 一张连续桌面，两个窗口坐在同一张壁纸上 */
+.stage { position: relative; border-radius: 18px; padding: 30px 20px 26px; overflow: hidden;
+  border: 1px solid var(--stroke); isolation: isolate; }
+.desk-art { position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(135deg, var(--desk-a), var(--desk-b) 55%, var(--desk-c)); }
+.desk-art::before, .desk-art::after { content: ""; position: absolute; border-radius: 50%;
+  filter: blur(42px); }
+.desk-art::before { width: 340px; height: 300px; left: -40px; top: -80px; background: var(--blob1); }
+.desk-art::after { width: 380px; height: 280px; right: -60px; bottom: -110px; background: var(--blob3); }
+.desk-blob { position: absolute; width: 300px; height: 240px; left: 42%; top: 12%; border-radius: 50%;
+  background: var(--blob2); filter: blur(50px); }
+.desk-detail { position: absolute; inset: 0; opacity: .5;
+  background-image: repeating-linear-gradient(115deg, rgba(255,255,255,.10) 0 2px, transparent 2px 16px),
+                    radial-gradient(circle at 20% 70%, rgba(255,255,255,.28) 0 2px, transparent 3px 22px); }
+.desk-word { position: absolute; right: 8%; top: 12%; font-size: 46px; font-weight: 700;
+  letter-spacing: -.04em; color: rgba(255,255,255,.22); transform: rotate(-8deg); }
+.stage[data-desktop="plain"] .desk-art { background: var(--page); }
+.stage[data-desktop="plain"] .desk-art::before, .stage[data-desktop="plain"] .desk-art::after,
+.stage[data-desktop="plain"] .desk-blob, .stage[data-desktop="plain"] .desk-detail,
+.stage[data-desktop="plain"] .desk-word { display: none; }
+
+.stage-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; position: relative; z-index: 1; }
+.winbox { flex: 1 1 360px; min-width: 300px; max-width: 440px; }
+.wincap { font-size: 11.5px; color: var(--onwin); margin: 0 0 8px 3px; display: flex; justify-content: space-between;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.wincap em { font-style: normal; font-weight: 600; }
+
+/* 窗口：L0 玻璃层 + 卡片 */
+.win { position: relative; border-radius: 15px; overflow: hidden; box-shadow: var(--winshadow);
+  border: 1px solid rgba(255,255,255,.14); color: var(--onwin);
+  --a-alpha: .55; }
+.l0 { position: absolute; inset: 0; pointer-events: none;
+  -webkit-backdrop-filter: blur(18px) saturate(165%); backdrop-filter: blur(18px) saturate(165%);
+  background: var(--l0-tint); }
+html[data-reduce="on"] .l0,
+html[data-l0="off"] .l0 { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.content { position: relative; z-index: 1; padding: 13px 12px 12px; }
+
+.win-head { display: flex; align-items: center; gap: 9px; padding: 2px 3px 11px; }
+.win-badge { width: 30px; height: 30px; border-radius: 9px; flex: none;
+  background: var(--jade); opacity: .92; }
+.win-head b { font-size: 13.5px; display: block; }
+.win-head small { font-size: 10.5px; color: var(--onwin2); }
+.win-icons { margin-left: auto; display: flex; gap: 7px; }
+.win-icons i { width: 22px; height: 22px; border-radius: 50%; display: block;
+  background: rgba(127,127,127,.22); border: 1px solid rgba(255,255,255,.12); }
+.hr { height: 1px; background: rgba(127,127,127,.28); margin: 0 3px 11px; }
+
+.card { border-radius: 14px; border: 1px solid var(--card-stroke); padding: 12px 13px; margin-bottom: 9px; }
+/* 当前窗口：不透明 L2 token 色；方案A窗口：同色但 alpha 可调，透出底层 L0 玻璃 */
+.win.current .card { background: rgb(var(--card-rgb)); }
+.win.planA .card { background: rgba(var(--card-rgb), var(--a-alpha)); }
+.card .ttl { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card .ttl .dot { width: 16px; height: 16px; border-radius: 5px; flex: none; }
+.card .row { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; margin-top: 9px; }
+.card .row span { color: var(--onwin2); }
+.card .row b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar { height: 6px; border-radius: 999px; background: rgba(127,127,127,.24); margin-top: 10px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 999px; background: var(--jade); width: 82%; }
+
+.hero { padding: 13px 14px; }
+.hero .cap { font-size: 11px; color: var(--hero-ink); font-weight: 600; }
+.hero .big { font-size: 30px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin: 2px 0 1px; }
+.hero .sub { font-size: 10.5px; color: var(--onwin2); }
+
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 0; font-size: 12px; color: var(--doc2); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; border: 1px solid var(--stroke); }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-top: 8px; }
+.panel ul { margin: 6px 0 0; padding-left: 20px; }
+.panel li { font-size: 13px; color: var(--doc2); margin: 5px 0; }
+.panel li strong { color: var(--doc); }
+.hint { font-size: 11.5px; color: var(--doc2); margin: 10px 2px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="eyebrow">AIdente · 仪表盘玻璃原型</div>
+  <h1>方案 A：让卡片透出底下的 L0 毛玻璃</h1>
+  <p class="lede">窗口 L0 已经在做真毛玻璃采样，卡片只是用不透明 token 色把它盖住了。方案 A 不加第二层模糊，只把卡面从不透明改成半透明，让已经采好的玻璃透上来。左边是现状，右边是方案 A——拖动 alpha 就是唯一变量。</p>
+
+  <div class="controls">
+    <div class="ctl"><span>外观</span>
+      <div class="seg" id="segAppearance">
+        <button data-v="light">浅色</button><button data-v="dark" class="on">深色</button>
+      </div>
+    </div>
+    <div class="ctl"><span>桌面壁纸</span>
+      <div class="seg" id="segDesktop">
+        <button data-v="color" class="on">彩色</button><button data-v="plain">纯色</button>
+      </div>
+    </div>
+    <div class="ctl"><span>方案 A · 卡片不透明度 alpha</span>
+      <div class="range"><input type="range" id="alpha" min="0.15" max="1" step="0.05" value="0.55"><b id="alphaVal">0.55</b></div>
+    </div>
+    <div class="ctl"><span>系统降低透明度</span>
+      <div class="seg" id="segReduce">
+        <button data-v="off" class="on">关闭</button><button data-v="on">开启</button>
+      </div>
+    </div>
+    <div class="ctl"><span>L0 毛玻璃打底</span>
+      <div class="switchrow"><div class="sw on" id="swL0"></div><span id="l0Label">开</span></div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage" data-desktop="color">
+    <div class="desk-art"><div class="desk-blob"></div><div class="desk-detail"></div><div class="desk-word">DESKTOP</div></div>
+    <div class="stage-row">
+      <div class="winbox">
+        <div class="wincap"><span>当前 · 卡片不透明（alpha = 1）</span><em>alpha 盖住玻璃</em></div>
+        <div class="win current">
+          <div class="l0"></div>
+          <div class="content">
+            <div class="win-head"><div class="win-badge"></div><div><b>电池养护控制台</b><small>菜单栏仪表盘 · 400 pt</small></div><div class="win-icons"><i></i><i></i></div></div>
+            <div class="hr"></div>
+            <div class="card hero">
+              <div class="cap">正在充电</div><div class="big">82%</div><div class="sub">达到 80% 后自动暂停充电</div>
+            </div>
+            <div class="card">
+              <div class="ttl"><i class="dot" style="background:#7F77DD"></i>能量分流</div>
+              <div class="row"><span>适配器输入</span><b>58.4 W</b></div>
+              <div class="row"><span>电池功率</span><b>12.1 W</b></div>
+            </div>
+            <div class="card">
+              <div class="ttl"><i class="dot" style="background:#1D9E75"></i>电池健康</div>
+              <div class="row"><span>健康度</span><b>96%</b></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="winbox">
+        <div class="wincap"><span>方案 A · 卡片半透明（alpha 可调）</span><em id="capAlpha">alpha = 0.55</em></div>
+        <div class="win planA" id="winA">
+          <div class="l0"></div>
+          <div class="content">
+            <div class="win-head"><div class="win-badge"></div><div><b>电池养护控制台</b><small>菜单栏仪表盘 · 400 pt</small></div><div class="win-icons"><i></i><i></i></div></div>
+            <div class="hr"></div>
+            <div class="card hero">
+              <div class="cap">正在充电</div><div class="big">82%</div><div class="sub">达到 80% 后自动暂停充电</div>
+            </div>
+            <div class="card">
+              <div class="ttl"><i class="dot" style="background:#7F77DD"></i>能量分流</div>
+              <div class="row"><span>适配器输入</span><b>58.4 W</b></div>
+              <div class="row"><span>电池功率</span><b>12.1 W</b></div>
+            </div>
+            <div class="card">
+              <div class="ttl"><i class="dot" style="background:#1D9E75"></i>电池健康</div>
+              <div class="row"><span>健康度</span><b>96%</b></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">提示：把 alpha 拖到 1.0，方案 A 就退化成左边的现状；关掉 L0 毛玻璃再看半透明卡片，能明白为什么必须先有 L0 玻璃打底，否则桌面内容直接透上来、文字会花。切到「纯色」壁纸可单独看玻璃的提亮与描边。</p>
+
+  <div class="legend">
+    <span><i style="background:rgba(30,30,34,.55)"></i>半透明卡面</span>
+    <span><i style="background:linear-gradient(0deg,#EDEDF0,#D7B8EC)"></i>已模糊的桌面（经 L0 采样）</span>
+  </div>
+
+  <h2>对应到 Swift 的改动点</h2>
+  <div class="panel">
+    <ul>
+      <li><strong>主改动</strong>：<code>AidenteSurfaceTokens.color(.card)</code> 或新增一个只给仪表盘卡片用的 level，把不透明 token 色改成带 alpha 的版本；<code>AidenteLevelSurface</code> 的非玻璃分支照常画，alpha 由调用方给。</li>
+      <li><strong>第二条路径</strong>：hero 卡与部分卡是硬编码渐变（<code>DashboardPopoverView.swift:695-710</code>），要一起改成半透明 token，否则只有普通卡透、hero 不透。</li>
+      <li><strong>降级必须保留</strong>：系统「降低透明度」开启或容器无法采样背景时，alpha 强制回 1、L0 也回实色——原型里切「系统降低透明度 → 开启」就是这一态。App 内不再提供材质覆盖开关。</li>
+      <li><strong>不碰 <code>.withinWindow</code></strong>：玻璃只在 L0 采一次，卡片只做半透明，避免双重模糊与发灰。</li>
+      <li><strong>待定取舍</strong>：alpha 取值需要在浅色壁纸 + 浅色主题下验证文字对比度；建议给浅/深两套默认值（原型里用 0.55 演示，真实值可能更高）。</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const html = document.documentElement;
+const stage = document.getElementById('stage');
+const winA = document.getElementById('winA');
+const alpha = document.getElementById('alpha');
+const alphaVal = document.getElementById('alphaVal');
+const capAlpha = document.getElementById('capAlpha');
+
+function bindSeg(id, apply){
+  const box = document.getElementById(id);
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    [...box.children].forEach(x => x.classList.toggle('on', x === b));
+    apply(b.dataset.v);
+  });
+}
+bindSeg('segAppearance', v => html.dataset.appearance = v);
+bindSeg('segDesktop', v => stage.dataset.desktop = v);
+bindSeg('segReduce', v => html.dataset.reduce = v);
+
+alpha.addEventListener('input', () => {
+  const v = parseFloat(alpha.value).toFixed(2);
+  winA.style.setProperty('--a-alpha', v);
+  alphaVal.textContent = v;
+  capAlpha.textContent = 'alpha = ' + v;
+});
+
+const swL0 = document.getElementById('swL0');
+swL0.addEventListener('click', () => {
+  const on = !swL0.classList.contains('on');
+  swL0.classList.toggle('on', on);
+  html.dataset.l0 = on ? 'on' : 'off';
+  document.getElementById('l0Label').textContent = on ? '开' : '关';
+});
+</script>
+</body>
+</html>

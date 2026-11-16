@@ -374,7 +374,6 @@ final class DiagnosticCenter {
             "useHardwarePercentage": Defaults[.useHardwarePercentage],
             "readabilityStrategy": readability.strategy.rawValue,
             "readabilitySource": readability.source.rawValue,
-            "forceOpaqueBackground": Defaults[.forceOpaqueBackground],
             "launchAtLogin": Defaults[.launchAtLogin],
         ]
 
@@ -393,7 +392,6 @@ final class DiagnosticCenter {
         AidenteReadability.resolve(
             reduceTransparency: NSWorkspace.shared
                 .accessibilityDisplayShouldReduceTransparency,
-            forceOpaque: Defaults[.forceOpaqueBackground],
             canSampleBackdrop: true
         )
     }

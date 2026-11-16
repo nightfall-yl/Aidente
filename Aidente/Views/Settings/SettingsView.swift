@@ -67,64 +67,38 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .about: AidenteTheme.permissionColors
         }
     }
-
-    var detailSubtitle: String {
-        switch self {
-        case .general: AidenteL10n.t(
-            "语言、外观、启动等全局基础偏好。",
-            "Global basics: language, appearance, and startup."
-        )
-        case .dashboard: AidenteL10n.t(
-            "配置仪表盘顶部的时间信息与打开方式。",
-            "Configure the dashboard's time readouts and how to open it."
-        )
-        case .charging: AidenteL10n.t(
-            "设定充电上限、巡航与高温保护，养护电池。",
-            "Set the charge limit, sailing mode and heat protection to care for the battery."
-        )
-        case .permissions: AidenteL10n.t(
-            "配置 Mac 睡眠与退出应用后的充电行为。",
-            "Set charging behavior while the Mac sleeps or Aidente is not running."
-        )
-        case .automation: AidenteL10n.t(
-            "按计划自动执行充电任务。",
-            "Run charging tasks on a schedule."
-        )
-        case .diagnostics: AidenteL10n.t(
-            "记录问题、导出诊断包，并查看命令行。",
-            "Record issues, export a diagnostics package, and review the CLI."
-        )
-        case .about: AidenteL10n.t(
-            "软件更新、版本信息与法律开源声明。",
-            "Software updates, version info, and legal & open-source notices."
-        )
-        }
-    }
 }
 
 struct SettingsView: View {
     @Default(.appLanguage) private var appLanguage
     @Default(.appAppearance) private var appAppearance
-    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var systemAppearanceMonitor = SystemAppearanceMonitor()
+
+    /// `.preferredColorScheme` is applied *below* this view, so an
+    /// `@Environment(\.colorScheme)` read here still reflects the window's
+    /// NSAppearance captured at creation. Surfaces painted directly in this
+    /// body — the pane divider, the detail background, the sidebar accent —
+    /// would otherwise keep the old theme after an in-app appearance switch.
+    /// Derive the scheme from the same source as the modifier instead.
+    private var colorScheme: ColorScheme { resolvedPreferredScheme }
     @State private var selectedTab: SettingsTab
+    /// Tab navigation history for the header back / forward buttons
+    /// (prototype `nav-btns`). `navIndex` points into `navHistory`; sidebar
+    /// taps push and truncate, back / forward only move the pointer. Reset to
+    /// the initial tab on every window creation — both buttons start dimmed.
+    @State private var navHistory: [SettingsTab]
+    @State private var navIndex: Int = 0
+    @State private var backHovered = false
+    @State private var forwardHovered = false
 
     private let capabilities: DeviceCapabilities
     private let chargeManager: ChargeManager
     private let diagnosticCenter: DiagnosticCenter
     private let updateService: UpdateService
 
-    /// AppKit paints no title bar for a transparent `.fullSizeContentView`
-    /// window. This independent chrome layer sits above the scrolling detail
-    /// pane so cards are clipped beneath it, like the prototype. 28pt is the
-    /// system height of a hidden-title title bar.
-    private let titlebarMaskHeight: CGFloat = 28
-
-    /// Both panes' headers share this fixed content height so the sidebar app
-    /// icon and the detail badge land on the same horizontal center line,
-    /// regardless of text height in either pane's header. The text column can
-    /// exceed 34pt (title + subtitle); centering it in this fixed frame keeps
-    /// the 34pt badges' geometric centers aligned on both sides.
+    /// Sidebar-only: fixed frame height so the app badge and "Aidente" label
+    /// are vertically centered as one header block. It has no relationship to
+    /// the nav rows below, which flow naturally after the header.
     private let headerContentHeight: CGFloat = 46
 
     init(
@@ -139,35 +113,43 @@ struct SettingsView: View {
         self.diagnosticCenter = diagnosticCenter
         self.updateService = updateService
         _selectedTab = State(initialValue: initialTab)
+        _navHistory = State(initialValue: [initialTab])
     }
 
     var body: some View {
+        // Prototype frame: `.window > .body > sidebar | vdiv | detail`. There
+        // is NO full-width layer — no title bar, no window-wide backdrop. Both
+        // panes and the divider paint from the very top edge all the way down,
+        // and the AppKit traffic lights float inside the sidebar's top-left.
         ZStack {
-            AidenteWindowBackdrop()
-
             HStack(spacing: 0) {
                 sidebar
                     .frame(width: 236)
 
-                Divider()
+                // The 1pt pane divider must be opaque: this window has no
+                // full-width backdrop and `backgroundColor = .clear`, so a
+                // translucent line shows the desktop through it and reads as
+                // a black seam. Paint an opaque window-token base first,
+                // then the neutral stroke on top.
+                ZStack {
+                    detailPaneColor
+                    AidenteSurfaceTokens.stroke(scheme: colorScheme)
+                }
+                .frame(width: 1)
 
                 detailPane
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(.container, edges: .top)
         }
-        .overlay(alignment: .top) {
-            VStack(spacing: 0) {
-                AidenteChromeBar()
-                    .frame(height: titlebarMaskHeight)
-                Rectangle()
-                    .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
-                    .frame(height: 1)
-            }
-            .frame(maxWidth: .infinity)
-            .offset(y: -titlebarMaskHeight)
-            .allowsHitTesting(false)
-        }
+        .ignoresSafeArea(.container, edges: .top)
         .tint(AidenteTheme.jade)
         .environment(\.aidenteCanSampleBackdrop, false)
+        // Settings cards use a dimmer light-mode fill than the global L2 token
+        // so they don't read as pure white on the grey detail pane. Injected
+        // here (not on .card itself) so dashboard / menu cards keep #FCFCFC.
+        // Sheets presented from settings inherit this and stay consistent.
+        .environment(\.aidenteUsesSettingsCardFill, true)
         .frame(minWidth: 960, minHeight: 640)
         .preferredColorScheme(resolvedPreferredScheme)
         .onAppear {
@@ -192,14 +174,16 @@ struct SettingsView: View {
                     .scaleEffect(1.18)
                     .clipped()
                 Text("Aidente")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 12)
-            // Fixed content height keeps the icon's center on the shared
-            // header center line with the detail pane's badge.
+            .padding(.horizontal, 16)
+            // Fixed header height; the detail pane no longer aligns with it.
             .frame(height: headerContentHeight)
-            .padding(.top, 16)
+            // Sidebar-only clearance for the AppKit traffic lights floating
+            // at the window's top-left. 60 + 46/2 = 83pt header center, i.e.
+            // 51pt below the traffic-light center at y=32pt.
+            .padding(.top, 60)
             .padding(.bottom, 12)
 
             ScrollView {
@@ -209,20 +193,16 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.horizontal, 10)
-                // Line the first sidebar row up with the first detail card:
-                // both headers are the same height, then the detail pane adds
-                // a 1pt divider and the settings page's 20pt top padding.
-                .padding(.top, 21)
                 .padding(.bottom, 14)
             }
         }
-        .background(AidenteChromeBar())
+        .background { AidenteSettingsSidebarSurface() }
     }
 
     private func sidebarRow(_ tab: SettingsTab) -> some View {
         let selected = tab == selectedTab
         return Button {
-            selectedTab = tab
+            selectFromSidebar(tab)
         } label: {
             HStack(spacing: 10) {
                 ZStack {
@@ -260,6 +240,15 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    /// Settings-only detail pane fill. Light sits a little greyer than the
+    /// global `.window` token (which the dashboard still uses), closer to the
+    /// macOS System Settings content pane. Dark keeps the global token.
+    private var detailPaneColor: Color {
+        colorScheme == .dark
+            ? AidenteSurfaceTokens.color(.window, scheme: .dark)
+            : Color(red: 237 / 255, green: 238 / 255, blue: 240 / 255)
+    }
+
     private var sidebarAccent: Color {
         // macOS 15 System Blue at ~80% — light #007AFF, dark #0A84FF.
         colorScheme == .dark
@@ -267,39 +256,127 @@ struct SettingsView: View {
             : Color(red: 0.0, green: 0.478, blue: 1.0).opacity(0.80)
     }
 
-    private var detailPane: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                HStack(spacing: 11) {
-                    AidenteIconBadge(
-                        icon: selectedTab.icon,
-                        colors: selectedTab.colors,
-                        size: 34
-                    )
-                    // Page-head badge uses the same sidebar-style gradient
-                    // as the cards (90% saturation, constant across themes).
-                    .environment(\.aidenteCardColors, selectedTab.colors)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(selectedTab.title)
-                            .font(.system(size: 20, weight: .bold))
-                        Text(selectedTab.detailSubtitle)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+    // MARK: Header back / forward navigation (settings-redesign-prototype.html)
+
+    private var canGoBack: Bool { navIndex > 0 }
+    private var canGoForward: Bool { navIndex < navHistory.count - 1 }
+
+    /// Sidebar tap = a fresh forward navigation: truncate any forward branch
+    /// and push. Tapping the already-current tab is a no-op (no duplicate).
+    private func selectFromSidebar(_ tab: SettingsTab) {
+        guard navHistory[navIndex] != tab else { return }
+        navHistory = Array(navHistory[0...navIndex]) + [tab]
+        navIndex = navHistory.count - 1
+        selectedTab = tab
+    }
+
+    private func goBack() {
+        guard canGoBack else { return }
+        navIndex -= 1
+        selectedTab = navHistory[navIndex]
+    }
+
+    private func goForward() {
+        guard canGoForward else { return }
+        navIndex += 1
+        selectedTab = navHistory[navIndex]
+    }
+
+    /// Available = darker chevron, no fill until hover (hover shows the
+    /// card-colored rounded chip). Unavailable = light chevron, no feedback.
+    /// Matches the prototype: NOT the system-blue accent, no borders/shadows.
+    private var navIconEnabled: Color {
+        colorScheme == .dark
+            ? Color(red: 242 / 255, green: 242 / 255, blue: 247 / 255)
+            : Color(red: 83 / 255, green: 83 / 255, blue: 83 / 255)
+    }
+
+    private var navIconDisabled: Color {
+        colorScheme == .dark
+            ? Color(red: 150 / 255, green: 150 / 255, blue: 157 / 255)
+            : Color(red: 115 / 255, green: 115 / 255, blue: 120 / 255)
+    }
+
+    private func navChevronButton(
+        systemImage: String,
+        isEnabled: Bool,
+        isHovered: Bool,
+        setHovered: @escaping (Bool) -> Void,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .frame(width: 26, height: 26)
+                .background {
+                    if isEnabled && isHovered {
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(AidenteSurfaceTokens.settingsCardColor(scheme: colorScheme))
                     }
+                }
+                .foregroundStyle(isEnabled ? navIconEnabled : navIconDisabled)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .onHover { setHovered($0) }
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var detailPane: some View {
+        // Right pane = Reduce Transparency always ON: an opaque window-token
+        // backdrop, with the page header pinned above the scrolling cards.
+        VStack(spacing: 0) {
+            // Fixed page header: the title's center sits 32pt from the window
+            // top, and the hairline below it is another 32pt down. Not part of
+            // the ScrollView, so it never scrolls; its opaque fill and higher
+            // z-order clip cards passing beneath it. Back / forward chevrons
+            // sit left of the title (~88pt title inset), per the prototype.
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        navChevronButton(
+                            systemImage: "chevron.left",
+                            isEnabled: canGoBack,
+                            isHovered: backHovered,
+                            setHovered: { backHovered = $0 },
+                            accessibilityLabel: AidenteL10n.t("后退", "Back")
+                        ) { goBack() }
+                        navChevronButton(
+                            systemImage: "chevron.right",
+                            isEnabled: canGoForward,
+                            isHovered: forwardHovered,
+                            setHovered: { forwardHovered = $0 },
+                            accessibilityLabel: AidenteL10n.t("前进", "Forward")
+                        ) { goForward() }
+                    }
+                    Text(selectedTab.title)
+                        .font(.system(size: 18, weight: .bold))
+                        // Clicks pass through to the drag layer below.
+                        .allowsHitTesting(false)
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
-                // Same fixed content height as the sidebar header: the 34pt
-                // badge centers on the shared horizontal line even when the
-                // title + subtitle column is taller than 34pt.
-                .frame(height: headerContentHeight)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+                .frame(height: 64)
 
+                // y = 64pt, i.e. 32pt below the title center. Cards keep
+                // their own top spacing and no longer line up with the
+                // sidebar's first nav row.
                 Divider()
                     .padding(.horizontal, 20)
+                    .allowsHitTesting(false)
+            }
+            // Drag layer sits BELOW the content (was an overlay above it): the
+            // buttons must stay clickable, while the title / hairline and empty
+            // areas opt out of hit-testing so window dragging still works there.
+            .background {
+                AidenteWindowDragHandle()
+            }
+            .background(detailPaneColor)
+            .zIndex(2)
 
+            ScrollView {
                 Group {
                     switch selectedTab {
                     case .general:
@@ -324,6 +401,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
+        .background(detailPaneColor)
     }
 
     /// Always returns an explicit scheme: 「自动」resolves to the current system
@@ -344,5 +422,53 @@ struct SettingsView: View {
                 "Aidente Settings"
             )
         }
+    }
+}
+
+/// Settings-only sidebar material. Mirrors the prototype's split: the left
+/// pane keeps Reduce Transparency permanently OFF and samples the desktop
+/// behind the window, while the right pane stays on the opaque window token
+/// (permanently ON). Kept local to the settings view so the dashboard's
+/// frozen L0-L3 scale is untouched. The solid chrome token underneath is a
+/// paint-order fallback for containers where no backdrop can be sampled.
+private struct AidenteSettingsSidebarSurface: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            AidenteSurfaceTokens.color(.chrome, scheme: colorScheme)
+            AidenteBackdropMaterial()
+            sidebarTint
+            AidenteSurfaceTokens.glassTint(scheme: colorScheme)
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// Mirrors the prototype's side-fill: a darker translucent wash over the
+    /// live glass so the sidebar reads one step deeper than the content pane.
+    private var sidebarTint: Color {
+        colorScheme == .dark
+            ? Color(red: 52 / 255, green: 52 / 255, blue: 56 / 255).opacity(0.50)
+            : Color(red: 236 / 255, green: 236 / 255, blue: 238 / 255).opacity(0.60)
+    }
+}
+
+/// Makes the pinned settings page header draggable. With a hidden transparent
+/// title bar, AppKit only lets the traffic-light strip move the window; turning
+/// on `isMovableByWindowBackground` would also steal drags from the card
+/// ScrollView, so the drag handle is scoped to the header instead.
+private struct AidenteWindowDragHandle: NSViewRepresentable {
+    func makeNSView(context: Context) -> AidenteWindowDragNSView {
+        AidenteWindowDragNSView()
+    }
+
+    func updateNSView(_ nsView: AidenteWindowDragNSView, context: Context) {}
+}
+
+private final class AidenteWindowDragNSView: NSView {
+    override var acceptsFirstResponder: Bool { false }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
     }
 }

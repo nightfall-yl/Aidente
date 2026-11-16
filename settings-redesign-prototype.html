@@ -6,9 +6,10 @@
 <title>Aidente 设置 · macOS 风格重排原型</title>
 <style>
   :root {
-    --window: #f4f5f6;
-    --chrome: #f8f8f8;
-    --card: #fcfcfc;
+    --window: #f7f8fa;                          /* 内容区：最浅 */
+    --detail-pane: #edeef0;                     /* 右栏专用底色（对齐 Swift detailPaneColor 浅 #EDEEF0，略偏灰不过白） */
+    --chrome: #ececee;                          /* 侧栏：比内容区深 */
+    --card: #f5f5f7;                            /* 卡片：浅灰白，对齐 Swift settingsCardColor，避免右栏灰底上过白 */
     --stroke: rgba(0, 0, 0, 0.09);
     --stroke-strong: rgba(0, 0, 0, 0.14);
     --text: #1d1d1f;
@@ -16,17 +17,26 @@
     --text-3: #737378;
     --hover: rgba(0, 0, 0, 0.05);
     --sel-bg: rgba(0, 122, 255, 0.80);
+    --nav-icon-on: #535353;                     /* 页头前进/后退可用图标：炭灰（macOS 截图采样），非蓝色 */
     --sel-text: #ffffff;
     --field: #ffffff;
     --search-bg: rgba(0, 0, 0, 0.06);
     /* 侧栏 tab 徽章尺寸：唯一来源。状态文案徽章跟随此值，JS 用 getComputedStyle 读取。 */
     --tab-badge-size: 22px;
+    /* 设置页玻璃化原型变量（对齐 Swift AidenteSurfaceTokens / AidenteReadability） */
+    --side-fill: rgba(236, 236, 238, .60);      /* 侧栏玻璃材质（比内容区深） */
+    --l0-tint: rgba(255, 255, 255, 0);          /* 浅色 glassTint = .clear */
+    --desk-a: #6ea8ff; --desk-b: #b18cff; --desk-c: #ffd9a8;
+    --blob1: rgba(120, 180, 255, .62);
+    --blob2: rgba(190, 140, 255, .52);
+    --blob3: rgba(255, 190, 130, .58);
     color-scheme: light;
   }
   .dark {
-    --window: #232326;
-    --chrome: #28282b;
-    --card: #2d2d31;
+    --window: #2c2c2f;                          /* 内容区：稍浅深灰 */
+    --detail-pane: #2c2c2f;                     /* 右栏专用底色：深色沿用 .window token */
+    --chrome: #262629;                          /* 侧栏：深灰，比内容区深一档但不贴黑 */
+    --card: #363639;                            /* 卡片：比内容区再浅一档 */
     --stroke: rgba(255, 255, 255, 0.10);
     --stroke-strong: rgba(255, 255, 255, 0.18);
     --text: #f2f2f7;
@@ -34,19 +44,57 @@
     --text-3: #96969d;
     --hover: rgba(255, 255, 255, 0.06);
     --sel-bg: rgba(10, 132, 255, 0.80);
+    --nav-icon-on: #F2F2F7;                     /* 深色可用图标：浅灰（与深色文字同源） */
     --sel-text: #ffffff;
     --field: #3a3a3e;
     --search-bg: rgba(255, 255, 255, 0.08);
+    --side-fill: rgba(52, 52, 56, .50);         /* 侧栏玻璃材质（提亮，比内容区深一档） */
+    --l0-tint: rgba(30, 30, 34, .24);           /* 深色 glassTint = rgb(30,30,34) .24 */
   }
 
   * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
   html, body {
-    margin: 0; height: 100%;
+    margin: 0; min-height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
       "Helvetica Neue", "Microsoft YaHei", sans-serif;
     color: var(--text);
-    background: #d9dadc;
   }
+  /* 玻璃需要一个"身后"：模拟桌面壁纸，设置窗口的 L0 会采样它。
+     切到纯色壁纸可单独看玻璃的提亮与描边。 */
+  body {
+    background:
+      radial-gradient(420px 340px at 12% 18%, var(--blob1), transparent 70%),
+      radial-gradient(460px 360px at 82% 26%, var(--blob2), transparent 70%),
+      radial-gradient(520px 380px at 62% 92%, var(--blob3), transparent 70%),
+      linear-gradient(135deg, var(--desk-a), var(--desk-b) 52%, var(--desk-c));
+    background-attachment: fixed;
+  }
+  body[data-desktop="plain"] { background: #d9dadc; }
+
+  /* 原型控制条：只在 HTML 原型里对照，不参与 App 实现 */
+  .proto-bar {
+    max-width: 980px; margin: 18px auto 0;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 14px; border-radius: 12px;
+    background: rgba(255,255,255,.76); border: 1px solid rgba(0,0,0,.10);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 11.5px; color: #1d1d1f;
+  }
+  .dark .proto-bar {
+    background: rgba(44,44,48,.76); border-color: rgba(255,255,255,.14); color: #f2f2f7;
+  }
+  .proto-bar b { font-size: 12px; }
+  .proto-bar .grp { display: inline-flex; align-items: center; gap: 6px; }
+  .proto-bar .grp + .grp { padding-left: 12px; border-left: 1px solid rgba(127,127,127,.32); }
+  .proto-bar button {
+    font: inherit; font-size: 11px; padding: 3px 9px; border-radius: 6px;
+    border: 1px solid rgba(127,127,127,.4); background: transparent; color: inherit; cursor: pointer;
+  }
+  .proto-bar button.on { background: #0a84ff; border-color: #0a84ff; color: #fff; }
+  .proto-bar button:disabled { opacity: .4; cursor: default; }
+  .proto-bar input[type=range] { width: 108px; accent-color: #0a84ff; }
+  .proto-bar .val { font-variant-numeric: tabular-nums; min-width: 30px; }
+  .proto-bar .hint { opacity: .72; }
 
   /* macOS window shell */
   .window {
@@ -58,26 +106,27 @@
     overflow: hidden;
     position: relative;
   }
-  .titlebar {
-    height: 38px; flex: 0 0 38px;
-    display: flex; align-items: center;
-    padding: 0 14px; gap: 8px;
-    background: var(--chrome);
-    border-bottom: 1px solid var(--stroke);
-    position: relative;
+  /* 玻璃下沉到侧栏：右栏恒实色（降低透明度恒开），左栏由 data-glass 控制（降低透明度恒关）。
+     实色/玻璃开关只作用于左栏侧栏，不动右栏内容区。 */
+  body[data-glass="on"] .sidebar {
+    background: linear-gradient(var(--l0-tint), var(--l0-tint)), var(--side-fill);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
   }
+  body[data-glass="off"] .sidebar { background: var(--chrome); }
+  /* macOS 15 框架：没有横贯的标题栏。交通灯浮在侧栏左上角，
+     左右分栏从窗口最顶部贯通到底，竖线全程可见。
+     交通灯 / 主徽章几何对齐 Swift 已落地值（pt 与 px 1:1）：
+     交通灯中心 y=32、左缘 x=20；徽章左缘 x=16、徽章 + 文字中心线 y=83（交通灯下方 51）。
+     交通灯走绝对定位、不占布局流，对应 AppKit 浮动按钮；主徽章从窗口顶部按 Swift
+     的 header 规格起排（padding.top 60 / 帧高 46 / padding.horizontal 16）。 */
   .traffic { width: 12px; height: 12px; border-radius: 50%; }
   .t-r { background: #ff5f57; } .t-y { background: #febc2e; } .t-g { background: #28c840; }
-  .titlebar .tt {
-    position: absolute; left: 0; right: 0; text-align: center;
-    font-size: 13px; font-weight: 600; color: var(--text-2);
-    pointer-events: none;
-  }
-  .theme-toggle {
-    margin-left: auto; position: relative; z-index: 2;
-    font-size: 11px; padding: 3px 9px; border-radius: 6px;
-    border: 1px solid var(--stroke); background: var(--field); color: var(--text-2);
-    cursor: pointer;
+  .side-traffic {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 64px; padding-left: 20px;            /* 中心 y=32，最左缘 x=20 */
+    display: flex; align-items: center; gap: 8px;
+    pointer-events: none; z-index: 2;
   }
 
   .body { flex: 1; display: flex; min-height: 0; }
@@ -89,12 +138,15 @@
     width: 236px; flex: 0 0 236px;
     background: var(--chrome);
     display: flex; flex-direction: column;
-    padding: 10px 10px 0;
+    position: relative;   /* 交通灯绝对定位的基准 */
+    padding: 0;           /* 由各子元素各自控制，便于对齐 Swift 数值 */
     overflow: hidden;
   }
   .side-head {
-    display: flex; align-items: center; gap: 9px;
-    padding: 6px 8px 12px;
+    margin: 60px 0 12px;  /* Swift header padding.top 60 / bottom 12 */
+    height: 46px;         /* Swift headerContentHeight 46，徽章垂直居中 → 中心 y=83 */
+    padding: 0 16px;      /* Swift padding.horizontal 16 → 徽章左缘 x=16 */
+    display: flex; align-items: center; gap: 11px;
   }
   .app-badge {
     width: 34px; height: 34px; border-radius: 9px;
@@ -102,10 +154,10 @@
     display: grid; place-items: center; flex: 0 0 34px;
   }
   .app-badge svg { width: 18px; height: 18px; color: #2ed680; }
-  .side-head .name { font-size: 14px; font-weight: 700; }
+  .side-head .name { font-size: 18px; font-weight: 700; }  /* Swift 18pt bold */
   .side-head .ver { font-size: 11px; color: var(--text-3); }
 
-  .nav { flex: 1; overflow-y: auto; padding-bottom: 10px; }
+  .nav { flex: 1; overflow-y: auto; padding: 0 10px 10px; }  /* 左右 10 补偿原 sidebar padding，导航项视觉位置不变 */
   .nav::-webkit-scrollbar { width: 0; }
   .nav-item {
     display: flex; align-items: center; gap: 10px;
@@ -122,15 +174,54 @@
   }
   .nav-icon svg { width: 14px; height: 14px; color: #fff; }
 
-  /* Detail */
+  /* Detail：右栏拆成「固定页头」+「滚动内容」两块。
+     右栏降低透明度恒开 → 永远实色，不采样玻璃，底色用右栏专用 --detail-pane。 */
   .detail {
-    flex: 1; min-width: 0; overflow-y: auto;
-    padding: 26px 30px 40px;
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--detail-pane);
   }
-  .detail::-webkit-scrollbar { width: 10px; }
-  .detail::-webkit-scrollbar-thumb { background: var(--stroke-strong); border-radius: 6px; border: 3px solid var(--window); }
-  .page-title { font-size: 20px; font-weight: 700; margin: 0; }
-  .page-sub { font-size: 12.5px; color: var(--text-2); margin-bottom: 20px; }
+  /* 固定页头：纯页标题（无徽章 / 副标题）+ 底部横线，不参与滚动。
+     实色背景 + 高层级 → 滚动的卡片从它下方穿过、被它遮住。整块可拖动窗口。
+     几何对齐 Swift（pt↔px 1:1）：标题槽高 64 → 文字中心 y=32；
+     横线紧跟槽底 y=64（距文字中心 32）；标题与横线左右各缩进 20。 */
+  .detail-head {
+    flex: 0 0 auto;
+    padding: 0;
+    background: var(--detail-pane);
+    position: relative; z-index: 2;
+  }
+  .detail-head .page-head {
+    height: 64px;                 /* Swift frame(height: 64) → 文字中心 y=32 */
+    display: flex; align-items: center;
+    padding: 0 20px;              /* Swift .padding(.horizontal, 20) */
+  }
+  .detail-head .hdiv { margin: 0 20px; }  /* Swift Divider().padding(.horizontal, 20)，y=64 */
+  /* 滚动区：只有卡片与 sheet 预览在这里滚。原横线下方 18px 间距移到此处的 padding-top。 */
+  .detail-scroll {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 18px 30px 40px;
+  }
+  .detail-scroll::-webkit-scrollbar { width: 10px; }
+  .detail-scroll::-webkit-scrollbar-thumb { background: var(--stroke-strong); border-radius: 6px; border: 3px solid var(--detail-pane); }
+  .page-title { font-size: 18px; font-weight: 700; margin: 0; }
+  /* 页头前进 / 后退：参考 macOS 系统设置窗口顶部的返回 / 前进按钮。
+     始终占位，标题不会因可用性切换而跳动。高亮方式按系统截图与用户澄清：
+     - 平时（无论可用 / 不可用）都没有底色；
+     - 可用 = 图标加深（炭灰），鼠标悬停时才出现卡片色圆角底色块；
+     - 不可用 = 图标浅灰、禁用，悬停无反馈。不是蓝色、不加描边阴影。 */
+  .nav-btns { display: flex; align-items: center; gap: 4px; margin-right: 12px; }
+  .navbtn {
+    width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px;
+    background: transparent; color: var(--text-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: default;
+  }
+  .navbtn svg { width: 15px; height: 15px; }
+  .navbtn.enabled { color: var(--nav-icon-on); cursor: pointer; }
+  .navbtn.enabled:hover { background: var(--card); }
+  .navbtn:focus-visible { outline: 2px solid var(--nav-icon-on); outline-offset: 1px; }
 
   .cards { max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -140,6 +231,7 @@
     border-radius: 14px;
     padding: 16px 16px 6px;
   }
+  /* 右栏卡片恒实色：降低透明度恒开，alpha 不参与，文字对比度始终可测。 */
   .card-head { display: flex; align-items: center; gap: 11px; padding-bottom: 14px; }
   .card-title { font-size: 14px; font-weight: 600; margin: 0; }
   .card-sub { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
@@ -239,14 +331,17 @@
   /* 仪表盘 tab：行徽章右缘对齐卡头徽章。固定 28px 槽位（= 卡头徽章宽），徽章右对齐，
      使 26px 行徽章右缘落在 28px 卡头徽章右缘上，行徽章归入卡头徽章组。 */
   .badge-slot { width: 28px; flex: 0 0 28px; display: flex; justify-content: flex-end; align-items: center; }
-  .page-head { display: flex; align-items: center; gap: 11px; }
-  .page-head .page-sub { margin: 1px 0 0; }
+  /* 右栏页头只保留标题：徽章与副标题已移除，下方横线仍固定不滚动。 */
+  .page-head { display: flex; align-items: center; }
 
   /* 基线说明（在窗口外的固定浅灰页面背景上：文字变量固定取浅色主题值，
      否则暗色模式下会继承到近白的 --text，落在浅背景上看不清） */
   .legend { max-width: 980px; margin: 0 auto 28px; font-size: 11px;
     color: var(--text-2); line-height: 1.75;
-    --text: #1d1d1f; --text-2: #6e6e73; --text-3: #737378; }
+    --text: #1d1d1f; --text-2: #6e6e73; --text-3: #737378;
+    background: rgba(255,255,255,.80); border: 1px solid rgba(0,0,0,.08);
+    border-radius: 12px; padding: 12px 16px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .legend b { color: var(--text); }
   .legend code { font-size: 10.5px; }
   .swatches { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
@@ -287,16 +382,21 @@
 </style>
 </head>
 <body>
+  <div class="proto-bar">
+    <b>设置页玻璃化 · 原型对照</b>
+    <span class="grp"><button id="themeBtn" aria-pressed="false" type="button">深色 / 浅色</button></span>
+    <span class="grp"><button id="modeBtn" type="button">左栏玻璃</button></span>
+    <span class="grp">壁纸 <button id="wallBtn" class="on" type="button">彩色 / 纯色</button></span>
+    <span class="grp hint" id="hint">右栏恒实色（降低透明度恒开）· 左栏可切玻璃（降低透明度恒关）</span>
+  </div>
   <div class="window">
-    <div class="titlebar">
-      <div class="traffic t-r"></div>
-      <div class="traffic t-y"></div>
-      <div class="traffic t-g"></div>
-      <div class="tt">Aidente 设置</div>
-      <button class="theme-toggle" id="themeBtn" aria-pressed="false">深色 / 浅色</button>
-    </div>
     <div class="body">
       <aside class="sidebar">
+        <div class="side-traffic">
+          <div class="traffic t-r"></div>
+          <div class="traffic t-y"></div>
+          <div class="traffic t-g"></div>
+        </div>
         <div class="side-head">
           <div class="app-badge" id="appBadge"></div>
           <div>
@@ -342,6 +442,9 @@ const ICON = {
   'clock.badge.fill': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   'repeat.circle.fill': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   'arrow.clockwise.circle.fill': '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>',
+  /* 页头前进 / 后退（chevron.left / chevron.right） */
+  'chevron.left': '<path d="m15 18-6-6 6-6"/>',
+  'chevron.right': '<path d="m9 18 6-6-6-6"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
 
@@ -359,7 +462,7 @@ const C = {
 };
 /* 2026-11-11 设计规则：卡内徽章三档 —— 28（标题行 / 卡头）、
    26（选项行、Inset）、TAB_BADGE_SIZE（状态文案，始终跟随侧栏 tab，当前 22px）；
-   页标题 34 属卡外元素，不受此限。
+   sheet 标题徽章 34 属卡外元素，不受此限（右栏页头徽章已移除，仅留纯标题）。
    尺寸唯一来源是 CSS 变量 --tab-badge-size：侧栏 .nav-icon、状态文案 .notice .ib 与
    iconBadge() 的内联宽高都取它，改一处即同步，不再单独写死数字。
    详情区按元素分两类。
@@ -443,15 +546,12 @@ const TABS = [
       设备能力不足时开关置灰；通知总开关禁用时子开关副标题动态改显原因。 */
 const PAGES = {
   general: {
-    sub: '语言、外观、启动等全局基础偏好。',
     cards: [
       { title:'语言', sub:'切换菜单栏和设置界面的显示语言。', icon:'lang', colors:'general', rows:[
         rSeg(['跟随系统','中文','英语'], 0),  // 中文界面显示「英语」，英文界面仍 English
       ]},
-      { title:'外观', sub:'选择浅色、深色或由系统自动切换。', icon:'brush', colors:'general', rows:[
+      { title:'外观', sub:'选择浅色、深色，或跟随系统。', icon:'brush', colors:'general', rows:[
         rSeg(['自动','浅色','深色'], 0),
-        rDiv(),
-        rToggle('始终使用不透明背景', '系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。', false, 'dashboard', 'brush'),
       ]},
       { title:'启动', sub:'让电池保护在登录后自动开始工作。', icon:'power', colors:'general', rows:[
         rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general', 'power'),
@@ -476,7 +576,6 @@ const PAGES = {
     ]
   },
   dashboard: {
-    sub: '配置仪表盘顶部的时间信息与打开方式。',
     cards: [
       { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'charging', rows:[
         rToggle('系统运行时间', '', true, 'dashboard', 'gauge'),
@@ -493,7 +592,6 @@ const PAGES = {
     ]
   },
   charging: {
-    sub: '设定充电上限、巡航与高温保护，养护电池。',
     cards: [
       { title:'充电管理', sub:'限制最高充电量，减少电池长期处于满电状态的时间。', icon:'battery', colors:'dashboard', rows:[
         rToggle('启用充电管理', '首次启用或升级需管理员授权安装后台服务，无需开发者账号。', true, 'charging', 'plug'),
@@ -531,7 +629,6 @@ const PAGES = {
     ]
   },
   automation: {
-    sub: '按计划自动执行充电任务，或接入快捷指令。',
     cards: [
       /* 无任务时不再显示「还没有计划任务」空状态文案（用户 2026-11-11 决定：
          设置中不需要提示用户），对应 AutomationSettingsView.swift 删除 tasks.isEmpty
@@ -581,7 +678,6 @@ const PAGES = {
     },
   },
   diagnostics: {
-    sub: '记录问题、导出诊断包，并查看命令行。',
     cards: [
       { title:'诊断与导出', sub:'诊断信息始终由用户决定是否生成和发送。', icon:'download', colors:'about', rows:[
         { t:'control', label:'诊断记录未启动', sub:'平时不会增加高频采样或后台负担', icon:'check', colors:'about', control:{ t:'button', label:'开始问题记录' } },
@@ -599,7 +695,6 @@ const PAGES = {
     ]
   },
   permissions: {
-    sub: '配置 Mac 睡眠与退出应用后的充电行为。',
     cards: [
       // 2026-11-11 用户指令：自「充电管理」页移入本页，并更名「睡眠行为」；颜色随页标题（advanced，与仪表盘互换后）
       { title:'睡眠行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'advanced', rows:[
@@ -612,7 +707,6 @@ const PAGES = {
     ]
   },
   about: {
-    sub: '软件更新、版本信息与法律开源声明。',
     cards: [
       /* 2026-11-14：「软件更新」卡固定两行——「当前版本」（右侧检查更新）+「自动检查更新」；
          「查看 GitHub 发行版」按钮删除，链接挂在副标题「GitHub 发行版」上。
@@ -932,21 +1026,58 @@ function renderNav() {
   });
 }
 
+/* tab 浏览历史栈：参考 macOS 系统设置窗口顶部的返回 / 前进按钮。
+   - history 是当前可回退的路径，idx 指向当前项。
+   - 点左栏导航 = 一次新的前进：截断 idx 之后的分支，push 新 tab。
+   - 点后退 / 前进只移动 idx，不写历史。
+   - 每次打开窗口历史重置为 [general]（见下方注释），两个按钮都不可用。 */
+let navHistory = ['general'];
+let navIndex = 0;
 let currentTab = 'general';
-function selectTab(id) {
-  currentTab = id;
+
+function navigateTo(id, record) {
+  if (record) {
+    if (navHistory[navIndex] !== id) {
+      navHistory = navHistory.slice(0, navIndex + 1);
+      navHistory.push(id);
+      navIndex = navHistory.length - 1;
+    }
+  } else {
+    navIndex = id; // 后退/前进：id 即目标下标
+  }
+  currentTab = navHistory[navIndex];
+  renderSettings();
+}
+
+function selectTab(id) { navigateTo(id, true); }
+function goBack()    { if (navIndex > 0) navigateTo(navIndex - 1, false); }
+function goForward() { if (navIndex < navHistory.length - 1) navigateTo(navIndex + 1, false); }
+
+function renderSettings() {
   document.querySelectorAll('.nav-item').forEach(el => {
-    const on = el.dataset.tab === id;
+    const on = el.dataset.tab === currentTab;
     el.classList.toggle('active', on);
     el.setAttribute('aria-selected', String(on));
   });
-  const page = PAGES[id];
-  const tab = TABS.find(t => t.id === id);
+  const page = PAGES[currentTab];
+  const tab = TABS.find(t => t.id === currentTab);
+  const canBack = navIndex > 0;
+  const canForward = navIndex < navHistory.length - 1;
+  const backTab = canBack ? TABS.find(t => t.id === navHistory[navIndex - 1]) : null;
+  const fwdTab = canForward ? TABS.find(t => t.id === navHistory[navIndex + 1]) : null;
   const detail = document.getElementById('detail');
-  detail.innerHTML = `<div class="page-head">${iconBadge(tab.icon, tab.colors, 34)}`
-    + `<div><h1 class="page-title">${tab.title}</h1><div class="page-sub">${page.sub}</div></div></div>`
-    + `<div class="hdiv"></div><div class="cards">${page.cards.map(c => renderCard(c, false)).join('')}</div>`
-    + (page.sheet ? renderSheetPreviews(page.sheet, page.sheetFlow) : '');
+  detail.innerHTML = `<div class="detail-head"><div class="page-head">`
+    + `<div class="nav-btns">`
+      + `<button class="navbtn ${canBack ? 'enabled' : ''}" id="navBack" aria-label="后退" title="${canBack ? '后退：' + backTab.title : '无后退历史'}" ${canBack ? '' : 'disabled'}>${svg('chevron.left')}</button>`
+      + `<button class="navbtn ${canForward ? 'enabled' : ''}" id="navForward" aria-label="前进" title="${canForward ? '前进：' + fwdTab.title : '无前进历史'}" ${canForward ? '' : 'disabled'}>${svg('chevron.right')}</button>`
+    + `</div>`
+    + `<h1 class="page-title">${tab.title}</h1></div>`
+    + `<div class="hdiv"></div></div>`
+    + `<div class="detail-scroll"><div class="cards">${page.cards.map(c => renderCard(c, false)).join('')}</div>`
+    + (page.sheet ? renderSheetPreviews(page.sheet, page.sheetFlow) : '')
+    + `</div>`;
+  document.getElementById('navBack').addEventListener('click', goBack);
+  document.getElementById('navForward').addEventListener('click', goForward);
   bindInteractions();
 }
 
@@ -993,24 +1124,53 @@ themeBtn.addEventListener('click', () => {
 });
 document.getElementById('appBadge').innerHTML = svg('bolt');
 
+/* ---------- 设置页玻璃化原型控制（只在原型里对照，不参与 App 实现） ---------- */
+(function () {
+  const body = document.body;
+  const modeBtn = document.getElementById('modeBtn');
+  const wallBtn = document.getElementById('wallBtn');
+  body.dataset.glass = 'on';
+  body.dataset.desktop = 'color';
+
+  // 实色/玻璃只切左栏侧栏；右栏恒实色，不受此处影响
+  modeBtn.addEventListener('click', () => {
+    const on = body.dataset.glass !== 'on';
+    body.dataset.glass = on ? 'on' : 'off';
+    modeBtn.classList.toggle('on', on);
+  });
+  wallBtn.addEventListener('click', () => {
+    const plain = body.dataset.desktop !== 'plain';
+    body.dataset.desktop = plain ? 'plain' : 'color';
+    wallBtn.classList.toggle('on', !plain);
+  });
+  modeBtn.classList.add('on');
+})();
+
 /* ---------- 规则说明 ---------- */
 function renderLegend() {
-  /* 按标签映射当前实际色对 */
+  /* 直接遍历 TABS：色块顺序、取色、标签都与侧栏 tab 一一对应。
+     t.colors 是色对名（general/dashboard/…），与 pal() = C[k] 同源。
+     注意 tab 与色对是交叉的（仪表盘用 chargingColors 绿、充电管理用
+     dashboardColors 紫），由 TABS 自身表达，不再手写映射导致错位。
+     末尾补高温保护字面量色对（非独立 tab）。 */
   const legendPairs = [
-    ['general', '通用'], ['dashboard', '充电管理'], ['charging', '仪表盘'],
-    ['advanced', '睡眠管理'], ['automation', '自动化'], ['about', '诊断'],
-    ['permissions', '关于'], ['heat', '高温保护（字面量）'],
+    ...TABS.map(t => [t.colors, t.title]),
+    ['heat', '高温保护（字面量）'],
   ];
   const sw = legendPairs.map(([k, label]) =>
     `<span class="sw"><i style="background:linear-gradient(135deg,${pal(k)[0]},${pal(k)[1]})"></i>${label}</span>`
   ).join('');
   document.getElementById('legend').innerHTML =
-    `<b>配色规则</b>`
-    + `<br>· 卡内同色：每张卡由卡头选定色对，行徽章、开关行、状态点、状态文案、动作按钮、数值全部继承，无强调色例外；相邻卡允许同色 / 相近色。`
+    `<b>窗口框架</b>：无横贯标题栏，交通灯浮在侧栏左上角，左右分栏与 1pt 竖线从窗口顶部贯通到底；框架是稳定骨架，玻璃 / 实色、浅 / 深只是框架内的细节变换，切 tab 不动框架。`
+    + `<br>· <b>左栏</b>：主徽章左缘 <code>16pt</code>、「Aidente」文字 <code>18pt</code> bold，徽章 + 文字中心线在交通灯中心下方 <code>51pt</code>（y=83pt）；导航区已与主徽章解耦，无补偿偏移、自然排在头部之后。交通灯中心距顶 <code>32pt</code>、最左缘 <code>20pt</code>，用透明 <code>NSTitlebarAccessoryViewController</code> 撑高 titlebar，使按钮留在点击热区内。`
+    + `<br>· <b>右栏</b>：页头固定不滚动、实色遮挡下方卡片，只有卡片与 sheet 预览滚动；页头为纯标题 <code>18pt</code>（无徽章 / 副标题），文字中心距窗口顶 <code>32pt</code>、下方横线距中心 <code>32pt</code>，整块页头可拖动窗口。标题左侧有<b>前进 / 后退按钮</b>（参考 macOS 系统设置窗口顶部的返回 / 前进）：<b>平时无底色，可用=图标加深</b>（浅色炭灰 <code>#535353</code>），<b>鼠标悬停时才出现卡片色圆角底</b> <code>var(--card)</code>（系统截图采样悬停底约 <code>#DBDCDC</code>，非蓝色）、不可用=图标浅灰禁用且悬停无反馈；无描边阴影。两按钮始终占位，标题不随状态跳动；标题左缘随按钮右移到约 <code>88px</code>（不再对齐交通灯 20pt，已接受此位移）。历史栈每次打开窗口重置为 <code>[通用]</code>，此时两个按钮都不可用；点左栏 tab 入栈并截断前方分支，点后退 / 前进只移指针。浅色底色 <code>#EDEEF0</code>（略偏灰、不过白）；1pt 竖线用不透明窗口底 + 中性描边，避免透出桌面成黑线。`
+    + `<br><b>配色规则</b>`
+    + `<br>· 卡内同色：每张卡由卡头选定色对，行徽章、开关行、状态点、状态文案、动作按钮全部继承，无强调色 / 状态色例外；相邻卡允许同色 / 相近色。唯一例外：<b>数值读数用系统文字色</b> <code>var(--text)</code>，与行标签一致，不随卡色。`
     + `<br>· 徽章恒定：色对 135° 渐变实底 + 白图标，不随主题切换；侧栏 tab 饱和 100%，详情区徽章同款绘制但饱和 90%。例外：状态文案徽章与「添加计划任务」sheet 行徽章为 legacy 式（首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的 legacyStyle: true。`
-    + `<br>· 跟随主题的部分：开关开态 = 首色实底、关态 = 首色 16% 半透明；动作按钮 = 首色 20% 底 / 34% 描边；状态文案 = 首色 7.5% 底 / 20% 描边——三者叠在卡背景上随主题变。滑杆数值用系统文字色 var(--text)，与行标签一致，不随卡色变化。`
-    + `<br>· 徽章尺寸：状态文案 = 侧栏 tab（引用唯一来源 <code>--tab-badge-size</code>）、行 / Inset <code>26</code>、卡头 <code>28</code>、页标题与 sheet 标题 <code>34</code>；状态文案的徽章与文字垂直居中，换行时容器上下等量延伸。`
-    + `<br><b>术语</b>：侧栏 tab（左边栏）；页标题（右边栏）；卡片 = 卡头（徽章 + 标题）、行 / Inset、卡内元素；状态文案 = 卡内说明状态的文字行；状态点 = 其前圆点；动作按钮 = 所有按钮；toggle（开关）。`
+    + `<br>· 跟随主题的部分：开关开态 = 首色实底、关态 = 首色 16% 半透明；动作按钮 = 首色 20% 底 / 34% 描边；状态文案 = 首色 7.5% 底 / 20% 描边——三者叠在卡背景上随主题变。`
+    + `<br>· 徽章尺寸三档：卡头 <code>28</code>、行 / Inset <code>26</code>、状态文案 = 侧栏 tab（唯一来源 <code>--tab-badge-size</code>，当前 22px）；sheet 标题徽章 <code>34</code> 属卡外元素、不受此限，右栏页头徽章已移除仅留纯标题。状态文案的徽章与文字垂直居中，换行时容器上下等量延伸。`
+    + `<br><b>玻璃化（左右分治）</b>：<b>右栏</b>降低透明度恒开 → 内容区与卡片永远实色、不采样玻璃，文字对比度始终可测；<b>左栏</b>降低透明度恒关 → 侧栏单独用 <code>backdrop-filter</code> 采样身后桌面（一次），「左栏玻璃」开关只切这里。侧栏由四层叠加：chrome 底 + 实时玻璃 + side-fill 染色（浅 <code>rgba(236,236,238,.60)</code> / 深 <code>rgba(52,52,56,.50)</code>）+ glassTint（浅 <code>clear</code> / 深 <code>rgb(30,30,34) .24</code>）。侧栏文字用系统色 <code>var(--text)</code>、徽章为实底渐变，玻璃下仍可读，不需要仪表盘那套 ink 补偿。`
+    + `<br><b>术语</b>：侧栏 tab（左边栏 7 项）；页标题（右边栏纯标题 <code>18pt</code>，右栏页头已无徽章 / 副标题）；卡片 = 卡头（徽章 + 标题）、行 / Inset、卡内元素；状态文案 = 卡内说明状态的文字行；状态点 = 其前 8px 圆点；动作按钮 = 所有按钮与按钮组；数值读数 = 只读数字，用系统文字色；toggle（开关）。`
     + `<div class="swatches">${sw}</div>`;
 }
 

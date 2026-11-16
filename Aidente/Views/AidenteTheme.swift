@@ -15,6 +15,31 @@ enum AidenteTheme {
     static let graphite = Color(red: 0.11, green: 0.12, blue: 0.14)
     static let panel = Color(red: 0.13, green: 0.13, blue: 0.14)
 
+    // Deep "ink" variants for colored TEXT / small ICONS on light surfaces.
+    // The accents above are tuned for dark surfaces and wash out on the light,
+    // translucent dashboard cards; only foreground uses switch to these inks.
+    // The red / orange / green inks match the hero card's existing deep values.
+    static let coralInk = Color(red: 0.80, green: 0.16, blue: 0.14)
+    static let amberInk = Color(red: 0.78, green: 0.40, blue: 0.04)
+    static let jadeInk = Color(red: 0.05, green: 0.52, blue: 0.28)
+    static let oceanInk = Color(red: 0.06, green: 0.40, blue: 0.80)
+    static let violetInk = Color(red: 0.42, green: 0.28, blue: 0.85)
+
+    /// Semantic compensation for colored foreground on translucent light cards.
+    /// Maps every accent to a deeper readable ink in light mode; dark mode is
+    /// untouched. Decorative fills (bars, gradients, glows, badge backgrounds,
+    /// legend swatches, flow lines) keep calling the vivid accents directly —
+    /// this is for text glyphs and small monochrome icons only.
+    static func legibleTextTint(_ color: Color, scheme: ColorScheme) -> Color {
+        guard scheme == .light else { return color }
+        if color == jade || color == mint { return jadeInk }
+        if color == amber || color == gold { return amberInk }
+        if color == coral || color == pink { return coralInk }
+        if color == ocean || color == sky { return oceanInk }
+        if color == violet { return violetInk }
+        return color
+    }
+
     static let generalColors = [ocean, sky]
     static let dashboardColors = [violet, pink]
     static let chargingColors = [jade, mint]
@@ -44,6 +69,21 @@ extension EnvironmentValues {
     var aidenteCardColors: [Color]? {
         get { self[AidenteCardColorsKey.self] }
         set { self[AidenteCardColorsKey.self] = newValue }
+    }
+}
+
+/// Settings-window-only L2 card fill. The global card token (#FCFCFC) reads
+/// close to pure white against the settings grey detail pane, so the settings
+/// window switches its cards to a dimmer neutral. The dashboard and menu views
+/// never set this flag and keep the global token.
+private struct AidenteSettingsCardFillKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var aidenteUsesSettingsCardFill: Bool {
+        get { self[AidenteSettingsCardFillKey.self] }
+        set { self[AidenteSettingsCardFillKey.self] = newValue }
     }
 }
 
@@ -117,6 +157,14 @@ enum AidenteSurfaceTokens {
         )
     }
 
+    /// Settings-window card fill. Sits a shade below the global `.card` token
+    /// so cards don't read as pure white on the grey settings detail pane;
+    /// dark keeps the global token. Only the settings window opts in via
+    /// `aidenteUsesSettingsCardFill`.
+    static func settingsCardColor(scheme: ColorScheme) -> Color {
+        scheme == .dark ? color(.card, scheme: .dark) : rgb(245, 245, 247)
+    }
+
     /// One 1pt neutral stroke is the only hierarchy signal on a card.
     static func stroke(scheme: ColorScheme) -> Color {
         scheme == .dark
@@ -132,14 +180,25 @@ enum AidenteSurfaceTokens {
             : Color.white.opacity(0.24)
     }
 
-    /// A light tint over the live backdrop material. Values are the frozen
-    /// defaults from `liquid-glass-proposal.html`: light white 0.14, dark
-    /// rgb(30,30,34) 0.24. AppKit's `.popover` material carries its own tint,
-    /// so this stays a small correction on top of the sampled backdrop.
+    /// A tint over the live backdrop material. Dark stays at the frozen
+    /// rgb(30,30,34) 0.24 to keep the dark glass's solid, frosted feel. Light is
+    /// now fully transparent: on a light wallpaper any white lift flattened the
+    /// backdrop's contrast and made the glass read as opaque, so the system
+    /// material is left untinted. AppKit's `.popover` carries its own tint.
     static func glassTint(scheme: ColorScheme) -> Color {
         scheme == .dark
             ? Color(red: 30 / 255, green: 30 / 255, blue: 34 / 255).opacity(0.24)
-            : Color.white.opacity(0.14)
+            : Color.clear
+    }
+
+    /// Dashboard card fill alpha: the L2 token paint is drawn at this opacity
+    /// so the L0 glass sampled by the window shows through (方案 A). Only the
+    /// dashboard opts in; settings cards keep the fully opaque token color.
+    /// Light is thinner (0.3 vs dark 0.4): translucent white lifts and flattens
+    /// a light backdrop, while dark paint only dims it and keeps contours, so
+    /// the same alpha reads as "see-through" in dark but "milky" in light.
+    static func dashboardCardAlpha(scheme: ColorScheme) -> CGFloat {
+        scheme == .dark ? 0.4 : 0.3
     }
 }
 
@@ -339,43 +398,11 @@ enum AidenteReadabilityStrategy: String {
     case systemMaterial
     case compatible
     case opaque
-
-    var badge: String {
-        switch self {
-        case .systemMaterial:
-            return AidenteL10n.t("系统材质", "System Material")
-        case .compatible:
-            return AidenteL10n.t("兼容材质", "Compatible Material")
-        case .opaque:
-            return AidenteL10n.t("不透明", "Opaque")
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .systemMaterial:
-            return AidenteL10n.t(
-                "界面材质由系统提供，并在受支持的界面上自动使用系统液态玻璃材质。",
-                "macOS supplies the material and automatically uses system Liquid Glass on supported surfaces."
-            )
-        case .compatible:
-            return AidenteL10n.t(
-                "macOS 26 以前的系统，仪表盘使用类液态玻璃材质；升级到 macOS 26+，自动使用系统液态玻璃材质。",
-                "On macOS versions earlier than 26, the dashboard uses a liquid-glass-like material. Upgrading to macOS 26 or later adopts the system Liquid Glass automatically."
-            )
-        case .opaque:
-            return AidenteL10n.t(
-                "当前使用不透明背景，所有界面层均为实体，文字对比度最高。",
-                "An opaque background is active. Every surface is solid for maximum text contrast."
-            )
-        }
-    }
 }
 
 enum AidenteReadabilitySource: String {
     case followSystem
     case systemReduceTransparency
-    case appOverride
     case containerFallback
 }
 
@@ -393,20 +420,15 @@ enum AidenteReadability {
         return false
     }
 
-    /// Priority: system Reduce Transparency > app override > container
-    /// capability > follow system.
+    /// Priority: system Reduce Transparency > container capability >
+    /// follow system.
     static func resolve(
         reduceTransparency: Bool,
-        forceOpaque: Bool,
         canSampleBackdrop: Bool
     ) -> AidenteReadabilityResolution {
         if reduceTransparency {
             return AidenteReadabilityResolution(
                 strategy: .opaque, source: .systemReduceTransparency)
-        }
-        if forceOpaque {
-            return AidenteReadabilityResolution(
-                strategy: .opaque, source: .appOverride)
         }
         if !canSampleBackdrop {
             return AidenteReadabilityResolution(
@@ -417,24 +439,55 @@ enum AidenteReadability {
             source: .followSystem
         )
     }
+
+    /// Dashboard cards are translucent only when the container is actually
+    /// showing L0 glass. Under any opaque strategy (system Reduce Transparency
+    /// or a container that cannot sample a backdrop) the card paint returns to
+    /// fully opaque so text contrast stays measurable.
+    static func dashboardCardAlpha(
+        reduceTransparency: Bool,
+        canSampleBackdrop: Bool,
+        scheme: ColorScheme
+    ) -> CGFloat {
+        let resolution = resolve(
+            reduceTransparency: reduceTransparency,
+            canSampleBackdrop: canSampleBackdrop
+        )
+        return resolution.strategy == .opaque
+            ? 1
+            : AidenteSurfaceTokens.dashboardCardAlpha(scheme: scheme)
+    }
 }
 
 /// The single painting outlet. No other view owns a material, gradient,
 /// blur or overall opacity.
 struct AidenteLevelSurface: View {
-    @Default(.forceOpaqueBackground) private var forceOpaque
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.aidenteCanSampleBackdrop) private var canSampleBackdrop
+    @Environment(\.aidenteUsesSettingsCardFill) private var usesSettingsCardFill
 
     let level: AidenteSurfaceLevel
     var cornerRadius: CGFloat = 0
+    /// Dashboard cards only: draw the opaque token paint translucent so the
+    /// L0 glass underneath shows through. Settings / sheets never pass this,
+    /// so their `.card` surfaces stay fully opaque. Forced back to 1 whenever
+    /// the readability resolution is opaque.
+    var translucentCard = false
 
     private var resolution: AidenteReadabilityResolution {
         AidenteReadability.resolve(
             reduceTransparency: reduceTransparency,
-            forceOpaque: forceOpaque,
             canSampleBackdrop: canSampleBackdrop
+        )
+    }
+
+    private var cardFillAlpha: CGFloat {
+        guard translucentCard, level == .card else { return 1 }
+        return AidenteReadability.dashboardCardAlpha(
+            reduceTransparency: reduceTransparency,
+            canSampleBackdrop: canSampleBackdrop,
+            scheme: colorScheme
         )
     }
 
@@ -452,7 +505,9 @@ struct AidenteLevelSurface: View {
             cornerRadius: cornerRadius,
             style: .continuous
         )
-        let base = AidenteSurfaceTokens.color(level, scheme: colorScheme)
+        let base = usesSettingsCardFill && level == .card
+            ? AidenteSurfaceTokens.settingsCardColor(scheme: colorScheme)
+            : AidenteSurfaceTokens.color(level, scheme: colorScheme)
 
         ZStack {
             if usesBackdropMaterial {
@@ -469,7 +524,7 @@ struct AidenteLevelSurface: View {
                     AidenteGlassOverlay(shape: shape, scheme: colorScheme)
                 }
             } else {
-                shape.fill(base)
+                shape.fill(base.opacity(cardFillAlpha))
             }
         }
         .clipShape(shape)
@@ -492,9 +547,16 @@ struct AidenteChromeBar: View {
 
 struct AidenteMaterialLayer: View {
     var cornerRadius: CGFloat = 0
+    /// Dashboard-only: let the L0 glass show through the card paint. Settings
+    /// and sheets keep the default `false` and stay fully opaque.
+    var translucent = false
 
     var body: some View {
-        AidenteLevelSurface(level: .card, cornerRadius: cornerRadius)
+        AidenteLevelSurface(
+            level: .card,
+            cornerRadius: cornerRadius,
+            translucentCard: translucent
+        )
     }
 }
 
@@ -799,9 +861,9 @@ struct AidenteSettingsPage<Content: View>: View {
         self.content = content()
     }
 
-    /// The settings detail pane owns the ScrollView so its page header scrolls
-    /// away together with the cards. Keep this container free of a nested
-    /// ScrollView, otherwise the header and the cards scroll independently.
+    /// The settings detail pane owns the ScrollView; the page header is a
+    /// sibling above it and stays pinned. Keep this container free of a nested
+    /// ScrollView, otherwise the cards scroll independently of the pane.
     var body: some View {
         LazyVStack(spacing: 14) {
             content

@@ -2,7 +2,34 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前 bundle 版本为 **6.1.4 / Build 25**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.4]-2026-11-14` 汇总 6.1.3 发行之后的全部改动（更新流程重构为独立弹窗、更新检查源切到 `nightfall-yl/Aidente`、计划任务卡修正、设置页交互与法律文档链接调整、充电状态文案修正），已于 2026-11-14 正式发行：GitHub Release `6.1.4`，资产含 `Aidente-6.1.4.dmg` / `Aidente-6.1.4-macOS-arm64.zip` / `SHA256SUMS-6.1.4.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+项目当前 bundle 版本为 **6.1.5 / Build 26**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.5]-2026-11-16` 汇总 6.1.4 发行之后的全部改动（仪表盘卡片玻璃化与浅色可读性、删除 App 内不透明覆盖开关、设置页无标题栏左右分栏窗口框架、浅色设置页配色、页头前进 / 后退导航），发行信息见该版本区块。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+
+## [6.1.5]-2026-11-16
+
+### 变更
+
+**外观与材质**
+
+- **仪表盘卡片透出窗口玻璃**：`DashboardPopoverView.swift` 的普通卡片与 hero 渐变改为半透明绘制，透出 L0 已采样的系统材质；填充透明度浅色 0.3 / 深色 0.4，系统开启「降低透明度」或容器无法采样背景时自动回到不透明。`AidenteTheme.swift` 的 L0 染色浅色改为完全透明、深色保留 `rgb(30,30,34) 0.24`，避免浅色下白色提亮层把桌面轮廓冲平。
+- **浅色主题彩色前景加深**：`AidenteTheme.swift` 新增五组 ink 色（coral / amber / jade / ocean / violet）与 `legibleTextTint(_:scheme:)`，浅色下把仪表盘全部彩色**文字与小图标**统一映射到加深色，深色不变；进度条、渐变、徽章底、描边、图例色块等装饰色仍用原色。
+- **移除「始终使用不透明背景」**：删除该开关及其 key、旧偏好迁移、诊断字段与动态策略副标题（`GeneralSettingsView` / `DefaultsKeys` / `AppDelegate` / `AidenteTheme` / `DashboardPopoverView` / `DiagnosticCenter`），「外观」卡副标题改为静态「选择浅色、深色，或跟随系统。」。界面材质完全跟随系统「降低透明度」，容器不可采样时自动降级为不透明，不再提供 App 内覆盖。
+
+**设置页窗口框架**
+
+- **改为 macOS 系统无标题栏左右分栏**：`SettingsView.swift` 删除横贯全宽的标题栏遮罩与整窗 L0 背景层，侧栏、1pt 竖线、内容区从窗口顶部贯通到底；`SettingsWindowController.swift` 去掉隐藏标题栏的分隔线（`titlebarSeparatorStyle = .none`），AppKit 交通灯落在侧栏左上角，两侧页头留出等高的交通灯空间。分界线、右栏背景与侧栏强调色改用与 `preferredColorScheme` 同源的 scheme 解析，随 App 内主题切换；1pt 分界线改为不透明窗口底加中性描边，避免透明窗口下透出桌面形成黑线。
+- **左栏头部规格**：主徽章左缘 16pt，「Aidente」文字 18pt bold，徽章与文字的中心线在交通灯中心下方 51pt（y=83pt）。导航区已与主徽章解耦：移除原用于锁定导航首行位置的补偿偏移，导航项自然排在头部之后，不再随头部尺寸联动调整。
+- **左右分治**：右栏与卡片恒为实色，左栏恒为玻璃（`AidenteSettingsSidebarSurface` 局部叠加系统材质与染色，不改仪表盘共用的全局表面 token），深色下侧栏比内容区深一档；浅色下右栏改用设置页专用的略偏灰底色，避免整体过白。设置页卡片另经 `aidenteUsesSettingsCardFill` 环境开关切到专用浅灰白 `#F5F5F7`（深色仍用全局 `.card` token），避免浅色下卡片在灰底上过白；全局 L2 token 与仪表盘、菜单视图卡片不变，设置页弹出的 sheet 随环境继承保持一致。`settings-redesign-prototype.html` 的 `--card` 同步为 `#f5f5f7`。
+- **页头固定并简化为纯标题**：右栏页头从 `ScrollView` 中拆出，实色钉在顶部并遮挡下方滚动卡片，只有卡片与 sheet 预览参与滚动；页头删掉 34pt 徽章与副标题，只保留纯标题与下方横线，`SettingsTab.detailSubtitle` 及其 7 条中英词条一并删除。标题字号 18pt、文字中心距窗口顶 32pt，标题下方横线距文字中心同为 32pt；左栏交通灯中心由 AppKit 按钮定位到 32pt，并整体右移使最左缘与标题 20pt 左 inset 对齐。为避免交通灯下移后超出标题栏容器的点击热区（点击落到 SwiftUI 内容上失效），加一个透明 `NSTitlebarAccessoryViewController`（`.bottom`）把容器撑高到 64pt，再在布局后重新定位按钮，保留 32pt 对齐的同时恢复点击；accessory 跟随窗口生命周期，关闭设置窗口即清引用、每次打开都为当前窗口重新安装。删除右栏原有 44pt 留白，右栏首卡片不再与左栏对齐。
+- **右栏页头可拖动窗口**：固定页头叠加局部 `NSViewRepresentable` 拖拽句柄，`mouseDown` 调 `window?.performDrag(with:)`；未开启 `isMovableByWindowBackground`，避免抢走卡片 `ScrollView` 的拖拽，左栏交通灯区域的系统拖拽保持不变。页头加入前进 / 后退按钮后，拖拽句柄从页头 overlay 下沉为 `.background` 层（在内容之下、实色底之上），标题 `Text` 与横线 `Divider` 加 `allowsHitTesting(false)` 让点击穿透——按钮可点、标题与空白区仍可拖动窗口。
+- **页头新增前进 / 后退按钮**：右栏页头标题左侧加一对 chevron 导航按钮（`SettingsView.swift`），带 tab 浏览历史栈——每次打开窗口重置为初始 tab、两按钮灰；点左栏 tab 入栈并截断前方分支，点后退 / 前进只移指针。高亮按 macOS 系统设置截图：平时无底色，可用 = 图标加深（浅 `#535353` / 深 `#F2F2F7`），鼠标悬停才出现卡片色圆角底（`settingsCardColor`）；不可用 = 图标浅灰（浅 `#737378` / 深 `#96969d`）禁用、悬停无反馈；不用系统蓝、无描边阴影。按钮始终占位，标题不随状态跳动，左缘随按钮右移到约 88pt（不再对齐交通灯 20pt）。不做长按展开历史列表。
+
+### 验证
+
+- **版本号升级到 6.1.5 / Build 26**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[未发布]` 归档为 `[6.1.5]-2026-11-16`，新建 `BuildSupport/release-notes-6.1.5.md`。
+- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.5 / 26**；`zsh BuildSupport/test_charging.sh` 138 项充电 / 睡眠 / 固件 / 回滚 / 回读检查全过。
+- `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.5.dmg`（3.7M，卷名 `Aidente 6.1.5`），`hdiutil verify` VALID；另产出 `Aidente-6.1.5-macOS-arm64.zip` 与 `SHA256SUMS-6.1.5.txt`（`Dist/` 内裸文件名格式）。
+- 界面改动（窗口框架 / 玻璃 / 前进后退按钮）编译通过，实机交互项（交通灯点击、页头拖拽、导航流转）以实机验证为准；充电策略代码无改动，回归为纯逻辑确认。
+- **发行**：GitHub Release `6.1.5`（tag `6.1.5`）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.5`。已装 6.1.4 的机器会收到应用内更新提示。
 
 ## [6.1.4]-2026-11-14
 
@@ -33,14 +60,12 @@
 
 ### 修订
 
-- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。
-
+- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。  
+  |  |  |  |  
+  | --- | --- | --- |
 - **hero 卡新增「点击修复」备用入口（2026-11-14 补发）**：当 hero 显示「充电控制未生效」且根因为后台控制服务（helper）缺失 / 身份不匹配 / 连接或健康检查失败时，hero 顶部状态行变为可点击并显示「点击修复充电控制」提示（要求 `manageCharging` 开启且不在磁盘映像运行）；点击复用与启动 / 更新后重新授权同一路径（`ChargingHelperManager.repair()`，触发一次 macOS 管理员密码弹窗），完成后经 `ChargeManager.retryControlAfterRepair()` 重新下发充电策略。门控用 `ChargingHelperManager.needsRepair`（`!isInstalled || failure != nil`）区分「helper 授权类故障」与「瞬时 SMC 命令失败」（后者不弹管理员密码、由周期轮询自愈），避免对瞬时错误误给修复入口；修复期间 hero 就地显示「修复中…」，失败保留原错误。新增 `ChargeManager.canQuickRepair` / `attemptQuickRepair()` 与 `MenuViewModel` 透传，`AidenteL10n` 补「修复中…」「点击修复充电控制」中英词条。该入口作为授权意外消失时的备用触发点，避免用户只能去「充电管理」重开关开关。
-
 - **设置页配色与文案调整（2026-11-15 静默重发）**：仪表盘与充电管理两个 tab 颜色互换——`SettingsTab.colors` 中 `.dashboard` 返 `chargingColors`（绿）、`.charging` 返 `dashboardColors`（紫），侧栏 tab 徽章、页头大徽章与首卡框架色随之互换（仪表盘「状态信息」卡改绿、充电管理「充电管理」卡改紫）；充电管理「巡航模式」卡整卡改 `permissionColors`（蓝紫，与软件更新同色）。文案上「管理充电」改名为「启用充电管理」、「充电上限」改名为「设置充电上限」（`ChargingSettingsView` 字面量 + `AidenteL10n` 新增「启用充电管理」词条），`ChargingHelperManager` 报错文案与 `AboutSettingsView` 安全说明同步；能量流标签「彩色能量流」改为「能量分流」（`Sankey Diagram`），README 与 `settings-redesign-prototype.html` 同步。
-
 - **hero 充电状态文案修正（2026-11-15 静默重发）**：修正 head / 能量分流显示「正在充电」而 hero 显示「等待充电」的错位——`ChargeManager.operationStatusTitle` 新增分支，仅当 `operationStatus == .charging` 且硬件实测 `BatteryService.metrics.isCharging`（`batteryPower > 0`）才返回「正在充电」，否则保持「等待充电」（策略已请求充电、硬件尚未跟上的短暂窗口不谎报），与顶部标题栏、能量分流统一以硬件电流为准。
-
 - **三轮补发均已提交并同步 tag**：更新器修复、hero 入口与本轮设置页 / hero 充电文案三次补发都已提交到 `main`，`tag 6.1.4` 已移到包含全部补发的提交并强制推送，GitHub Release `6.1.4`（本仓库 `nightfall-yl/Aidente`）的 dmg / zip / SHA256SUMS 同步覆盖上传（silent patch，版本号与 tag 不变）。
 
 ## [6.1.3]-2026-11-13

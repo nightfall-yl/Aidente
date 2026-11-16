@@ -33,7 +33,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         AidenteMigration.migrateLegacyPreferencesIfNeeded()
-        AidenteMigration.migrateMaterialPreferenceIfNeeded()
 
         // Health-only integration probe: no charge policy, LED changes or UI
         // services. Run from the installed bundle so SMAppService resolves it.

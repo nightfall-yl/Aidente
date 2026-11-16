@@ -150,7 +150,7 @@ li strong { color: var(--doc); }
 
   <div class="panel" style="margin:0 0 22px;border-left:3px solid var(--accent)">
     <span class="tagline">现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
-    <p>四档「界面材质」选择器已删除，设置页为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关；仪表盘三个容器 <code>canSampleBackdrop = true</code>，15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 用系统 <code>glassEffect(.regular)</code>；设置窗口仍为 <code>false</code>。仪表盘<strong>无 L1 底栏</strong>，三个按钮在 header 右上角。下方 01–10 节为现行方案说明与验收清单；定稿参数见 <code>liquid-glass-proposal.html</code>。</p>
+    <p>四档「界面材质」选择器已删除，设置页为「外观」自动 / 浅色 / 深色 分段控件，材质完全跟随系统「降低透明度」（App 内材质覆盖开关已移除）；仪表盘三个容器 <code>canSampleBackdrop = true</code>，15 及更早用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（tint .14 / blur 2 / sat 180 / bright 1.06 / rim 40 / 边缘光 .20），26+ 用系统 <code>glassEffect(.regular)</code>；设置窗口仍为 <code>false</code>。仪表盘<strong>无 L1 底栏</strong>，三个按钮在 header 右上角。下方 01–10 节为现行方案说明与验收清单；定稿参数见 <code>liquid-glass-proposal.html</code>。</p>
   </div>
 
   <!-- ================= 交互原型 ================= -->
@@ -164,8 +164,6 @@ li strong { color: var(--doc); }
       <button data-v="both" class="on">并排</button><button data-v="settings">设置页</button><button data-v="dashboard">仪表盘</button></div></div>
     <div class="ctl"><span>系统开关</span><div class="switchrow">
       <div class="sw" id="cRT"></div><span class="swlabel">降低透明度</span></div></div>
-    <div class="ctl"><span>App 覆盖项</span><div class="switchrow">
-      <div class="sw" id="cForce"></div><span class="swlabel">始终使用不透明背景</span></div></div>
     <div class="ctl"><span>辅助</span><div class="switchrow">
       <div class="sw" id="cLevels"></div><span class="swlabel">显示层级标尺</span></div></div>
   </div>
@@ -192,9 +190,7 @@ li strong { color: var(--doc); }
             <div class="row"><div class="txt">跟随系统<span class="sub"> · 默认</span></div>
               <span class="pill" id="strategyPill">兼容材质</span></div>
             <div class="note" id="strategyNote">当前系统使用兼容材质。升级到 macOS 26 及以上后，将自动采用系统材质。</div>
-            <div class="rule"></div>
-            <div class="row"><div class="txt">始终使用不透明背景</div><div class="sw tiny" id="mirrorForce"></div></div>
-            <div class="note">系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。</div>
+            <div class="note">系统「降低透明度」开启时自动使用不透明背景；App 内不提供材质覆盖开关。</div>
           </div>
 
           <div class="card" data-level="L2"><span class="lvl">L2 卡片</span>
@@ -283,7 +279,7 @@ li strong { color: var(--doc); }
     <div class="panel">
       <span class="tagline">01 变更摘要</span>
       <h3 style="margin-top:4px">一句话</h3>
-      <p>删除四档「界面材质」选择器，改为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关；把材质从用户选项降级为实现细节，把「可读性」提升为 app 的唯一承诺。<strong>本方案已于 6.1.1 / Build 22 落地</strong>：仪表盘三个容器恢复背景采样并叠加类液态玻璃静态层，macOS 26+ 改用系统 <code>glassEffect(.regular)</code>。</p>
+      <p>删除四档「界面材质」选择器，改为「外观」自动 / 浅色 / 深色 分段控件；把材质从用户选项降级为实现细节，把「可读性」提升为 app 的唯一承诺。<strong>本方案已于 6.1.1 / Build 22 落地</strong>：仪表盘三个容器恢复背景采样并叠加类液态玻璃静态层，macOS 26+ 改用系统 <code>glassEffect(.regular)</code>。方案落地时附带的 App 内材质覆盖开关已于 2026-11-15 移除，材质现在完全跟随系统「降低透明度」。</p>
       <div class="callout"><p><strong>结果：</strong>渲染路径从 4 档 × 2 外观 × 5 层级 × 2 容器 × 3 系统状态 ≈ 240 条，收敛为「1 个基线 + 5 个固定层级偏移 + 1 次整体变换」，约 12 个常量。</p></div>
     </div>
 
@@ -342,10 +338,9 @@ li strong { color: var(--doc); }
       <table>
         <thead><tr><th style="width:12%">优先级</th><th>条件</th><th>结果</th></tr></thead>
         <tbody>
-          <tr><td>1（最高）</td><td>系统「降低透明度」开启</td><td>整栈强制实体，忽略一切其他设置与容器能力</td></tr>
-          <tr><td>2</td><td>app 内「始终使用不透明背景」开启</td><td>整栈实体，但系统开关关闭时可调回</td></tr>
-          <tr><td>3</td><td>容器不能采样背景</td><td>该容器单独回退到实体基线</td></tr>
-          <tr><td>4（默认）</td><td>跟随系统</td><td>26+ 系统 glassEffect / 15 及更早 .behindWindow + 自绘类液态玻璃层</td></tr>
+          <tr><td>1（最高）</td><td>系统「降低透明度」开启</td><td>整栈强制实体，忽略容器能力</td></tr>
+          <tr><td>2</td><td>容器不能采样背景</td><td>该容器单独回退到实体基线</td></tr>
+          <tr><td>3（默认）</td><td>跟随系统</td><td>26+ 系统 glassEffect / 15 及更早 .behindWindow + 自绘类液态玻璃层</td></tr>
         </tbody>
       </table>
       <p>「增强对比度」只加粗描边与分隔线，不改层级亮度差；「减少动态效果」影响过渡动画，不影响颜色。</p>
@@ -354,21 +349,20 @@ li strong { color: var(--doc); }
     <div class="panel">
       <span class="tagline">07 设置页信息架构（现行 6.1.1）</span>
       <ul>
-        <li>卡片标题「外观」：<strong>自动 / 浅色 / 深色</strong> 分段控件（全局生效）+「始终使用不透明背景」开关。</li>
+        <li>卡片标题「外观」：<strong>自动 / 浅色 / 深色</strong> 分段控件（全局生效），无 App 内材质开关。</li>
         <li>四档材质选择器与「macOS 26 / 27」版本标签已移除；版本适配是实现细节，不出现在设置页。</li>
-        <li>副标题统一为一句定稿文案：「macOS 26 以前的系统，仪表盘使用类液态玻璃材质；升级到 macOS 26+，自动使用系统液态玻璃材质。」</li>
+        <li>副标题为静态文案：「选择浅色、深色，或跟随系统。」</li>
         <li>旧四档译名与版本说明已从设置页移除，版本兼容信息可在「关于」页保留一行。</li>
       </ul>
     </div>
 
     <div class="panel">
       <span class="tagline">08 数据与迁移</span>
-      <p>已采用<strong>一次性迁移</strong>（<code>AidenteMigration.migrateMaterialPreferenceIfNeeded()</code>：旧 <code>interfaceMaterialStyle: solid</code> → <code>forceOpaqueBackground</code> 开启）。现有偏好是已持久化的用户数据，直接删除会造成升级后外观突变。</p>
+      <p>6.1.1 曾提供 App 内材质覆盖开关及一次性偏好迁移；两者已于 2026-11-15 一并删除，偏好键、迁移标记与对应诊断字段都不再存在。</p>
       <ul>
-        <li>首次启动时读取旧值：旧值为「清晰实体」→ 新开关设为开启；其余三档 → 关闭；无旧值 → 关闭。</li>
-        <li>迁移只执行一次，写入标记后不再读取旧键；旧键保留一个版本周期以便回滚，之后清除。</li>
-        <li>诊断信息中的「界面材质」字段已改为上报当前生效策略（<code>readabilityStrategy</code> / <code>readabilitySource</code> / <code>forceOpaqueBackground</code>），不再上报档位名。</li>
-        <li>迁移过程对用户无感，不弹提示、不重置其他偏好。</li>
+        <li>不再读取或写入任何材质偏好；界面材质完全由 macOS 与容器能力决定。</li>
+        <li>诊断信息只上报当前生效策略与来源，不再上报已删除的开关状态。</li>
+        <li>系统「降低透明度」与容器不可采样仍会自动降级为不透明，无需用户配置。</li>
       </ul>
     </div>
 
@@ -406,7 +400,7 @@ li strong { color: var(--doc); }
 (function () {
   var params = new URLSearchParams(window.location.search);
   var state = { appearance: params.get("theme") === "dark" ? "dark" : "light",
-    os: "15", view: "both", rt: false, force: false, levels: false };
+    os: "15", view: "both", rt: false, levels: false };
   var LEVELS = {
     light: [
       { name: "L0 窗口底", hex: "#F4F5F6", rgb: 244, delta: "基线" },
@@ -439,7 +433,6 @@ li strong { color: var(--doc); }
   seg("cOS", "os");
   seg("cView", "view");
   toggle("cRT", "rt");
-  toggle("cForce", "force");
   toggle("cLevels", "levels");
 
   function effective(opaque) { return opaque ? "不透明（强制实体）" : null; }
@@ -452,7 +445,7 @@ li strong { color: var(--doc); }
         function (b) { b.classList.toggle("on", b.getAttribute("data-v") === state[p[1]]); }
       );
     });
-    var opaque = state.rt || state.force;
+    var opaque = state.rt;
     var forced = effective(opaque);
 
     // 容器策略
@@ -476,8 +469,7 @@ li strong { color: var(--doc); }
         : "当前系统使用兼容材质。升级到 macOS 26 及以上后，将自动采用系统材质。");
 
     var priority;
-    if (state.rt) priority = "系统「降低透明度」优先：强制实体，app 覆盖项与容器能力均被忽略";
-    else if (state.force) priority = "app 覆盖项生效：强制实体（系统开关关闭时可调回）";
+    if (state.rt) priority = "系统「降低透明度」优先：强制实体，容器能力被忽略";
     else priority = "默认跟随系统；设置窗口因无法采样背景而单独降级为实体";
     document.getElementById("rPriority").textContent = priority;
 
@@ -488,10 +480,9 @@ li strong { color: var(--doc); }
       (state.view === "settings") ? "none" : "";
 
     // 开关状态
-    [["cRT", state.rt], ["cForce", state.force], ["cLevels", state.levels]].forEach(function (p) {
+    [["cRT", state.rt], ["cLevels", state.levels]].forEach(function (p) {
       document.getElementById(p[0]).classList.toggle("on", p[1]);
     });
-    document.getElementById("mirrorForce").classList.toggle("on", state.force);
     var stage = document.getElementById("stage");
     stage.classList.toggle("show-levels", state.levels);
     document.getElementById("winSettings").classList.toggle("show-levels", state.levels);

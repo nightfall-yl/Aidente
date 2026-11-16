@@ -118,7 +118,21 @@ struct DashboardPopoverView: View {
     @Default(.dashboardCardOrder) private var dashboardCardOrder
     @Default(.appAppearance) private var appAppearance
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.aidenteCanSampleBackdrop) private var canSampleBackdrop
     @StateObject private var systemAppearanceMonitor = SystemAppearanceMonitor()
+
+    /// Hero card fill alpha, shared with the compact-card surface. The hero
+    /// paints its own gradient, so it applies the same readability-gated alpha
+    /// directly: 0.3 light / 0.4 dark over live L0 glass, 1 under any opaque
+    /// strategy.
+    private var heroCardFillAlpha: CGFloat {
+        AidenteReadability.dashboardCardAlpha(
+            reduceTransparency: reduceTransparency,
+            canSampleBackdrop: canSampleBackdrop,
+            scheme: colorScheme
+        )
+    }
 
     /// Called whenever the measured content height changes so AppKit can
     /// resize the popover / standalone window / preview panel.
@@ -709,6 +723,7 @@ struct DashboardPopoverView: View {
                         startPoint: .leading,
                         endPoint: .trailing
                     )
+                    .opacity(heroCardFillAlpha)
                 )
         }
         .overlay(alignment: .trailing) {
@@ -934,7 +949,9 @@ struct DashboardPopoverView: View {
                     Spacer()
                     Text(viewModel.operationStatusText)
                         .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(statusTint)
+                        .foregroundStyle(
+                            AidenteTheme.legibleTextTint(statusTint, scheme: colorScheme)
+                        )
                 }
 
                 CompactActionRow(
@@ -1022,22 +1039,17 @@ struct DashboardPopoverView: View {
     }
 
     /// The regular accents are tuned for dark surfaces and wash out on white.
-    /// The hero card is light in light mode, so use deeper variants there.
+    /// The hero card is light in light mode, so use deeper variants there —
+    /// shared ink tokens so foreground compensation stays in one place.
     private var heroTint: Color {
         guard colorScheme == .light else { return statusTint }
-        if viewModel.hasControlError {
-            return Color(red: 0.80, green: 0.16, blue: 0.14)
-        }
-        if viewModel.isCharging {
-            return Color(red: 0.78, green: 0.40, blue: 0.04)
-        }
-        return Color(red: 0.05, green: 0.52, blue: 0.28)
+        if viewModel.hasControlError { return AidenteTheme.coralInk }
+        if viewModel.isCharging { return AidenteTheme.amberInk }
+        return AidenteTheme.jadeInk
     }
 
     private var warningTint: Color {
-        colorScheme == .dark
-            ? AidenteTheme.amber
-            : Color(red: 0.78, green: 0.40, blue: 0.04)
+        colorScheme == .dark ? AidenteTheme.amber : AidenteTheme.amberInk
     }
 
     private func energyTint(for index: Int) -> Color {
@@ -1527,10 +1539,10 @@ private struct PowerFlowNode: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 23, height: 23)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
+                    .frame(width: 23, height: 23)
                 .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1541,7 +1553,7 @@ private struct PowerFlowNode: View {
                 Text(String(format: "%.2f W", abs(power)))
                     .font(.system(size: 11.5, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(tint)
+                    .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
 
@@ -1549,7 +1561,10 @@ private struct PowerFlowNode: View {
                     Text(electricalText)
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(tint.opacity(0.92))
+                        .foregroundStyle(
+                            AidenteTheme.legibleTextTint(tint, scheme: colorScheme)
+                                .opacity(0.92)
+                        )
                         .lineLimit(1)
                         .minimumScaleFactor(0.76)
                 }
@@ -1598,7 +1613,10 @@ private struct PopoverCardBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        AidenteLevelSurface(level: .card, cornerRadius: 14)
+        // Dashboard cards let the L0 glass show through (alpha 0.3 light /
+        // 0.4 dark). The surface falls back to opaque under Reduce Transparency
+        // or non-sampling containers, so text contrast is preserved.
+        AidenteLevelSurface(level: .card, cornerRadius: 14, translucentCard: true)
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(
@@ -1619,6 +1637,7 @@ private struct CompactDivider: View {
 
 private struct CompactMetric: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.colorScheme) private var colorScheme
 
     let title: String
     let value: String
@@ -1636,7 +1655,7 @@ private struct CompactMetric: View {
                     )
                 )
                 .monospacedDigit()
-                .foregroundStyle(tint)
+                .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
                 .lineLimit(1)
                 .minimumScaleFactor(0.70)
             Text(AidenteL10n.t(title))
@@ -1676,6 +1695,7 @@ private struct CapacityLegend: View {
 
 private struct CompactActionRow: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.colorScheme) private var colorScheme
 
     let title: String
     let subtitle: String
@@ -1689,7 +1709,7 @@ private struct CompactActionRow: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(tint)
+                    .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
                     .frame(width: 30, height: 30)
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1708,7 +1728,9 @@ private struct CompactActionRow: View {
 
                 Text(AidenteL10n.t(isOn ? "开启" : "关闭"))
                     .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(isOn ? tint : .secondary)
+                    .foregroundStyle(
+                        isOn ? AidenteTheme.legibleTextTint(tint, scheme: colorScheme) : .secondary
+                    )
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
@@ -1741,7 +1763,7 @@ private struct EnergyAppRow: View {
                 HStack(spacing: 6) {
                     Text("\(rank)")
                         .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(tint)
+                        .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
                         .frame(width: 13)
                     Text(app.name)
                         .font(.system(size: 11.5, weight: .semibold))
@@ -1780,6 +1802,7 @@ private struct EnergyAppRow: View {
 
 private struct ProtectionPill: View {
     @Default(.appLanguage) private var appLanguage
+    @Environment(\.colorScheme) private var colorScheme
 
     let title: String
     let isEnabled: Bool
@@ -1790,12 +1813,20 @@ private struct ProtectionPill: View {
             HStack(spacing: 5) {
                 Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(isEnabled ? AidenteTheme.jade : Color.secondary)
+                    .foregroundStyle(
+                        isEnabled
+                            ? AidenteTheme.legibleTextTint(AidenteTheme.jade, scheme: colorScheme)
+                            : Color.secondary
+                    )
                 Text(AidenteL10n.t(title))
                     .font(.system(size: 10.5, weight: .medium))
                 Text(AidenteL10n.t(isEnabled ? "开" : "关"))
                     .font(.system(size: 9.5, weight: .bold))
-                    .foregroundStyle(isEnabled ? AidenteTheme.jade : .secondary)
+                    .foregroundStyle(
+                        isEnabled
+                            ? AidenteTheme.legibleTextTint(AidenteTheme.jade, scheme: colorScheme)
+                            : .secondary
+                    )
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 7)

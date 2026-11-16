@@ -17,6 +17,22 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let diagnosticCenter: DiagnosticCenter
     private let updateService: UpdateService
 
+    /// AppKit parks the traffic lights at ~16pt under a hidden transparent
+    /// title bar. Move their centers to 32pt so they line up with the detail
+    /// pane's title, and shift the row right to the 20pt left inset used by
+    /// the detail title. AppKit re-lays them out on resize / appearance
+    /// changes, so the delegate callbacks below re-apply this.
+    private static let trafficLightInset: CGFloat = 32
+    private static let trafficLightLeftInset: CGFloat = 20
+    /// The buttons' superview (the titlebar container) is only ~28pt tall by
+    /// default. Moving the buttons down to a 32pt center yields a negative y
+    /// in that container, pushing them outside its hit-test bounds — clicks
+    /// land on the SwiftUI content instead. A transparent bottom accessory
+    /// grows the container to this height so `positionTrafficLights()` keeps
+    /// the buttons inside it and their click targets stay alive.
+    private static let targetTitlebarHeight: CGFloat = 64
+    private var titlebarAccessory: NSTitlebarAccessoryViewController?
+
     init(
         capabilities: DeviceCapabilities,
         chargeManager: ChargeManager,
@@ -44,6 +60,52 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func applyAppearance() {
         window?.appearance = AidenteAppearanceResolver.resolved(Defaults[.appAppearance])
+        positionTrafficLights()
+    }
+
+    /// Grow the titlebar container with a transparent bottom accessory. The
+    /// stock container is ~28pt tall, so a 32pt-centered button needs a
+    /// negative y and falls outside its hit-test bounds (clicks hit the
+    /// SwiftUI view instead). Adding the accessory once grows the container
+    /// to `targetTitlebarHeight`; `positionTrafficLights()` then computes a
+    /// positive in-bounds y and clicks reach the buttons again.
+    private func installTitlebarAccessory() {
+        guard titlebarAccessory == nil,
+              let window,
+              let button = window.standardWindowButton(.closeButton),
+              let container = button.superview else { return }
+        let extra = max(0, Self.targetTitlebarHeight - container.bounds.height)
+        guard extra > 0 else { return }
+        let accessory = NSTitlebarAccessoryViewController()
+        let spacer = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: extra))
+        spacer.wantsLayer = false
+        accessory.view = spacer
+        accessory.layoutAttribute = .bottom
+        window.addTitlebarAccessoryViewController(accessory)
+        titlebarAccessory = accessory
+    }
+
+    private func positionTrafficLights() {
+        guard let window else { return }
+        let kinds: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        // Delta is recomputed from the current (possibly AppKit-reset) x, so
+        // repeated calls converge on the target inset without drifting.
+        let dx: CGFloat
+        if let first = window.standardWindowButton(.closeButton) {
+            dx = Self.trafficLightLeftInset - first.frame.origin.x
+        } else {
+            dx = 0
+        }
+        for kind in kinds {
+            guard let button = window.standardWindowButton(kind),
+                  let container = button.superview else { continue }
+            let y = container.bounds.height
+                - Self.trafficLightInset
+                - button.frame.height / 2
+            button.setFrameOrigin(
+                NSPoint(x: button.frame.origin.x + dx, y: y)
+            )
+        }
     }
 
     deinit {
@@ -56,6 +118,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             existingWindow.delegate = nil
             existingWindow.close()
             window = nil
+            // The accessory view controller belongs to the closed window;
+            // drop the controller-held reference so the next window gets
+            // its own (otherwise installTitlebarAccessory() below would
+            // skip and traffic-light clicks break again on reopen).
+            titlebarAccessory = nil
         }
 
         let settingsView = SettingsView(
@@ -79,6 +146,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         newWindow.appearance = AidenteAppearanceResolver.resolved(Defaults[.appAppearance])
         newWindow.titlebarAppearsTransparent = true
         newWindow.titleVisibility = .hidden
+        // No hairline under the hidden title bar: the prototype has no
+        // full-width band, only the sidebar/detail divider running top-down.
+        newWindow.titlebarSeparatorStyle = .none
         newWindow.isOpaque = false
         newWindow.backgroundColor = .clear
         newWindow.contentView?.wantsLayer = true
@@ -93,11 +163,27 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
 
         self.window = newWindow
+        installTitlebarAccessory()
+        // Force the titlebar container to adopt the accessory's extra height
+        // before computing the buttons' y, otherwise it still reads ~28pt.
+        newWindow.layoutIfNeeded()
+        positionTrafficLights()
+    }
+
+    nonisolated func windowDidBecomeKey(_ notification: Notification) {
+        MainActor.assumeIsolated { positionTrafficLights() }
+    }
+
+    nonisolated func windowDidResize(_ notification: Notification) {
+        MainActor.assumeIsolated { positionTrafficLights() }
     }
 
     nonisolated func windowWillClose(_ notification: Notification) {
         MainActor.assumeIsolated {
             window = nil
+            // Accessory belongs to the closing window; reset so a later
+            // showSettings() installs a fresh one for the new window.
+            titlebarAccessory = nil
         }
     }
 }

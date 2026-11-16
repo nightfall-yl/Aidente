@@ -9,29 +9,15 @@ struct GeneralSettingsView: View {
     @Default(.menuBarReadoutStyle) var menuBarReadoutStyle
     @Default(.showBatteryStateInStatusIcon) var showBatteryStateInStatusIcon
     @Default(.useHardwarePercentage) var useHardwarePercentage
-    @Default(.forceOpaqueBackground) var forceOpaqueBackground
     @Default(.appAppearance) var appAppearance
     @Default(.manageMagSafeLED) var manageMagSafeLED
     @Default(.heatProtectionMagSafeLEDState) var heatProtectionMagSafeLEDState
     @Default(.enableHeatProtectionMode) var enableHeatProtectionMode
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private let capabilities: DeviceCapabilities
 
     init(capabilities: DeviceCapabilities) {
         self.capabilities = capabilities
-    }
-
-    /// The card reports the app-wide policy, not the settings window's own
-    /// container capability. That window always renders an opaque baseline
-    /// because it cannot sample a backdrop; the explanation still describes
-    /// what the system would supply on a capable surface.
-    private var resolution: AidenteReadabilityResolution {
-        AidenteReadability.resolve(
-            reduceTransparency: reduceTransparency,
-            forceOpaque: forceOpaqueBackground,
-            canSampleBackdrop: true
-        )
     }
 
     var body: some View {
@@ -55,7 +41,7 @@ struct GeneralSettingsView: View {
 
             AidenteCard(
                 "外观",
-                subtitle: resolution.strategy.detail,
+                subtitle: "选择浅色、深色，或跟随系统。",
                 icon: "paintbrush.fill",
                 colors: AidenteTheme.generalColors
             ) {
@@ -68,16 +54,6 @@ struct GeneralSettingsView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .id(appLanguage)
-
-                AidenteRowDivider()
-
-                AidenteSettingToggle(
-                    "始终使用不透明背景",
-                    subtitle: "系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。",
-                    icon: "rectangle.inset.filled",
-                    colors: AidenteTheme.dashboardColors,
-                    isOn: $forceOpaqueBackground
-                )
             }
 
             AidenteCard(

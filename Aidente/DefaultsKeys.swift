@@ -29,26 +29,6 @@ enum AidenteMigration {
 
         defaults.set(true, forKey: migrationMarker)
     }
-
-    /// One-time migration from the retired four-way material picker to the
-    /// readability strategy. The old "solid" choice becomes the new
-    /// "always use an opaque background" override; every other choice falls
-    /// back to following the system. Runs once and never reads the old key
-    /// again.
-    private static let materialMigrationMarker =
-        "didMigrateInterfaceMaterialStyleV1"
-
-    static func migrateMaterialPreferenceIfNeeded() {
-        let defaults = UserDefaults.standard
-        guard !defaults.bool(forKey: materialMigrationMarker) else { return }
-
-        if defaults.object(forKey: "forceOpaqueBackground") == nil,
-           let legacy = defaults.string(forKey: "interfaceMaterialStyle") {
-            Defaults[.forceOpaqueBackground] = (legacy == "solid")
-        }
-
-        defaults.set(true, forKey: materialMigrationMarker)
-    }
 }
 
 extension MagSafeLEDState: Defaults.Serializable {}
@@ -118,15 +98,13 @@ enum MenuBarReadoutStyle: String, Defaults.Serializable, CaseIterable, Identifia
 }
 
 // The four-way interface material picker has been retired. macOS supplies
-// the material; the app only exposes one readability override below.
+// the material and the app follows the system's readability settings.
 
 extension Defaults.Keys {
     // General
     static let appLanguage = Key<AppLanguage>("appLanguage", default: .system)
     static let appAppearance = Key<AppAppearance>("appAppearance", default: .auto)
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
-    static let forceOpaqueBackground = Key<Bool>(
-        "forceOpaqueBackground", default: false)
     static let automaticallyCheckForUpdates = Key<Bool>(
         "automaticallyCheckForUpdates", default: true)
     /// Version the user chose to skip from the update sheet. Empty means none;

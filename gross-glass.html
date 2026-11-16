@@ -290,7 +290,7 @@ html[data-plan="a"] .win-dashboard {
 
   <div class="panel" style="margin:0 0 22px;border-left:3px solid var(--accent)">
     <span class="tagline">现行方案 · 6.1.1 / Build 22（已编译并输出 DMG）</span>
-    <p>macOS 26+ 使用系统 <code>glassEffect(.regular)</code>；macOS 15 及更早使用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（不含真折射 / 色散）。仪表盘三个容器 <code>canSampleBackdrop = true</code>，设置窗口仍为 <code>false</code>；「外观」为 自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关，四档材质选择器已删除。下方表格中的「改版前」一列是<strong>历史快照</strong>，不代表当前实现。</p>
+    <p>macOS 26+ 使用系统 <code>glassEffect(.regular)</code>；macOS 15 及更早使用 <code>NSVisualEffectView(.popover, .behindWindow)</code> + <code>AidenteGlassOverlay</code> 自绘静态层（不含真折射 / 色散）。仪表盘三个容器 <code>canSampleBackdrop = true</code>，设置窗口仍为 <code>false</code>；「外观」为 自动 / 浅色 / 深色 分段控件，四档材质选择器与 App 内材质开关均已删除。下方表格中的「改版前」一列是<strong>历史快照</strong>，不代表当前实现。</p>
   </div>
 
   <h2>一 · 交互原型</h2>
@@ -487,7 +487,7 @@ html[data-plan="a"] .win-dashboard {
       <ul>
         <li><strong>材质层数：</strong>改版前窗口底带公共对角渐变、顶栏带整体 <code>.98</code> 与页脚 <code>.72</code>、卡片带渐变描边与半透明；现行方案收敛为一组固定中性色阶，卡片只留 1pt 中性描边，仪表盘 L0 另叠类液态玻璃静态层。</li>
         <li><strong>两端一致性：</strong>改版前亮色下设置页是实体近白、仪表盘是透桌面的玻璃；现行方案两端同类层同值，差异只由容器能力标志（能否采样背景）决定。</li>
-        <li><strong>用户可选项：</strong>改版前是四档分段选择器（本原型固定选中「毛玻璃」）；现行方案已删除四档，改为「外观」自动 / 浅色 / 深色 分段控件 + 「始终使用不透明背景」开关。</li>
+        <li><strong>用户可选项：</strong>改版前是四档分段选择器（本原型固定选中「毛玻璃」）；现行方案已删除四档，只保留「外观」自动 / 浅色 / 深色 分段控件（App 内材质开关已于 2026-11-15 移除）。</li>
         <li><strong>通透感：</strong>早期「改版后不再透桌面」的推断已被推翻：现行方案把仪表盘三个容器的 <code>canSampleBackdrop</code> 恢复为 <code>true</code>，15 及更早走 <code>.behindWindow</code> 毛玻璃 + 自绘玻璃层，26+ 走系统液态玻璃；设置窗口仍固定实体。</li>
       </ul>
     </div>
