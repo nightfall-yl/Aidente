@@ -266,10 +266,33 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         pinRefreshGeneration += 1
         let generation = pinRefreshGeneration
         logger.notice("PIN_REFRESH_SCHEDULED \(expectedVersion, privacy: .public)")
+        pinLog("SCHEDULED expectedVersion=\(expectedVersion) generation=\(pinRefreshGeneration)")
         pinRefreshQueue.async { [weak self] in
             self?.watchForClientSwap(expectedVersion: expectedVersion, generation: generation)
         }
         reply(true, nil)
+    }
+
+    /// File-based trace for the pin-refresh watcher: the unified log is not
+    /// readable in every environment, so keep a small plain-text trail next to
+    /// the manifest (truncated past 64 KB).
+    private func pinLog(_ message: String) {
+        let url = URL(fileURLWithPath: LocalControlIdentity.directory)
+            .appendingPathComponent("pinrefresh.log")
+        let line = "\(Date()) \(message)\n"
+        if let data = try? Data(contentsOf: url), data.count > 64 * 1024 {
+            try? data.write(to: url)
+        }
+        if let handle = try? FileHandle(forWritingTo: url) {
+            defer { try? handle.close() }
+            try? handle.seekToEnd()
+            try? handle.write(line.data(using: .utf8)!)
+        } else {
+            try? line.data(using: .utf8)?.write(to: url)
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o644], ofItemAtPath: url.path
+            )
+        }
     }
 
     private func watchForClientSwap(expectedVersion: String, generation: Int) {
@@ -281,10 +304,14 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         // read; the expensive codesign verify only runs once the cdhash moved.
         // Expiring without a swap (failed update, user rollback) is a no-op —
         // the old pin stays valid.
-        for _ in 0..<240 {
-            guard pinRefreshGeneration == generation else { return }
+        for tick in 0..<240 {
+            guard pinRefreshGeneration == generation else {
+                pinLog("SUPERSEDED generation=\(generation)")
+                return
+            }
             guard let pinned = clientPinnedIdentity() else {
                 logger.error("PIN_REFRESH_NO_MANIFEST")
+                pinLog("NO_MANIFEST")
                 return
             }
             guard FileManager.default.fileExists(atPath: clientPath) else {
@@ -293,6 +320,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
             }
             guard let candidate = codeIdentity(at: bundleURL) else {
                 logger.notice("PIN_REFRESH_CANDIDATE_UNREADABLE")
+                pinLog("tick=\(tick) CANDIDATE_UNREADABLE")
                 usleep(500_000)
                 continue
             }
@@ -300,6 +328,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
                 usleep(500_000) // not swapped yet (or rolled back)
                 continue
             }
+            pinLog("tick=\(tick) SWAP_DETECTED new=\(candidate.cdHash) id=\(candidate.identifier ?? "nil") ver=\(candidate.version ?? "nil")")
             // The cdhash moved — validate the replacement before re-pinning.
             // Strict (non-deep) is sufficient here: the updater already ran a
             // full --deep --strict on the staged bundle before the swap, and
@@ -310,13 +339,16 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
                   let sha = fileSHA256(at: URL(fileURLWithPath: clientPath))
             else {
                 logger.error("PIN_REFRESH_VALIDATION_FAILED")
+                pinLog("VALIDATION_FAILED id=\(candidate.identifier ?? "nil") ver=\(candidate.version ?? "nil") expected=\(expectedVersion)")
                 return
             }
             guard updateClientPin(cdHash: candidate.cdHash, sha256: sha, manifestURL: manifestURL) else {
                 logger.error("PIN_REFRESH_WRITE_FAILED")
+                pinLog("WRITE_FAILED")
                 return
             }
             logger.notice("PIN_REFRESHED \(candidate.cdHash, privacy: .public) version=\(expectedVersion, privacy: .public)")
+            pinLog("PIN_REFRESHED new=\(candidate.cdHash)")
             // Restart so the listener re-reads the manifest: exiting releases
             // the mach port and launchd starts a fresh daemon on demand with
             // the new pin in effect.
@@ -324,6 +356,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
             exit(0)
         }
         logger.notice("PIN_REFRESH_EXPIRED")
+        pinLog("EXPIRED no swap within window")
     }
 
     private struct CodeIdentity {
