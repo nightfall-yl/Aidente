@@ -899,7 +899,12 @@ final class UpdateService {
             controlRetryHandler?()
         }
 
-        guard !helper.isInstalled, Defaults[.manageCharging] else { return }
+        guard !helper.isInstalled, Defaults[.manageCharging] else {
+            if let updatedVersion {
+                presentSuccessfulUpdateAlert(version: updatedVersion)
+            }
+            return
+        }
 
         let title: String
         let englishTitle: String
@@ -949,6 +954,24 @@ final class UpdateService {
             alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
             present(alert) { _ in }
         }
+    }
+
+    /// Shown once after a seamless update: the relaunched build confirms the
+    /// swap completed and charging control is available again. Kept as an
+    /// AppKit alert so it appears regardless of which surface is open.
+    private func presentSuccessfulUpdateAlert(version: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = AidenteL10n.t(
+            "Aidente 已更新至 \(version)",
+            "Aidente Was Updated to \(version)"
+        )
+        alert.informativeText = AidenteL10n.t(
+            "新版本已成功启动，原版本备份已安全清理。",
+            "The new version launched successfully and the old backup was safely removed."
+        )
+        alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
+        present(alert) { _ in }
     }
 
     private func removeValidatedBackupIfPresent(_ path: String?) {
