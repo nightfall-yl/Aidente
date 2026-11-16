@@ -37,6 +37,18 @@ final class ChargingHelperManager {
     func refreshStatus() {
         helperStatus = LocalControlInstaller.installedMatchesCurrentApp() ? .installed : .notInstalled
     }
+
+    /// Drops a stale failure recorded while the daemon was restarting (the
+    /// update re-pin window). Unlike `refreshStatus`, which only re-derives
+    /// `helperStatus`, this also clears `failure` and the cached connection so
+    /// the next command reconnects against the fresh daemon pin — without it,
+    /// the hero would offer a pointless re-authorization after a seamless
+    /// update. Only acts when the installed helper actually matches this app.
+    func clearTransientFailure() {
+        guard isInstalled else { return }
+        failure = nil
+        disconnect()
+    }
     // Startup and polling NEVER request administrator privileges.
     func ensureInstalled() throws {
         if let failure { throw failure }

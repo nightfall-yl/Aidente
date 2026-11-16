@@ -801,20 +801,6 @@ const PAGES = {
         actions: [ { label:'取消更新', ghost:true }, { label:'后台继续' } ],
       },
       {
-        label: '软件更新弹窗 · 安装完成（新版本成功启动后）',
-        title: '软件更新', sub: 'Aidente 6.1.4 · 更新完成',
-        icon: 'download', colors: 'permissions', legacyRows: false,
-        card: {
-          title: '更新进度', sub: '所有步骤已完成，当前运行的就是新版本。',
-          icon: 'check', colors: 'permissions', headless: true, rows: [
-            rUpdate({
-              icon: 'check', title: '已更新至 6.1.4', detail: '新版本已成功启动。',
-            }),
-          ]
-        },
-        actions: [ { label:'完成' } ],
-      },
-      {
         label: '软件更新弹窗 · 失败原因（校验或安装失败时）',
         title: '软件更新', sub: 'Aidente 6.1.4 · 更新未完成',
         icon: 'download', colors: 'permissions', legacyRows: false,

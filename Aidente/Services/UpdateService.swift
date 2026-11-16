@@ -890,12 +890,16 @@ final class UpdateService {
             }
         }
 
-        guard !helper.isInstalled, Defaults[.manageCharging] else {
-            if let updatedVersion {
-                presentSuccessfulUpdateAlert(version: updatedVersion)
-            }
-            return
+        if helper.isInstalled {
+            // The daemon restart during the swap window may have recorded a
+            // stale XPC failure and control errors; drop them now that the
+            // pin has converged so the hero doesn't offer a pointless
+            // re-authorization after a seamless update.
+            helper.clearTransientFailure()
+            controlRetryHandler?()
         }
+
+        guard !helper.isInstalled, Defaults[.manageCharging] else { return }
 
         let title: String
         let englishTitle: String
@@ -945,21 +949,6 @@ final class UpdateService {
             alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
             present(alert) { _ in }
         }
-    }
-
-    private func presentSuccessfulUpdateAlert(version: String) {
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = AidenteL10n.t(
-            "Aidente 已更新至 \(version)",
-            "Aidente Was Updated to \(version)"
-        )
-        alert.informativeText = AidenteL10n.t(
-            "新版本已成功启动，原版本备份已安全清理。",
-            "The new version launched successfully and the old backup was safely removed."
-        )
-        alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
-        present(alert) { _ in }
     }
 
     private func removeValidatedBackupIfPresent(_ path: String?) {
