@@ -1,5 +1,6 @@
 import Defaults
 import Foundation
+import os.log
 
 enum AidenteL10n {
     static var isEnglish: Bool {
@@ -20,7 +21,14 @@ enum AidenteL10n {
 
     static func t(_ chinese: String) -> String {
         guard isEnglish else { return chinese }
-        return english[chinese] ?? chinese
+        guard let translated = english[chinese] else {
+            #if DEBUG
+            Logger(subsystem: "com.aidente.app", category: "AidenteL10n")
+                .warning("Missing English translation: \(chinese, privacy: .public)")
+            #endif
+            return chinese
+        }
+        return translated
     }
 
     static func t(_ chinese: String, _ english: String) -> String {
@@ -77,6 +85,7 @@ enum AidenteL10n {
         "中文": "Chinese",
         "跟随系统": "System",
         "语言": "Language",
+        "语言与外观": "Language & Appearance",
         "切换菜单栏和设置界面的显示语言。": "Follow macOS or choose the language used in the menu bar and settings.",
         "通用": "General",
         "仪表盘": "Dashboard",
@@ -103,6 +112,7 @@ enum AidenteL10n {
         "系统「降低透明度」开启时，无论此开关状态如何，都会强制使用不透明背景。": "When the system Reduce Transparency setting is on, an opaque background is used regardless of this switch.",
         "启动": "Startup",
         "让电池保护在登录后自动开始工作。": "Start battery protection automatically after you sign in.",
+        "登录时启动": "Launch at Login",
         "登录时启动 Aidente": "Launch Aidente at Login",
         "登录后自动启动，并在菜单栏显示图标": "Launch automatically after sign-in and show the menu bar icon",
         "访问仪表盘": "Dashboard Access",
@@ -110,6 +120,7 @@ enum AidenteL10n {
         "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。": "Double-click Aidente in Applications, Launchpad, or Spotlight to open a standalone dashboard window.",
         "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。面板显示项可在仪表盘内配置。": "Double-click Aidente in Applications, Launchpad, or Spotlight to open a standalone dashboard window. Panel visibility is configured inside the dashboard.",
         "打开仪表盘": "Open Dashboard",
+        "菜单栏": "Menu Bar",
         "菜单栏实时读数": "Live Menu Bar Readout",
         "在电量、功率或两者同时显示之间切换。": "Show battery level, power, or both.",
         "菜单栏显示内容": "Menu Bar Content",
@@ -282,6 +293,7 @@ enum AidenteL10n {
         "巡航模式": "Sailing Mode",
         "允许电量在上限附近自然浮动，减少频繁微量补电。": "Let battery level float near the limit to reduce frequent top-ups.",
         "启用巡航模式": "Enable Sailing Mode",
+        "启用电池巡航": "Enable Battery Sailing",
         "低于上限多少时恢复充电": "Resume Charging Below Limit By",
         "恢复充电电量": "Resume Charging Level",
         "温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。": "Pause charging above the temperature threshold, using a roughly five-minute delay to avoid rapid switching.",

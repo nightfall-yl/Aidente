@@ -12,7 +12,9 @@ struct DashboardSettingsView: View {
                 "状态信息",
                 subtitle: "选择仪表盘顶部显示的系统与电池时间信息。",
                 icon: "gauge.with.dots.needle.67percent",
-                colors: AidenteTheme.chargingColors
+                colors: AidenteTheme.chargingColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 AidenteSettingToggle(
                     "系统运行时间",
@@ -29,16 +31,20 @@ struct DashboardSettingsView: View {
                 )
             }
 
-            /* The notice repeated the subtitle, so the card is header-only:
-               no content rows and no header divider; the action button sits
-               to the right of the title. */
+            // v2: no header. The title is a setting row (13pt) and the action
+            // button sits at that row's trailing edge.
             AidenteCard(
                 "访问仪表盘",
-                subtitle: "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。",
                 icon: "macwindow.on.rectangle",
                 colors: AidenteTheme.automationColors,
-                showDivider: false,
-                headerAccessory: {
+                headless: true
+            ) {
+                AidenteControlRow(
+                    "访问仪表盘",
+                    subtitle: "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。",
+                    icon: "macwindow.on.rectangle",
+                    colors: AidenteTheme.automationColors
+                ) {
                     Button {
                         if let url = URL(string: "aidente://dashboard") {
                             NSWorkspace.shared.open(url)
@@ -50,8 +56,6 @@ struct DashboardSettingsView: View {
                         AidenteActionButtonStyle(colors: AidenteTheme.automationColors)
                     )
                 }
-            ) {
-                EmptyView()
             }
         }
     }

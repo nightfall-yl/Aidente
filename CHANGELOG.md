@@ -2,7 +2,52 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前 bundle 版本为 **6.1.5 / Build 26**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.5]-2026-11-16` 汇总 6.1.4 发行之后的全部改动（仪表盘卡片玻璃化与浅色可读性、删除 App 内不透明覆盖开关、设置页无标题栏左右分栏窗口框架、浅色设置页配色、页头前进 / 后退导航），已于 2026-11-16 正式发行：GitHub Release `6.1.5`，资产含 `Aidente-6.1.5.dmg` / `Aidente-6.1.5-macOS-arm64.zip` / `SHA256SUMS-6.1.5.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+项目当前 bundle 版本为 **6.1.6 / Build 27**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。`[6.1.6]-2026-11-18` 汇总 6.1.5 发行之后的全部改动（通用页卡片重组、MagSafe 指示灯卡迁移与门控、窗口几何微调与深色光圈、死代码与零引用清理、性能缓存、英文卡标题漏翻译修复），已于 2026-11-18 正式发行：GitHub Release `6.1.6`，资产含 `Aidente-6.1.6.dmg` / `Aidente-6.1.6-macOS-arm64.zip` / `SHA256SUMS-6.1.6.txt`，自动更新源即本仓库。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+
+## [6.1.6]-2026-11-18
+
+### 变更
+
+**设置页窗口**
+
+- **左右分栏尺寸对齐系统设置**：左栏 214pt、分隔线 1pt、右栏自适应；窗口总宽 720pt 锁死、不可横向拉伸，高度默认 475pt、可在 475–960pt 间纵向拉伸。宽度由 `minSize` / `maxSize` 同宽钳制、高度由 SwiftUI frame 范围约束，autosave 换用新 key 避免恢复旧尺寸。
+- **通用页卡片重组**：①「语言」「外观」两张 headless 单行卡合并为「语言与外观」一张卡（卡头外置、只有标题、无徽章，两行 + 分隔线）；②「菜单栏」提前到第二张、「登录时启动」移到末尾，卡序定稿 语言与外观 → 菜单栏 → 登录时启动；③「登录时启动」配色改 amber/gold（`automationColors`）；④「MagSafe 指示灯」卡从通用页移入充电管理页（电池校准之后），相关 `@Default` key 与能力门控（`hasMagSafe` / `magsafeLEDControl`）随迁，与 `settings-prototype_v2.html` 同步；⑤指示灯卡加入 `manageCharging` 门控家族——LED 是充电状态机的可视化外设（写入与限充走同一 root helper），充电管理关闭时与电池校准 / 巡航 / 高温保护同族整卡隐藏。
+- **卡片内容留白**：卡头外置 / headless 卡片的 content 上下各补 7pt，首末行距卡片边约 15pt；Inset 块间距统一交给卡片 `VStack` spacing，不再单独叠加 margin。卡片间距 16、行徽章槽 26。
+- **窗口框架几何微调**：交通灯中心 32 → 30pt（titlebar 透明 accessory 64 → 60pt），侧栏主徽章 34px +「Aidente」18pt bold 中心线 83 → 77pt（header padding.top 60 → 54，交通灯下方 51 → 47pt）；右栏页头槽 64 → 60pt、横线距标题中心 32 → 30pt，与 `settings-prototype_v2.html` 同步。
+- **深色模式窗口光圈**：设置窗口最外层叠加 1pt 圆角描边（白色 20% 透明度，`RoundedRectangle.cornerRadius 12` 内描边），跟随窗口 12pt 圆角贴合边缘、不参与点击；仅深色模式显示，浅色保持系统自带边缘高光不变。窗口圆角 14 → 12pt、设置卡片圆角 15 → 12pt（`AidenteTheme` 收敛为 `AidenteCard.cardCornerRadius` 单一常量），与原型 12px 对齐。
+
+**设置页卡片与控件**
+
+- **卡片结构统一**：`AidenteCard` 新增 `headerOutside` / `headless`，徽章统一为 34 / 26 / 22 三档；含设置项或 Inset 的卡片卡头外置并去徽章、去掉分隔线，只有卡头无设置项的卡片保留内嵌卡头与徽章；语言 / 外观 / 访问仪表盘改为 headless 设置项行。卡头标题 14pt、设置项标签 13pt。
+- **菜单选择器统一**：新增 `AidenteMenuPicker` / `AidenteMenuOption`，语言、外观、菜单栏读数、电量数字位置、高温灯光、执行动作、重复等改用同一套单击弹出列表；Swift 用 `Button + popover` 自绘，文字与对号用系统色、对号在左，右侧双箭头紧跟当前值，按钮宽度随内容自适应。
+- **弹窗**：软件更新与添加计划任务弹窗宽度统一 520pt，添加计划任务高度 450pt；标题徽章 26、标题 15pt、无副标题，添加任务的取消 / 添加按钮右对齐、执行动作与重复用统一菜单；软件更新弹窗去掉卡内徽章，GitHub 发行版链接移到「自动检查更新」副标题。
+
+**充电管理与授权**
+
+- **术语改名**：「巡航模式」卡片及「启用巡航模式」开关改名为「电池巡航」/「启用电池巡航」（英文 Battery Sailing / Enable Battery Sailing）；中文映射写入 `AidenteL10n`。
+- **文案精简**：启用充电管理副标题改为「首次启用需管理员授权安装后台服务」；「设置充电上限」不再单独显示副标题，说明与实时状态合并为一个状态提示框，两行分别为「达到上限后由适配器供电；巡航使用巡航范围。」和「正在以 X% 上限管理充电；电池巡航已开启 / 当前关闭。」；重新授权与授权失败提示中的「无需开发者账号」中英双语全部移除。删除只读「恢复充电电量」设置项。
+- **hero 一键修复补通知**：`attemptQuickRepair()` 修复成功 / 失败各弹 NSAlert，文案与更新触发的重新授权路径一致（此前仅成功重连、失败写日志，无任何用户提示）。
+
+**默认行为与用语**
+
+- 默认外观改深色；睡眠三开关默认改为 开 / 关 / 开；「启动」→「登录时启动」，睡眠管理导航 →「睡眠行为」；计划任务副标题精简并补英文；移除多处重复副标题。
+
+**代码优化**
+
+- **移除旧 NSMenu 实现整条死链**：`MenuBuilder.swift`（433 行）、`MenuViews.swift`、`PowerSankeyView.swift` 全部零外部引用，整体删除；连带删除只被它们读取的 7 个 `showBattery*` / `showPowerSource` 等默认 key（`DefaultsKeys.swift`）、`MenuBarReadoutStyle.icon`，以及 `MenuViewModel` 的 `powerSourceText` / `externalInputText` / `internalInputText` / `adapterSpecificationText` 四个只写不读属性与 `formatAdapterSpecification` / `formatSpecification` 两个 helper——每次 SMC 刷新不再格式化这四条无人读取的字符串。同时删除其它零引用项：`UpdateService` 的 `statusIcon` / `statusColor` 计算属性，`AidenteTheme` 的 `graphite` / `panel` 颜色常量与 `AidenteChromeBar` 视图。
+- **删除零引用模块与死字段**：`ControlServiceRefreshPolicy`（daemon 早已内联同等迁移逻辑，仅剩测试引用）连同 `ChargingRegressionTests` 中对应的 4 条检查一并移除（充电回归 138 → 134 项，全部通过）；`AidenteUpdateRelease` 的 `name` / `notes` / `pageURL` 三个只写不读字段随三处构造点移除。`GitHubReleaseResponse` 等 API 解码模型保持完整不动。
+- **修复英文界面卡标题漏翻译**：「登录时启动」「菜单栏」「语言与外观」三张卡的英文词条缺失（卡标题以变量传入组件、词典查找发生在内部，改标题时词典易漏），补入 `AidenteL10n`；同时 DEBUG 构建中 `t()` 未命中词典时打 os_log 警告，后续漏词条可当场发现。
+- **DateFormatter 缓存**：`MenuViewModel` 的历史记录起始日期、`BatteryCapacityChartView` 的图表横轴日期改为静态缓存的按语言双格式器，不再每次调用 / 渲染新建 `DateFormatter`。
+- **仪表盘卡片顺序解析缓存**：`DashboardPopoverView` 的 `orderedCards` 逻辑提为 `DashboardEditableCard.resolvedOrder(_:)` 并按最后一个 key 记忆化，body 多次求值不再重复 split 排序字符串。
+- **重复样板收敛**：新增 `AidenteCapabilityGate`（`.aidenteGated(_)`）统一「禁用 + 50% 透明」写法（充电页 3 处、权限页 3 处）；`AidenteMenuOption.options(for:)` 静态工厂替换 5 处 `allCases.map` 映射样板；权限页冗余的 `hasChargingControl` 私有属性改用 `capabilities.chargingControl` 直取。
+- **`ChargingHelper.pinLog()` 清理两处无效 `try?`**：`seekToEnd()` 结果显式丢弃，写入改用 `write(contentsOf:)`；行为不变。
+
+### 验证
+
+- **版本号升级到 6.1.6 / Build 27**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[6.1.6-preview]` 归档为 `[6.1.6]-2026-11-18`，新建 `BuildSupport/release-notes-6.1.6.md`。
+- 多轮 `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），最终构建产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.6 / 27**；`zsh BuildSupport/test_charging.sh` 134 项充电 / 睡眠 / 固件 / 回滚 / 回读检查全过。
+- `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.6.dmg`（3.5M，卷名 `Aidente 6.1.6`），`hdiutil verify` VALID；另产出 `Aidente-6.1.6-macOS-arm64.zip` 与 `SHA256SUMS-6.1.6.txt`（`Dist/` 内裸文件名格式）。
+- **发行**：GitHub Release `6.1.6`（tag `6.1.6`）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.6`。已装 6.1.5 的机器会收到应用内更新提示。
 
 ## [6.1.5]-2026-11-16
 
@@ -23,21 +68,9 @@
 - **右栏页头可拖动窗口**：固定页头叠加局部 `NSViewRepresentable` 拖拽句柄，`mouseDown` 调 `window?.performDrag(with:)`；未开启 `isMovableByWindowBackground`，避免抢走卡片 `ScrollView` 的拖拽，左栏交通灯区域的系统拖拽保持不变。页头加入前进 / 后退按钮后，拖拽句柄从页头 overlay 下沉为 `.background` 层（在内容之下、实色底之上），标题 `Text` 与横线 `Divider` 加 `allowsHitTesting(false)` 让点击穿透——按钮可点、标题与空白区仍可拖动窗口。
 - **页头新增前进 / 后退按钮**：右栏页头标题左侧加一对 chevron 导航按钮（`SettingsView.swift`），带 tab 浏览历史栈——每次打开窗口重置为初始 tab、两按钮灰；点左栏 tab 入栈并截断前方分支，点后退 / 前进只移指针。高亮按 macOS 系统设置截图：平时无底色，可用 = 图标加深（浅 `#535353` / 深 `#F2F2F7`），鼠标悬停才出现卡片色圆角底（`settingsCardColor`）；不可用 = 图标浅灰（浅 `#737378` / 深 `#96969d`）禁用、悬停无反馈；不用系统蓝、无描边阴影。按钮始终占位，标题不随状态跳动，左缘随按钮右移到约 88pt（不再对齐交通灯 20pt）。不做长按展开历史列表。
 
-### 验证
-
-- **版本号升级到 6.1.5 / Build 26**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[未发布]` 归档为 `[6.1.5]-2026-11-16`，新建 `BuildSupport/release-notes-6.1.5.md`。
-- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.5 / 26**；`zsh BuildSupport/test_charging.sh` 138 项充电 / 睡眠 / 固件 / 回滚 / 回读检查全过。
-- `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.5.dmg`（3.7M，卷名 `Aidente 6.1.5`），`hdiutil verify` VALID；另产出 `Aidente-6.1.5-macOS-arm64.zip` 与 `SHA256SUMS-6.1.5.txt`（`Dist/` 内裸文件名格式）。
-- 界面改动（窗口框架 / 玻璃 / 前进后退按钮）编译通过，实机交互项（交通灯点击、页头拖拽、导航流转）以实机验证为准；充电策略代码无改动，回归为纯逻辑确认。
-- **发行**：GitHub Release `6.1.5`（tag `6.1.5`）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.5`。已装 6.1.4 的机器会收到应用内更新提示。
-
-### 后续修订（2026-11-16 同日重发）
-
 **更新**
 
-- **应用内更新免重新授权**：授权 App 在退出前经 XPC 预告版本，后台守护进程观察换包（0.5 秒轮询），对新包完成 bundle id / 版本 / 签名校验后自行刷新 pin 并重启；更新后的 App 直连，不再弹管理员重新授权。预告只能经已授权连接发起，手动替换 /Applications 仍需重授权；守护进程版本不含该能力时自动回落旧流程。更新后启动先等待重 pin 收敛（约 2 秒）再弹提示，成功反馈落在 3–5 秒区间，不再出现「更新完成却弹重授权」的竞态。
-- **修复守护进程读取新包版本失败**：新包路径误用可执行文件路径当 bundle 目录，版本恒读为 nil，校验被拒导致重 pin 失效。
-- **修复无缝更新后「充电管理」页残留「后台控制服务登记失败」提示**：更新经 daemon 自动 re-pin 后充电控制已生效、无需重新授权，但 re-pin 收敛窗口期内 `prepareForControl` 记录的一次 `registrationError` 未被清除（`clearTransientFailure()` 原本只清 `failure`）。现补清 `registrationError`，并给该提示加 `manageCharging && !helperManager.isInstalled` 显示条件，服务已匹配当前应用时不再显示过期提示。
+- **应用内更新免重新授权**：授权 App 在退出前经 XPC 预告版本，后台守护进程观察换包（0.5 秒轮询），对新包完成 bundle id / 版本 / 签名校验后自行刷新 pin 并重启；更新后的 App 直连，不再弹管理员重新授权。预告只能经已授权连接发起，手动替换 /Applications 仍需重授权；守护进程版本不含该能力时自动回落旧流程。更新后启动先等待重 pin 收敛（约 2 秒）再弹提示，成功反馈落在 3–5 秒区间；re-pin 收敛窗口内记录的一次性 `registrationError` 会被清除，且「后台控制服务登记失败」提示加 `manageCharging && !helperManager.isInstalled` 显示条件，服务已匹配当前应用时不再显示过期提示。
 
 **充电控制服务**
 
@@ -51,7 +84,14 @@
 
 - README 与英文版版本史对齐为「6.1.5 纲要 + 6.1」，6.1 节自英文版译入；三份设计文档更新至 6.1.5 已落地状态。
 
-- **验证（后续修订）**：`build_app.sh` / `make_dmg.sh` / `test_charging.sh`（138 项，含写序列、回滚、取整、小端编解码分组计数）全部通过；6.1.4 → 6.1.5 升级路径实机验证通过：更新全程免重新授权，换包到重 pin 约 2 秒，成功提示按 3–5 秒区间出现。
+### 验证
+
+- **版本号升级到 6.1.5 / Build 26**：`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六处 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`、`AGENTS.md` 当前版本声明已同步；`[未发布]` 归档为 `[6.1.5]-2026-11-16`，新建 `BuildSupport/release-notes-6.1.5.md`。
+- `zsh BuildSupport/build_app.sh` Exit 0（`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`），产物 `Dist/Aidente.app` 的 `Info.plist` 为 **6.1.5 / 26**；`zsh BuildSupport/test_charging.sh` 138 项充电 / 睡眠 / 固件 / 回滚 / 回读检查全过（含写序列、回滚、取整、小端编解码分组计数）。
+- `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.5.dmg`（3.7M，卷名 `Aidente 6.1.5`），`hdiutil verify` VALID；另产出 `Aidente-6.1.5-macOS-arm64.zip` 与 `SHA256SUMS-6.1.5.txt`（`Dist/` 内裸文件名格式）。
+- 界面改动（窗口框架 / 玻璃 / 前进后退按钮）编译通过，实机交互项（交通灯点击、页头拖拽、导航流转）以实机验证为准；充电策略代码无改动，回归为纯逻辑确认。
+- **6.1.4 → 6.1.5 升级路径实机验证通过**：更新全程免重新授权，换包到重 pin 约 2 秒，成功提示按 3–5 秒区间出现。
+- **发行**：GitHub Release `6.1.5`（tag `6.1.5`）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.5`。已装 6.1.4 的机器会收到应用内更新提示。
 
 ## [6.1.4]-2026-11-14
 

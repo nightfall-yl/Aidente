@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aidente 设置 · macOS 风格重排原型</title>
+<style>
+  :root {
+    --window: #f7f8fa;                          /* 内容区：最浅 */
+    --detail-pane: #edeef0;                     /* 右栏专用底色（对齐 Swift detailPaneColor 浅 #EDEEF0，略偏灰不过白） */
+    --chrome: #ececee;                          /* 侧栏：比内容区深 */
+    --card: #f5f5f7;                            /* 卡片：浅灰白，对齐 Swift settingsCardColor，避免右栏灰底上过白 */
+    --stroke: rgba(0, 0, 0, 0.09);
+    --stroke-strong: rgba(0, 0, 0, 0.14);
+    --text: #1d1d1f;
+    --text-2: #6e6e73;
+    --text-3: #737378;
+    --hover: rgba(0, 0, 0, 0.05);
+    --sel-bg: rgba(0, 122, 255, 0.80);
+    --nav-icon-on: #535353;                     /* 页头前进/后退可用图标：炭灰（macOS 截图采样），非蓝色 */
+    --sel-text: #ffffff;
+    --field: #ffffff;
+    --search-bg: rgba(0, 0, 0, 0.06);
+    /* 导航栏 tab 徽章尺寸：唯一来源。状态文案徽章跟随此值，JS 用 getComputedStyle 读取。 */
+    --tab-badge-size: 22px;
+    /* 设置页玻璃化原型变量（对齐 Swift AidenteSurfaceTokens / AidenteReadability） */
+    --side-fill: rgba(236, 236, 238, .60);      /* 侧栏玻璃材质（比内容区深） */
+    --l0-tint: rgba(255, 255, 255, 0);          /* 浅色 glassTint = .clear */
+    --desk-a: #6ea8ff; --desk-b: #b18cff; --desk-c: #ffd9a8;
+    --blob1: rgba(120, 180, 255, .62);
+    --blob2: rgba(190, 140, 255, .52);
+    --blob3: rgba(255, 190, 130, .58);
+    color-scheme: light;
+  }
+  .dark {
+    --window: #2c2c2f;                          /* 内容区：稍浅深灰 */
+    --detail-pane: #2c2c2f;                     /* 右栏专用底色：深色沿用 .window token */
+    --chrome: #262629;                          /* 侧栏：深灰，比内容区深一档但不贴黑 */
+    --card: #363639;                            /* 卡片：比内容区再浅一档 */
+    --stroke: rgba(255, 255, 255, 0.10);
+    --stroke-strong: rgba(255, 255, 255, 0.18);
+    --window-ring: rgba(255, 255, 255, 0.20);   /* 深色窗口光圈：对齐 Swift 白 20% 内描边 */
+    --text: #f2f2f7;
+    --text-2: #98989f;
+    --text-3: #96969d;
+    --hover: rgba(255, 255, 255, 0.06);
+    --sel-bg: rgba(10, 132, 255, 0.80);
+    --nav-icon-on: #F2F2F7;                     /* 深色可用图标：浅灰（与深色文字同源） */
+    --sel-text: #ffffff;
+    --field: #3a3a3e;
+    --search-bg: rgba(255, 255, 255, 0.08);
+    --side-fill: rgba(52, 52, 56, .50);         /* 侧栏玻璃材质（提亮，比内容区深一档） */
+    --l0-tint: rgba(30, 30, 34, .24);           /* 深色 glassTint = rgb(30,30,34) .24 */
+  }
+
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body {
+    margin: 0; min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+      "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+  }
+  /* 玻璃需要一个"身后"：模拟桌面壁纸，设置窗口的 L0 会采样它。
+     切到纯色壁纸可单独看玻璃的提亮与描边。 */
+  body {
+    background:
+      radial-gradient(420px 340px at 12% 18%, var(--blob1), transparent 70%),
+      radial-gradient(460px 360px at 82% 26%, var(--blob2), transparent 70%),
+      radial-gradient(520px 380px at 62% 92%, var(--blob3), transparent 70%),
+      linear-gradient(135deg, var(--desk-a), var(--desk-b) 52%, var(--desk-c));
+    background-attachment: fixed;
+  }
+  body[data-desktop="plain"] { background: #d9dadc; }
+
+  /* 原型控制条：只在 HTML 原型里对照，不参与 App 实现 */
+  .proto-bar {
+    max-width: 980px; margin: 18px auto 0;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 9px 14px; border-radius: 12px;
+    background: rgba(255,255,255,.76); border: 1px solid rgba(0,0,0,.10);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-size: 11.5px; color: #1d1d1f;
+  }
+  .dark .proto-bar {
+    background: rgba(44,44,48,.76); border-color: rgba(255,255,255,.14); color: #f2f2f7;
+  }
+  .proto-bar b { font-size: 12px; }
+  .proto-bar .grp { display: inline-flex; align-items: center; gap: 6px; }
+  .proto-bar .grp + .grp { padding-left: 12px; border-left: 1px solid rgba(127,127,127,.32); }
+  .proto-bar button {
+    font: inherit; font-size: 11px; padding: 3px 9px; border-radius: 6px;
+    border: 1px solid rgba(127,127,127,.4); background: transparent; color: inherit; cursor: pointer;
+  }
+  .proto-bar button.on { background: #0a84ff; border-color: #0a84ff; color: #fff; }
+  .proto-bar button:disabled { opacity: .4; cursor: default; }
+  .proto-bar input[type=range] { width: 108px; accent-color: #0a84ff; }
+  .proto-bar .val { font-variant-numeric: tabular-nums; min-width: 30px; }
+  .proto-bar .hint { opacity: .72; }
+
+  /* macOS window shell */
+  .window {
+    width: 750px; height: 660px; margin: 28px auto;
+    background: var(--window);
+    border-radius: 12px;
+    border: 1px solid var(--stroke-strong, rgba(0, 0, 0, 0.14));
+    /* 深色模式窗口光圈（2026-11-17）：1pt 白 14% 描边，对齐 Swift SettingsView
+       根部 overlay 的 strokeBorder；浅色无光圈（保留系统自带边缘高光）。 */
+    border-color: var(--window-ring, var(--stroke-strong));
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  /* 玻璃下沉到侧栏：右栏恒实色（降低透明度恒开），左栏由 data-glass 控制（降低透明度恒关）。
+     实色/玻璃开关只作用于左栏侧栏，不动右栏内容区。 */
+  body[data-glass="on"] .sidebar {
+    background: linear-gradient(var(--l0-tint), var(--l0-tint)), var(--side-fill);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
+  }
+  body[data-glass="off"] .sidebar { background: var(--chrome); }
+  /* macOS 15 框架：没有横贯的标题栏。交通灯浮在侧栏左上角，
+     左右分栏从窗口最顶部贯通到底，竖线全程可见。
+     交通灯 / 主徽章几何对齐 Swift 已落地值（pt 与 px 1:1）：
+     交通灯中心 y=30、左缘 x=20；徽章左缘 x=16、徽章 + 文字中心线 y=77（交通灯下方 47）。
+     交通灯走绝对定位、不占布局流，对应 AppKit 浮动按钮；主徽章从窗口顶部按 Swift
+     的 header 规格起排（padding.top 54 / 帧高 46 / padding.horizontal 16）。 */
+  .traffic { width: 12px; height: 12px; border-radius: 50%; }
+  .t-r { background: #ff5f57; } .t-y { background: #febc2e; } .t-g { background: #28c840; }
+  .side-traffic {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 60px; padding-left: 20px;            /* 中心 y=30，最左缘 x=20 */
+    display: flex; align-items: center; gap: 8px;
+    pointer-events: none; z-index: 2;
+  }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+  .vdiv { width: 1px; background: var(--stroke); align-self: stretch; }
+  .hdiv { height: 1px; background: var(--stroke); margin: 14px 0 18px; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 214px; flex: 0 0 214px;
+    background: var(--chrome);
+    display: flex; flex-direction: column;
+    position: relative;   /* 交通灯绝对定位的基准 */
+    padding: 0;           /* 由各子元素各自控制，便于对齐 Swift 数值 */
+    overflow: hidden;
+  }
+  .side-head {
+    margin: 54px 0 12px;  /* Swift header padding.top 54 / bottom 12 */
+    height: 46px;         /* Swift headerContentHeight 46，徽章垂直居中 → 中心 y=77（交通灯下方 47） */
+    padding: 0 16px;      /* Swift padding.horizontal 16 → 徽章左缘 x=16 */
+    display: flex; align-items: center; gap: 11px;
+  }
+  .app-badge {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: #1c2b3a; border: 1px solid var(--stroke);
+    display: grid; place-items: center; flex: 0 0 34px;
+  }
+  .app-badge svg { width: 18px; height: 18px; color: #2ed680; }
+  .side-head .name { font-size: 18px; font-weight: 700; }  /* Swift 18pt bold */
+  .side-head .ver { font-size: 11px; color: var(--text-3); }
+
+  .nav { flex: 1; overflow-y: auto; padding: 0 10px 10px; }  /* 左右 10 补偿原 sidebar padding，导航项视觉位置不变 */
+  .nav::-webkit-scrollbar { width: 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; margin: 5px 0; border-radius: 7px;
+    cursor: pointer; color: var(--text); font-size: 13px;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--hover); }
+  .nav-item.active { background: var(--sel-bg); color: var(--sel-text); font-weight: 600; }
+  .nav-icon {
+    width: var(--tab-badge-size); height: var(--tab-badge-size);
+    border-radius: 6px; flex: 0 0 var(--tab-badge-size);
+    display: grid; place-items: center;
+  }
+  .nav-icon svg { width: 14px; height: 14px; color: #fff; }
+
+  /* Detail：右栏拆成「固定页头」+「滚动内容」两块。
+     右栏降低透明度恒开 → 永远实色，不采样玻璃，底色用右栏专用 --detail-pane。 */
+  .detail {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--detail-pane);
+  }
+  /* 固定页头：纯页标题（无徽章 / 副标题）+ 底部横线，不参与滚动。
+     实色背景 + 高层级 → 滚动的卡片从它下方穿过、被它遮住。整块可拖动窗口。
+     几何对齐 Swift（pt↔px 1:1）：标题槽高 60 → 文字中心 y=30；
+     横线紧跟槽底 y=60（距文字中心 30）；标题与横线左右各缩进 20。 */
+  .detail-head {
+    flex: 0 0 auto;
+    padding: 0;
+    background: var(--detail-pane);
+    position: relative; z-index: 2;
+  }
+  .detail-head .page-head {
+    height: 60px;                 /* Swift frame(height: 60) → 文字中心 y=30 */
+    display: flex; align-items: center;
+    padding: 0 20px;              /* Swift .padding(.horizontal, 20) */
+  }
+  .detail-head .hdiv { margin: 0 20px; }  /* Swift Divider().padding(.horizontal, 20)，y=60 */
+  /* 滚动区：只有卡片与 sheet 预览在这里滚。原横线下方 18px 间距移到此处的 padding-top。 */
+  .detail-scroll {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 18px 30px 40px;
+  }
+  .detail-scroll::-webkit-scrollbar { width: 10px; }
+  .detail-scroll::-webkit-scrollbar-thumb { background: var(--stroke-strong); border-radius: 6px; border: 3px solid var(--detail-pane); }
+  .page-title { font-size: 16px; font-weight: 700; margin: 0; }
+  /* 页头前进 / 后退：参考 macOS 系统设置窗口顶部的返回 / 前进按钮。
+     始终占位，标题不会因可用性切换而跳动。高亮方式按系统截图与用户澄清：
+     - 平时（无论可用 / 不可用）都没有底色；
+     - 可用 = 图标加深（炭灰），鼠标悬停时才出现卡片色圆角底色块；
+     - 不可用 = 图标浅灰、禁用，悬停无反馈。不是蓝色、不加描边阴影。 */
+  .nav-btns { display: flex; align-items: center; gap: 4px; margin-right: 12px; }
+  .navbtn {
+    width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px;
+    background: transparent; color: var(--text-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: default;
+  }
+  .navbtn svg { width: 15px; height: 15px; }
+  .navbtn.enabled { color: var(--nav-icon-on); cursor: pointer; }
+  .navbtn.enabled:hover { background: var(--card); }
+  .navbtn:focus-visible { outline: 2px solid var(--nav-icon-on); outline-offset: 1px; }
+
+  .cards { max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* 2026-11-17 尝试：卡头移到卡片之外。card-group 把「卡头 + 卡片」作为一组，
+     .cards 的 gap 仍作用于组之间；卡头与卡片之间用较小的 gap。
+     只有卡头、没有设置项（也无 Inset）的卡片不适用此规则，卡头留在卡片内。 */
+  .card-group { display: flex; flex-direction: column; gap: 8px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    padding: 16px 16px 6px;
+  }
+  /* 卡头在卡外、或整卡无卡头（headless）时，顶部不再为卡头留白；上下 padding 对称。 */
+  .card-group .card, .card.card-headless { padding: 6px 16px; }
+  /* 右栏卡片恒实色：降低透明度恒开，alpha 不参与，文字对比度始终可测。 */
+  .card-head { display: flex; align-items: center; gap: 11px; padding-bottom: 14px; }
+  /* 卡头在卡外：左右 padding 与卡片一致，使徽章 / 标题左缘与卡内行徽章对齐；去掉卡内时的下留白。 */
+  .card-group .card-head { padding: 0 16px; }
+  /* 卡头标题 14px / 600，与 Swift AidenteSectionHeader 14pt 对齐；设置项标签仍是 13px。 */
+  .card-title { font-size: 14px; font-weight: 600; margin: 0; }
+  .card-sub { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
+  /* 副标题内链（卡头 / 行副标题）：只用系统文字色与副标题灰字区分，不加下划线 */
+  .card-sub a, .r-sub a { color: var(--text); text-decoration: none; }
+  .card-sub a:hover, .r-sub a:hover { opacity: .72; }
+  .card-divider { height: 1px; background: var(--stroke); margin: 0 -16px 6px; }
+
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; min-height: 30px;
+  }
+  .row .r-label { font-size: 13px; flex: 0 0 auto; }
+  .row .r-sub { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+  .row .r-main { flex: 1; min-width: 0; }
+  .row .r-control { flex: 0 0 auto; display: flex; align-items: center; }
+  .row-text { font-size: 12px; color: var(--text-2); line-height: 1.5; padding: 8px 0 11px; }
+
+  .divider { height: 1px; background: var(--stroke); margin: 0 -16px; }
+
+  /* Toggle */
+  /* 开关两态都由 renderCard 传入的卡色决定：
+     --toggle-on = 首色实底；--toggle-off = 首色 16% 半透明叠卡片背景 */
+  .toggle {
+    width: 38px; height: 22px; border-radius: 12px;
+    background: var(--toggle-off, #c7c7cc); position: relative; cursor: pointer; transition: background .15s;
+    flex: 0 0 38px;
+  }
+  .toggle.on { background: var(--toggle-on, #3d8ffa); }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Segmented */
+  .segmented {
+    display: inline-flex; background: var(--search-bg); border-radius: 7px; padding: 2px;
+    gap: 2px;
+  }
+  .seg {
+    font-size: 12px; padding: 4px 10px; border-radius: 5px; cursor: pointer;
+    color: var(--text-2); white-space: nowrap;
+  }
+  .seg.on { background: var(--field); color: var(--text); font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  /* Slider */
+  .slider-wrap { display: flex; align-items: center; gap: 10px; }
+  .slider { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 3px;
+    background: var(--stroke-strong); width: 180px; }
+  .slider:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid #0a84ff; outline-offset: 2px;
+  }
+  .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; border: 1px solid var(--stroke-strong);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); cursor: pointer; }
+  /* 滑杆数值：13px 常规字重，与行标签同用系统文字色 var(--text)，不随卡色变化 */
+  .slider-val { font-size: 13px; color: var(--text); width: 46px; text-align: right; }
+
+  /* Button */
+  .btn {
+    font-size: 12.5px; padding: 5px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid transparent; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn svg { width: 13px; height: 13px; }
+  a.btn { text-decoration: none; }
+  .btn-ghost { background: var(--field); border-color: var(--stroke); color: var(--text); }
+
+  /* 卡头菜单选择器（语言 / 外观）：单击弹出选项列表，与标题同行、不占卡片行 */
+  .head-menu { position: relative; margin-left: auto; flex: 0 0 auto; }
+  .head-menu-btn {
+    font-size: 12.5px; padding: 5px 10px; border-radius: 7px; cursor: pointer;
+    background: var(--field); border: 1px solid var(--stroke); color: var(--text);
+    display: inline-flex; align-items: center; gap: 4px;
+    width: max-content; max-width: 240px;
+  }
+  .head-menu-btn:hover { background: var(--search-bg); }
+  /* macOS 风格：当前值用系统文字色，双箭头紧跟在值右边；按钮宽度随内容自适应，不写死。 */
+  .head-menu-btn .chev {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 1px 4px; border-radius: 4px; background: var(--search-bg);
+  }
+  .head-menu-btn .chev svg { width: 11px; height: 11px; color: var(--text-2); }
+  .head-menu-btn [data-menu-label] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .head-menu-pop {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 30;
+    /* 宽度随内容自适应：中文短则窄、英文长则宽；超长在 max-width 内省略号截断，不写死宽度。 */
+    width: max-content; max-width: 240px; padding: 4px; border-radius: 8px;
+    background: var(--field); border: 1px solid var(--stroke-strong);
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  }
+  [hidden] { display: none !important; }
+  .head-menu-item {
+    font-size: 12.5px; padding: 6px 9px; border-radius: 5px; cursor: pointer;
+    display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+    color: var(--text);
+  }
+  /* 2026-11-17 对齐 Swift AidenteMenuPicker：悬停 = 系统强调色实底 + 白字白勾（macOS 原生菜单样式） */
+  .head-menu-item:hover { background: var(--sel-bg); color: var(--sel-text); }
+  .head-menu-item .check { flex: 0 0 13px; width: 13px; height: 13px; visibility: hidden; }
+  .head-menu-item[aria-checked="true"] .check { visibility: visible; }
+  .head-menu-item [data-menu-value] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+  /* Notice */
+  .notice {
+    display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 9px;
+    font-size: 11.5px; line-height: 1.45; margin: 6px 0 10px;
+    background: var(--search-bg); color: var(--text-2);
+  }
+  /* 徽章与文字垂直居中；文字换行时由文字块撑高容器，上下等量向外延伸，徽章仍居中 */
+  .notice > div { min-width: 0; }
+
+  /* Inset panel */
+  .inset {
+    background: var(--search-bg); border-radius: 9px; padding: 12px 13px;
+    margin: 6px 0 10px; font-size: 12px; color: var(--text-2); line-height: 1.6;
+  }
+  .inset.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+  /* 快捷指令卡：等宽 URL + 灰色中文说明，逐行对齐 */
+  .shortcut-line { display: flex; gap: 12px; align-items: baseline; }
+  .shortcut-line code { flex: 0 0 210px; color: var(--text); }
+  .shortcut-line span { font-family: system-ui; }
+
+  /* 状态文案：卡内说明状态 / 注意事项的独立文字行（.notice） */
+
+  /* 真实组件取色：AidenteIconBadge = 首色 16% 底 / 34% 描边 / 尾色图标 */
+  .ib { display: grid; place-items: center; flex: 0 0 auto; box-sizing: border-box; }
+  .ib svg { width: var(--ico); height: var(--ico); color: inherit; }
+  .notice .ib { flex: 0 0 var(--tab-badge-size); align-self: center; }
+  /* 行徽章右缘对齐卡头徽章。固定 26px 槽位（= 卡头徽章宽，2026-11-17 卡头徽章由 28 改为 26），
+     徽章右对齐，使 26px 行徽章右缘落在 26px 卡头徽章右缘上，行徽章归入卡头徽章组。 */
+  .badge-slot { width: 26px; flex: 0 0 26px; display: flex; justify-content: flex-end; align-items: center; }
+  /* 右栏页头只保留标题：徽章与副标题已移除，下方横线仍固定不滚动。 */
+  .page-head { display: flex; align-items: center; }
+
+  /* 规格说明（在窗口外的固定浅灰页面背景上：文字变量固定取浅色主题值，
+     否则暗色模式下会继承到近白的 --text，落在浅背景上看不清）。
+     分层：外框尺寸 → 窗口框架 → 页面设计 → 组件元素 → 字号 → 配色 → 术语，
+     自上而下按依赖顺序，每节一张可折叠 spec 卡，数值用表格承载。 */
+  .spec { max-width: 980px; margin: 0 auto 28px; font-size: 11px;
+    color: #6e6e73; line-height: 1.7;
+    --text: #1d1d1f; --text-2: #6e6e73; --text-3: #737378; }
+  .spec-title { font-size: 13px; font-weight: 700; color: #1d1d1f; margin: 0 0 4px; }
+  .spec-sub { font-size: 11px; color: #86868b; margin: 0 0 2px; }
+  .spec-card { background: rgba(255,255,255,.80); border: 1px solid rgba(0,0,0,.08);
+    border-radius: 12px; padding: 10px 16px 12px; margin-top: 10px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .spec-card summary { cursor: pointer; font-weight: 700; color: #1d1d1f;
+    font-size: 12px; display: flex; align-items: baseline; gap: 8px; list-style: none; }
+  .spec-card summary::-webkit-details-marker { display: none; }
+  .spec-card summary .no { color: #86868b; font-weight: 600;
+    font-variant-numeric: tabular-nums; font-size: 11px; }
+  .spec-card summary .en { color: #86868b; font-weight: 500; font-size: 10.5px; }
+  .spec-card summary::after { content: "＋"; margin-left: auto; color: #b0b0b5; font-weight: 400; }
+  .spec-card[open] summary::after { content: "－"; }
+  .spec-card[open] summary { margin-bottom: 6px; }
+  .spec-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 2px 0; }
+  .spec-table th { text-align: left; color: #737378; font-weight: 600;
+    padding: 3px 12px 3px 0; border-bottom: 1px solid rgba(0,0,0,.10); white-space: nowrap; }
+  .spec-table td { padding: 4px 12px 4px 0; border-bottom: 1px dashed rgba(0,0,0,.07);
+    vertical-align: top; }
+  .spec-table tr:last-child td { border-bottom: none; }
+  .spec-table td.v { color: #1d1d1f; font-weight: 600; white-space: nowrap; }
+  .spec-table code { font-size: 10.5px; }
+  .spec-note { margin-top: 6px; }
+  .spec-note b { color: #1d1d1f; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+  .sw { display: inline-flex; align-items: center; gap: 5px; }
+  .sw i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+
+  /* 添加计划任务弹窗 · 页下方静态预览（520×450 窗口 mockup，对齐 Swift .frame(width:520, height:450)） */
+  .sheet-wrap { max-width: 720px; margin-top: 20px; }
+  .sheet-wrap .sheet-label { font-size: 11px; color: var(--text-3); margin-bottom: 8px; }
+  .sheet-window {
+    width: 520px; max-width: 100%; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--stroke-strong); background: var(--window);
+    box-shadow: 0 10px 34px rgba(0,0,0,.18);
+  }
+  .sheet-bg { background: var(--window); padding: 24px; }
+  .sheet-title { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  /* 2026-11-17 用户规则：弹窗标题字号 15px（原 17px），比卡片标题 13px 略高半档。 */
+  .sheet-title-t { font-size: 15px; font-weight: 700; margin: 0; }
+  .sheet-title-s { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .sheet-actions .btn { padding: 7px 16px; }
+  .field {
+    font-size: 13px; color: var(--text); background: var(--field);
+    border: 1px solid var(--stroke); border-radius: 7px; padding: 5px 10px;
+    min-width: 150px; display: inline-block; text-align: left;
+  }
+
+  /* 软件更新弹窗 · 只呈现当前状态（页下方静态预览，与「添加计划任务」同款 sheet） */
+  .upd-head { display: flex; align-items: center; gap: 12px; padding: 4px 0 12px; }
+  /* 2026-11-17 对齐 Swift：状态标题 13.5px semibold、详情 11px（原 14 / 11.5） */
+  .upd-title { font-size: 13.5px; font-weight: 650; color: var(--text); }
+  .upd-detail { font-size: 11px; color: var(--text-2); margin-top: 3px; line-height: 1.45; }
+  .upd-badge { margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 700;
+    padding: 4px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  /* 弹窗状态流转说明（页下方预览区顶部） */
+  .sheet-flow { max-width: 720px; margin-top: 20px; padding: 10px 12px;
+    border-radius: 9px; background: var(--card); border: 1px solid var(--stroke);
+    font-size: 11.5px; color: var(--text-2); line-height: 1.65; }
+  .sheet-flow b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body class="dark">
+  <div class="proto-bar">
+    <b>设置页玻璃化 · 原型对照</b>
+    <span class="grp"><button id="themeBtn" aria-pressed="true" type="button">深色 / 浅色</button></span>
+    <span class="grp"><button id="modeBtn" type="button">左栏玻璃</button></span>
+    <span class="grp">壁纸 <button id="wallBtn" class="on" type="button">彩色 / 纯色</button></span>
+    <span class="grp hint" id="hint">右栏恒实色（降低透明度恒开）· 左栏可切玻璃（降低透明度恒关）</span>
+  </div>
+  <div class="window">
+    <div class="body">
+      <aside class="sidebar">
+        <div class="side-traffic">
+          <div class="traffic t-r"></div>
+          <div class="traffic t-y"></div>
+          <div class="traffic t-g"></div>
+        </div>
+        <div class="side-head">
+          <div class="app-badge" id="appBadge"></div>
+          <div>
+            <div class="name">Aidente</div>
+          </div>
+        </div>
+        <nav class="nav" id="nav" role="tablist" aria-label="设置分类"></nav>
+      </aside>
+      <div class="vdiv"></div>
+      <main class="detail" id="detail"></main>
+    </div>
+  </div>
+  <div class="spec" id="legend"></div>
+
+<script>
+/* ---------- icon paths (lucide-style) ---------- */
+const ICON = {
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  gauge: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  battery: '<path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-3"/><path d="M9 7H8a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1"/><path d="m11 7-3 5h4l-3 5"/><line x1="22" x2="22" y1="11" y2="13"/>',
+  calendar: '<path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.25V14"/><path d="M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>',
+  waveform: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  bolt: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  lang: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+  brush: '<path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>',
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  signal: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  terminal: '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  /* sheet 弹窗专用图标（SF Symbol 名 → lucide 线性路径；此前字典缺失导致渲染成色块） */
+  'calendar.badge.plus': '<path d="M8 2v4"/><path d="M16 2v4"/><path d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8"/><path d="M3 10h18"/><path d="M19 16v6"/><path d="M22 19h-6"/>',
+  'slider.horizontal.3': '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="12" x2="12" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+  'bolt.fill': '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>',
+  'percent': '<line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  'clock.badge.fill': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  'repeat.circle.fill': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  'arrow.clockwise.circle.fill': '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>',
+  /* 页头前进 / 后退（chevron.left / chevron.right） */
+  'chevron.left': '<path d="m15 18-6-6 6-6"/>',
+  'chevron.right': '<path d="m9 18 6-6-6-6"/>',
+  'chevron.down': '<path d="m6 9 6 6 6-6"/>',
+  'chevron.up.down': '<path d="m7 9 5-5 5 5"/><path d="m7 15 5 5 5-5"/>',
+  'check': '<polyline points="20 6 9 17 4 12"/>',
+};
+const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
+
+/* ---------- palette: 6.1.3 / 8779443 真实色值 ---------- */
+/* AidenteTheme.swift 的 Color(red:green:blue:) 固定 sRGB，换算成 hex */
+const C = {
+  general:     ['#3d8ffa', '#5cbdff'], // generalColors    = [ocean, sky]
+  dashboard:   ['#8c6bfa', '#e661db'], // dashboardColors  = [violet, pink]
+  charging:    ['#2ed680', '#66ebad'], // chargingColors   = [jade, mint]
+  permissions: ['#3d8ffa', '#8c6bfa'], // permissionColors = [ocean, violet]
+  automation:  ['#ff972e', '#ffc245'], // automationColors = [amber, gold]
+  advanced:    ['#5856d6', '#8c6bfa'], // advancedColors   = [Color.indigo, violet]（固定值）
+  about:       ['#fa574d', '#ff972e'], // aboutColors      = [coral, amber]
+  heat:        ['#ff972e', '#fa574d'], // 高温保护字面量    = [amber, coral]
+};
+/* 徽章尺寸（2026-11-17 修订）：卡头与设置项一致 = 26（含 Inset 或含设置项的卡片不渲染卡头徽章）、
+   选项行 / Inset = 26、TAB_BADGE_SIZE（状态文案，始终跟随导航栏 tab，当前 22px）；
+   弹窗标题徽章 26（2026-11-17 由 34 → 28 → 26，现与卡片 / 设置项徽章统一）属卡外元素，不受此限（右栏页头徽章已移除，仅留纯标题）。
+   卡头标题字号（.card-title 14px，与 Swift 14pt 对齐）；设置项标签（.r-label 13px）仍是 13px，语言 / 外观 / 访问仪表盘等 headless 卡标题按设置项 13px。
+   尺寸唯一来源是 CSS 变量 --tab-badge-size：侧栏 .nav-icon、状态文案 .notice .ib 与
+   iconBadge() 的内联宽高都取它，改一处即同步，不再单独写死数字。
+   详情区按元素分两类。
+   徽章 = 色对渐变实底、恒定不随主题切换；导航栏 tab 饱和 100%，详情区降到 90%。
+   状态文案、动作按钮 = 首色半透明叠在卡片背景 var(--card) 上，跟随主题变化：
+   浅色卡片上显淡、深色卡片上随底色变深。文字仍用 var(--text) 等系统语义色。
+   例外：状态文案徽章与「添加计划任务」sheet 的行徽章用 legacy 式
+   （首色 16% 底 / 34% 描边 / 尾色图标，跟随主题），对应 Swift 的
+   legacyStyle: true（AidenteTheme.swift:911 / AutomationSettingsView.swift:120）。 */
+
+/* 导航栏 tab 徽章尺寸：只从 CSS 变量读取；状态文案徽章共用，不写死 22。 */
+const TAB_BADGE_SIZE = parseFloat(
+  getComputedStyle(document.documentElement).getPropertyValue('--tab-badge-size'));
+const pal = k => C[k];
+const rgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+};
+/* HSL 饱和度 × factor 等价于向同亮度灰 l 混合 (1-factor)；factor=1 原色。
+   侧栏徽章用默认 1，详情区徽章用 BADGE_SATURATION = 0.9。 */
+const badgeTint = (hex, factor) => {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = [n >> 16 & 255, n >> 8 & 255, n & 255];
+  const l = (Math.max(...ch) + Math.min(...ch)) / 2;
+  return '#' + ch.map(v => Math.round(l + factor * (v - l)).toString(16).padStart(2, '0')).join('');
+};
+const grad = (k, factor = 1) => {
+  const [a, b] = pal(k);
+  return `linear-gradient(135deg, ${badgeTint(a, factor)}, ${badgeTint(b, factor)})`;
+};
+
+/* 侧栏导航徽章：渐变实底 + 白图标（SettingsView.sidebarRow，真实实现） */
+function badge(k, colors) {
+  return `<span class="nav-icon" style="background:${grad(colors)}">${svg(k)}</span>`;
+}
+/* 2026-11-11 规则：详情区徽章绘制对齐侧栏（135° 渐变实底 + 白图标，
+   无半透明底 / 描边 / 阴影 / 尾色图标），但色对饱和度降到 90% 且恒定不随主题切换。
+   导航栏 tab 徽章保持 100% 饱和。 */
+const BADGE_SATURATION = 0.9;
+function iconBadge(k, colors, size) {
+  const ico = Math.round(size * 0.46);
+  return `<span class="ib" style="width:${size}px;height:${size}px;`
+    + `border-radius:${Math.max(6, Math.round(size * 0.27))}px;background:${grad(colors, BADGE_SATURATION)};`
+    + `color:#fff;--ico:${ico}px">${svg(k)}</span>`;
+}
+/* 状态文案（AidenteIconBadge 式）徽章：首色 16% 底 / 34% 描边 / 尾色图标，
+   半透明叠在卡片背景 var(--card) 上、跟随主题变化（不恒定），带外围框线；
+   尺寸跟随 --tab-badge-size。用于「添加计划任务」弹窗任务设置卡的行徽章（用户 2026-11-11 定）。 */
+function legacyBadge(k, colors, size = TAB_BADGE_SIZE) {
+  const [a, b] = pal(colors);
+  const ico = Math.round(size * 0.46);
+  return `<span class="ib" style="width:${size}px;height:${size}px;`
+    + `border-radius:${Math.max(6, Math.round(size * 0.27))}px;`
+    + `background:${rgba(a, .16)};border:1px solid ${rgba(a, .34)};color:${b};--ico:${ico}px">`
+    + `${svg(k)}</span>`;
+}
+
+/* ---------- data: tabs + cards ---------- */
+const TABS = [
+  { id:'general',    title:'通用',         icon:'gear',      colors:'general' },
+  { id:'dashboard',  title:'仪表盘',       icon:'gauge',     colors:'charging' },
+  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'dashboard' },
+  { id:'permissions',title:'睡眠行为',     icon:'shield',    colors:'advanced' },
+  { id:'automation', title:'自动化', icon:'calendar',  colors:'automation' },
+  { id:'diagnostics',title:'诊断',         icon:'waveform',  colors:'about' },
+  { id:'about',      title:'关于',         icon:'heart',     colors:'permissions' },
+];
+
+/* 各控件 colors 字段保留 6.1.3 真实基线值供追溯；
+   渲染时由 renderCard 按「同一卡内颜色一致」规则统一覆盖为卡头色对。 */
+/* 2026-11-11 按 Swift 源码重新校正（8779443 / 6.1.3）：
+   ① 「使用硬件电量百分比」开关 + 状态文案在「通用 → 菜单栏实时读数」卡，
+      与 Swift 源码一致（GeneralSettingsView.swift:144-158，由充电管理页迁入），渲染随本卡 charging。
+   ② 「任务设置」是点「添加计划任务」后弹出的独立 sheet（NewScheduleTaskView），
+      不是「自动化」页的常驻卡，已从 cards 移除，仅在注释保留其结构。
+   ③ 运行时条件不模拟，原型一律展示默认 / 开启态，仅在注释标注：
+      manageCharging 控制「电池校准 / 巡航模式 / 高温保护 / MagSafe 指示灯」是否出现
+      （2026-11-18：LED 是充电状态机的可视化外设，写入走同一 root helper，关闭充电管理时与其它状态卡同族隐藏）；
+      sailingMode 控制两个滑杆；enableHeatProtectionMode 控制温度上限；
+      hasMagSafe 控制整张 MagSafe 卡；updateService.phase != .idle 才显示更新状态面板；
+      设备能力不足时开关置灰；通知总开关禁用时子开关副标题动态改显原因。 */
+const PAGES = {
+  general: {
+    cards: [
+      /* 2026-11-18 用户指令：语言与外观合并为一张卡「语言与外观」，无副标题；
+         含设置项 → 卡头外置（无徽章 / 分隔线）。右侧单击列表。opts 为选项，sel 为当前选中项索引。 */
+      /* 2026-11-18 用户指令：语言与外观合并为一张卡「语言与外观」，无副标题；
+         含设置项 → 按标准规则卡头外置（card-group：只有标题，无徽章 / 分隔线）。
+         右侧单击列表。opts 为选项，sel 为当前选中项索引。 */
+      { title:'语言与外观', icon:'lang', colors:'general', rows:[
+        rMenuRow('语言', '切换菜单栏和设置界面的显示语言。', ['跟随系统','中文','英语'], 0, 'general', 'lang'),
+        { t:'div' },
+        rMenuRow('外观', '选择浅色、深色，或跟随系统。', ['自动','浅色','深色'], 0, 'general', 'brush'),
+      ]},
+      /* 2026-11-18 用户指令：菜单栏与登录时启动换位，菜单栏提前到第二张 */
+      /* 2026-11-17 用户指令：卡头改为「菜单栏」无副标题；原标题 / 副标题下移到第一行做 label / sub，
+         右侧的选项由 segmented 改为单击弹出的列表（电量 / 功率 / 电量 + 功率）。 */
+      { title:'菜单栏', icon:'signal', colors:'charging', rows:[
+        rMenuRow('菜单栏实时读数', '', ['电量','功率','电量 + 功率'], 0, 'charging', 'signal'),
+        rDiv(),
+        // 「电量数字位置」是 Picker，选项 不显示 / 图标旁 / 图标内（GeneralSettingsView.swift:98-102），
+        // 仅当菜单栏显示内容 = 电量百分比时出现；2026-11-17 改为与「语言」一致的单击列表。
+        rControl('电量数字位置', '', { t:'picker', val:'图标旁', opts:['不显示','图标旁','图标内'], sel:1 }, 'charging', 'sliders'),
+        rDiv(),
+        rToggle('使用颜色显示电池状态', '充电、接通电源、低电量使用不同颜色。', true, 'charging', 'brush'),
+        rDiv(),
+        // 2026-11-11 用户指令：由「充电管理 → 电量读取方式」移回此处，颜色随本卡（charging）
+        rToggle('使用硬件电量百分比', '直接读取电池管理系统的原始数值，而不是 macOS 校准后的显示值。', false, 'charging', 'battery'),
+        rNotice('硬件电量通常会与菜单栏中的 macOS 电量相差几个百分点。切换后，所有充电策略都将使用所选读数。', 'info', 'charging'),
+      ]},
+      /* 2026-11-18 用户定：登录时启动改用 amber/gold（automation 色对），启动语义 */
+      { title:'登录时启动', icon:'power', colors:'automation', rows:[
+        rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general', 'power'),
+      ]},
+    ]
+  },
+  dashboard: {
+    cards: [
+      { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'charging', rows:[
+        rToggle('系统运行时间', '', true, 'dashboard', 'gauge'),
+        rDiv(),
+        rToggle('电池剩余时间', '', true, 'dashboard', 'gauge'),
+      ]},
+      /* 2026-11-17 用户指令：访问仪表盘不给卡头，标题下移为卡片设置项行、与设置项同字号；
+         动作按钮落在该行右侧。 */
+      { title:'访问仪表盘', icon:'signal', colors:'automation', headless:true, rows:[
+        rControl('访问仪表盘', '菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。',
+          { t:'button', label:'打开仪表盘' }, 'automation', 'signal'),
+      ]},
+    ]
+  },
+  charging: {
+    cards: [
+      { title:'充电管理', icon:'battery', colors:'dashboard', rows:[
+        rToggle('启用充电管理', '首次启用需管理员授权安装后台服务。', true, 'charging', 'plug'),
+        rNotice('部分新固件在电量高于上限时会使用电池，不能保证仅由充电器供电；临时暂停使用当时电量的固件上限，允许小幅波动。', 'info', 'charging'),
+        rControl('设置充电上限', '', rSlider(80, 20, 100, '%'), 'charging', 'sliders'),
+        // 默认态示例：运行时由 chargeLimit / sailingMode / 供电状态填充，原型不模拟动态读数
+        // 原「设置充电上限」副标题说明并入状态文案，与实时状态同处一个框内、换行展示
+        rNotice('达到上限后由适配器供电；巡航使用巡航范围。<br>正在以 80% 上限管理充电；电池巡航已开启。', 'battery', 'charging'),
+        rDiv(),
+        // 2026-11-11 用户指令恢复：自动放电回到原位，默认关闭
+        rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'charging', 'plug'),
+      ]},
+      { title:'电池巡航', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'permissions', rows:[
+        rToggle('启用电池巡航', '', false, 'permissions', 'signal'),
+        rDiv(),
+        rControl('低于上限多少时恢复充电', '', rSlider(3, 1, 20, '%'), 'permissions', 'sliders'),
+      ]},
+      { title:'高温保护', sub:'温度超过阈值时暂停充电，并通过约五分钟的延迟避免频繁切换。', icon:'bolt', colors:'heat', rows:[
+        rToggle('启用高温保护', '', false, 'heat', 'bolt'),
+        rDiv(),
+        rControl('温度上限', '', rSlider(40, 30, 50, '°C'), 'heat', 'bolt'),
+      ]},
+      { title:'电池校准', sub:'充至 100% → 放电 → 再充满 → 满电保持 → 恢复原上限。', icon:'gauge', colors:'automation', rows:[
+        // 校准是一次性完整 loop，不是持续开关：与诊断页「诊断记录未启动」同款
+        // 控件行 + 内联按钮；运行中 label 显示当前阶段（校准：xxx）、按钮变「停止校准」。
+        { t:'control', label:'电池校准未启动', sub:'执行一次完整的充放电校准流程', icon:'gauge', colors:'dashboard', control:{ t:'button', label:'开始电池校准' } },
+        rDiv(),
+        rControl('放电目标', '', rSlider(15, 5, 20, '%'), 'dashboard', 'sliders'),
+        rDiv(),
+        rControl('满电保持时间', '', rStepper('60 分钟'), 'automation', 'sliders'),
+      ]},
+      // 2026-11-18 用户指令：「MagSafe 指示灯」从通用页移入充电管理页，排在电池校准之后
+      { title:'MagSafe 指示灯', sub:'在受支持机型上用颜色显示充电、暂停和保护状态。', icon:'bolt', colors:'automation', rows:[
+        rToggle('由 Aidente 控制指示灯', '', true, 'automation', 'bolt'),
+        rDiv(),
+        // 源码 Picker 5 项，2026-11-17 改为与「语言」一致的单击列表
+        rControl('高温保护时的灯光', '', { t:'picker', val:'关闭', opts:['关闭','绿色','橙色','橙色慢闪','橙色快闪'], sel:0 }, 'automation', 'bolt'),
+      ]},
+      // 2026-11-11 用户指令：原「睡眠与退出行为」卡移至「睡眠管理」页并更名「睡眠行为」
+    ]
+  },
+  automation: {
+    cards: [
+      /* 无任务时不再显示「还没有计划任务」空状态文案（用户 2026-11-11 决定：
+         设置中不需要提示用户），对应 AutomationSettingsView.swift 删除 tasks.isEmpty
+         空态 Inset 分支；任务列表由运行时数据填充，原型默认态不渲染行。
+         2026-11-14：「添加计划任务」与「打开仪表盘」同样移到卡头标题右侧（card.action）。 */
+      { title:'计划任务', sub:'按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。', icon:'calendar', colors:'automation', action:'添加计划任务', rows:[
+      ]},
+      /* 2026-11-14 用户指令：把「快捷指令」卡加回自动化 tab，紧跟「计划任务」。
+         沿用 6.1.3 基线的标题 / 副标题 / terminal 图标 / dashboard 色与 6 条 URL
+         （README.md:110-115），说明沿用 AidenteL10n.swift:167-171 / :262 的动作词条。
+         Swift 侧该卡已删除（自动化页现只有「计划任务」），本处仅恢复原型预览。 */
+      { title:'Apple 快捷指令', sub:'在「快捷指令」中使用「打开 URL」操作，即可控制 Aidente。', icon:'terminal', colors:'dashboard', rows:[
+        rInset('<div class="shortcut-line"><code>aidente://set-limit?value=80</code><span>设置充电上限</span></div>'
+          + '<div class="shortcut-line"><code>aidente://top-up</code><span>临时充至 100%</span></div>'
+          + '<div class="shortcut-line"><code>aidente://calibrate</code><span>开始电池校准</span></div>'
+          + '<div class="shortcut-line"><code>aidente://pause</code><span>暂停充电</span></div>'
+          + '<div class="shortcut-line"><code>aidente://discharge?value=70</code><span>放电至指定电量</span></div>'
+          + '<div class="shortcut-line"><code>aidente://resume</code><span>恢复充电</span></div>', true),
+      ]},
+      /* 「任务设置」不是本页常驻卡；点「添加计划任务」后弹出的独立 sheet
+         （AutomationSettingsView.swift:143-301，520×450）。下方「添加计划任务弹窗」
+         预览块按真实源码结构呈现该 sheet 并应用已定规则：标题徽章取卡头档 26
+         （2026-11-17 与设置项一致；Swift 当前 44，待同步）；卡内统一 automation 色（AidenteCard 注入
+         cardColors 覆盖各控件基线 colors）；开关走卡色两态、行徽章 26。 */
+    ],
+    sheet: {
+      title: '添加计划任务',
+      icon: 'calendar.badge.plus', colors: 'automation',
+      card: {
+        title: '任务设置', icon: 'slider.horizontal.3', colors: 'automation', rows: [
+          /* 2026-11-17：右侧改为与「语言」一致的单击列表；选项取自 ScheduleActionKind.allCases（源码 6 项）。 */
+          { t:'control', label:'执行动作', icon:'bolt.fill', colors:'charging',
+            control:{ t:'picker', val:'设置充电上限', opts:['设置充电上限','开始电池校准','临时充至 100%','暂停充电','放电至','恢复充电'], sel:0 } },
+          { t:'div' },
+          { t:'control', label:'充电上限', icon:'percent', colors:'charging',
+            control:{ t:'slider', min:20, max:100, val:80, suf:'%' } },
+          { t:'div' },
+          { t:'control', label:'首次执行', icon:'clock.badge.fill', colors:'general',
+            control:{ t:'date', val:'今天 18:00' } },
+          { t:'div' },
+          /* 选项取自 ScheduleRepeatRule.allCases（源码 6 项，默认「仅一次」）；同样改为单击列表。 */
+          { t:'control', label:'重复', icon:'repeat.circle.fill', colors:'dashboard',
+            control:{ t:'picker', val:'仅一次', opts:['仅一次','每天','工作日','每周','每两周','每月'], sel:0 } },
+          { t:'div' },
+          { t:'toggle', label:'错过后尽快补做', sub:'Mac 唤醒并运行 Aidente 后执行',
+            icon:'arrow.clockwise.circle.fill', colors:'automation', on:true },
+        ]
+      }
+    },
+  },
+  diagnostics: {
+    cards: [
+      { title:'诊断与导出', icon:'download', colors:'about', rows:[
+        { t:'control', label:'诊断记录未启动', sub:'平时不会增加高频采样或后台负担', icon:'check', colors:'about', control:{ t:'button', label:'开始问题记录' } },
+        rDiv(),
+        rToggle('包含最近的崩溃报告', '最多收集最近七天内的 5 份 Aidente 报告，并自动脱敏。', true, 'advanced', 'info'),
+        rDiv(),
+        rToggle('包含耗电 App 名称', '默认关闭；开启后仅记录导出时的 App 名称与活动估算。', false, 'charging', 'bolt'),
+        rInset('导出内容预览<br>• Aidente 统一日志（最近 1 小时或本次记录）<br>• 软件、macOS、机型与后台服务状态<br>• 电池、适配器及充电控制快照<br>• 用户名、路径、网络地址、序列号自动脱敏'),
+        rBtnRow([['导出诊断包','about'],['在访达中显示','about']]),
+      ]},
+      { title:'可选 CLI', sub:'高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。', icon:'terminal', colors:'permissions', rows:[
+        rInset('aidente status<br>aidente limit 80<br>aidente pause · aidente resume<br>aidente diagnostics', true),
+        rBtn('复制 CLI 完整路径', 'permissions'),
+      ]},
+    ]
+  },
+  permissions: {
+    cards: [
+      // 2026-11-11 自「充电管理」页移入并更名「睡眠行为」，颜色 advanced（与仪表盘互换后）；
+      // 2026-11-17 用户指令：导航栏更名「睡眠行为」，本页只此一张卡，去掉卡头标题 / 副标题，只保留卡片（headless）。
+      { title:'睡眠行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'advanced', headless: true, rows:[
+        rToggle('达到上限前阻止睡眠', '仅阻止因长时间无操作而自动睡眠，合盖仍会睡眠。', true, 'advanced', 'power'),
+        rDiv(),
+        rToggle('睡眠时暂停充电', '进入睡眠（含合盖）时暂停充电。', false, 'advanced', 'power'),
+        rDiv(),
+        rToggle('退出 Aidente 后保持暂停', '退出后保持充电受控状态。', true, 'advanced', 'power'),
+      ]},
+    ]
+  },
+  about: {
+    cards: [
+      /* 2026-11-14：「软件更新」卡固定两行——「当前版本」（右侧检查更新）+「自动检查更新」；
+         点「检查更新」立即弹出独立 sheet（见 about.sheet），各阶段只显示简要状态与结果，
+         不展示更新过程与状态文案，卡内不加状态行。
+         2026-11-17 用户指令：GitHub 发行版链接从卡头副标题移到「自动检查更新」副标题的「发行版」上，卡头副标题删除。 */
+      { title:'软件更新', icon:'download', colors:'permissions', rows:[
+        rControl('当前版本', 'v6.1.3 (Build 24)', { t:'button', label:'检查更新', icon:'bolt' }, 'permissions', 'download'),
+        rDiv(),
+        rToggle('自动检查更新', '启动后检查，并每隔六小时检查一次正式<a href="https://github.com/nightfall-yl/Aidente/releases" target="_blank" rel="noopener noreferrer">发行版</a>。', true, 'automation', 'download'),
+      ]},
+      /* 2026-11-17 用户指令：卡头移到卡片之外并去掉徽章（本卡无设置项，靠 headOutside 显式指定）。 */
+      { title:'法律与开源', icon:'shield', colors:'general', headOutside: true, rows:[
+        rText('<b>安全说明</b><br>Aidente 会调整底层电池充电控制。设备不支持某项能力时，软件会自动退回只读监测模式。你可以随时关闭「启用充电管理」，恢复系统默认充电状态。'),
+        rDiv(),
+        rText('<b>商标声明</b><br>Aidente 是独立项目，与 AppHouseKitchen 不存在隶属、授权或分发关系。AlDente 是其各自权利人的商标。'),
+        rDiv(),
+        rText('<b>开放源代码</b><br>Aidente 是基于开源 Stasis 项目修改的 GPL-3.0 软件，并使用 SMCKit 与 Defaults 开源组件。'),
+        /* 2026-11-14：两个动作按钮改为指向本仓库的文档（不再是打开 app bundle 内文件）。 */
+        rBtnRow([
+          ['查看开源许可证','general','https://github.com/nightfall-yl/Aidente/blob/main/LICENSE'],
+          ['查看第三方声明','general','https://github.com/nightfall-yl/Aidente/blob/main/THIRD_PARTY_NOTICES.md'],
+        ]),
+      ]},
+    ],
+    /* 2026-11-14：整个更新流程收进同一个独立 sheet，设置页卡片始终两行、不加状态行。
+       点「检查更新」立即弹窗；检查中、无更新、发现新版本、下载 / 校验 / 安装、完成与失败
+       都只在弹窗内显示当前状态（图标 + 标题 + 一句说明 + 版本胶囊），不展示阶段清单、
+       进度条与状态文案。下方按流转顺序做静态预览，形式同「添加计划任务」弹窗。 */
+    sheetFlow: '点「检查更新」→ <b>正在检查</b> → ① 无更新：<b>已是最新版</b>，点「完成」关闭；'
+      + ' ② 有更新：<b>发现新版本</b> →「立即更新」→ <b>下载 / 校验 / 安装</b> → <b>安装完成</b> 或 <b>失败原因</b>。'
+      + ' 弹窗只显示当前状态，不展示更新过程与状态文案；设置页卡片不加状态行。',
+    sheet: [
+      {
+        label: '软件更新弹窗 · 正在检查（点「检查更新」后立即弹出 · 520 宽）',
+        title: '软件更新',
+        icon: 'download', colors: 'permissions', legacyRows: false,
+        card: {
+          title: '更新检查', sub: '检查在后台进行，结果会直接显示在这个窗口里。',
+          icon: 'download', colors: 'permissions', headless: true, rows: [
+            rUpdate({
+              icon: 'download', title: '正在检查更新…',
+              detail: '正在读取本仓库最新的正式发行版，并与当前版本比较。',
+            }),
+          ]
+        },
+        actions: [ { label:'后台继续' } ],
+      },
+      {
+        label: '软件更新弹窗 · 无可用更新（检查完成、版本一致时）',
+        title: '软件更新',
+        icon: 'download', colors: 'permissions', legacyRows: false,
+        card: {
+          title: '更新检查', sub: '当前版本已是最新正式发行版。',
+          icon: 'check', colors: 'permissions', headless: true, rows: [
+            rUpdate({
+              icon: 'check', title: '当前已是最新版',
+              detail: '上次检查：10:06 · 当前版本 v6.1.3 (Build 24)',
+              badge: 'v6.1.3',
+            }),
+          ]
+        },
+        actions: [ { label:'完成' } ],
+      },
+      {
+        label: '软件更新弹窗 · 发现新版本（检查到更高版本，等待确认）',
+        title: '软件更新',
+        icon: 'download', colors: 'permissions', legacyRows: false,
+        card: {
+          title: '更新检查', sub: '发现更高版本，确认后会自动下载并安装。',
+          icon: 'download', colors: 'permissions', headless: true, rows: [
+            rUpdate({
+              icon: 'download', title: '发现新版本 6.1.4',
+              detail: '点击后将自动下载、校验、安装并重新启动 Aidente。 · 3.2 MB',
+              badge: 'v6.1.4',
+            }),
+          ]
+        },
+        actions: [ { label:'跳过这个版本', ghost:true }, { label:'立即更新' } ],
+      },
+      {
+        label: '软件更新弹窗 · 下载 / 校验 / 安装进行中（点「立即更新」后切换 · 520 宽）',
+        title: '软件更新',
+        icon: 'download', colors: 'permissions', legacyRows: false,
+        card: {
+          title: '更新进度', sub: '下载、校验与安装都在后台进行，无需停留在设置页。',
+          icon: 'download', colors: 'permissions', headless: true, rows: [
+            rUpdate({
+              icon: 'download', title: '正在后台下载 6.1.4…',
+              detail: '可以继续使用 Aidente，下载完成后才会重新启动。',
+            }),
+          ]
+        },
+        actions: [ { label:'取消更新', ghost:true }, { label:'后台继续' } ],
+      },
+      {
+        label: '软件更新弹窗 · 失败原因（校验或安装失败时）',
+        title: '软件更新',
+        icon: 'download', colors: 'permissions', legacyRows: false,
+        card: {
+          title: '更新进度', sub: '当前版本未受影响，可以稍后重试。',
+          icon: 'info', colors: 'permissions', headless: true, rows: [
+            rUpdate({
+              icon: 'info', title: '更新未完成',
+              detail: '无法验证更新包的 SHA-256 校验和。更新已停止，当前版本未受影响，可稍后重试。',
+            }),
+          ]
+        },
+        actions: [ { label:'关闭', ghost:true }, { label:'重试' } ],
+      },
+    ],
+  },
+};
+
+/* ---------- 设置页 UI 术语体系（2026-11-11 定） ----------
+   卡内元素 = 卡头 / 行徽章 / 开关行 / 状态点 / 状态文案 / 动作按钮 / 数值
+              （「同一卡内颜色一致」规则的作用范围，由 renderCard 统一覆盖）
+   状态文案 = 卡内说明状态、注意事项的独立文字行：如快捷操作卡「正在以 80% 上限
+              管理充电」、通用页「菜单栏实时读数」卡下的「硬件电量通常会与…」
+   状态点   = 状态文案前的 8px 圆点
+   动作按钮 = 所有按钮与按钮组（代码 AidenteActionButtonStyle）
+   以下 rNotice / rBtn / rBtnRow 等 helper 名是实现细节，不重命名。
+   colors = 该控件在 6.1.3 基线里真实使用的色对键。
+   ---------------------------------------------------------- */
+function rToggle(label, sub, on, colors, icon) { return { t:'toggle', label, sub, on, colors, icon }; }
+function rSeg(opts, sel, colors, icon) { return { t:'seg', opts, sel, colors, icon }; }
+/* 行内菜单行：左侧 label + sub，右侧单击弹出的选项列表（菜单栏实时读数）。
+   sel 为当前选中项索引；opts 为选项文字。 */
+function rMenuRow(label, sub, opts, sel, colors, icon) { return { t:'menuro', label, sub, opts, sel, colors, icon }; }
+/* 菜单选择器 HTML：卡头菜单与行内菜单共用。对号在左、文字居左，宽度随内容自适应。 */
+function menuHTML(opts, sel) {
+  const items = opts.map((o, i) =>
+    `<div class="head-menu-item" role="option" tabindex="0" aria-checked="${i === sel}" data-menu-item><span class="check">${svg('check')}</span><span data-menu-value>${o}</span></div>`
+  ).join('');
+  return `<div class="head-menu" data-head-menu><button type="button" class="head-menu-btn" aria-haspopup="listbox" aria-expanded="false" data-menu-btn>`
+    + `<span data-menu-label>${opts[sel]}</span><span class="chev">${svg('chevron.up.down')}</span></button>`
+    + `<div class="head-menu-pop" role="listbox" hidden>${items}</div></div>`;
+}
+function rControl(label, sub, control, colors, icon) { return { t:'control', label, sub, control, colors, icon }; }
+function rSlider(val, min, max, suf) { return { t:'slider', val, min, max, suf }; }
+function rStepper(txt) { return { t:'stepper', txt }; }
+function rDiv() { return { t:'div' }; }
+function rNotice(text, icon, colors) { return { t:'notice', text, icon, colors }; }
+function rInset(html, mono) { return { t:'inset', html, mono }; }
+function rText(text) { return { t:'text', text }; }
+function rBtn(label, colors) { return { t:'btn', label, colors }; }
+function rBtnRow(list) { return { t:'btnrow', list }; }
+/* 软件更新弹窗专用：状态头 + 线性进度条 + 阶段清单 + 状态文案。
+   色对由 renderCard 统一覆盖为弹窗卡色，不另设强调色 / 状态色。 */
+function rUpdate(state) { return { t:'update', ...state }; }
+
+/* ---------- render：按真实组件取色 ---------- */
+function rowBadge(r, legacy) {
+  if (legacy) return legacyBadge(r.icon || 'sliders', r.colors, TAB_BADGE_SIZE);
+  return r.colors ? iconBadge(r.icon || 'sliders', r.colors, 26) : '';
+}
+function renderRow(r, legacy) {
+  const b = rowBadge(r, legacy);
+  const bOut = b ? `<span class="badge-slot">${b}</span>` : b;
+  switch (r.t) {
+    case 'toggle': {
+      const a = r.colors ? pal(r.colors)[0] : null;
+      const tint = a ? ` style="--toggle-on:${a};--toggle-off:${rgba(a, .16)}"` : '';
+      return `<div class="row">${bOut}<div class="r-main"><div class="r-label">${r.label}</div>`
+        + `${r.sub ? `<div class="r-sub">${r.sub}</div>` : ''}</div>`
+        + `<div class="r-control"><div class="toggle ${r.on ? 'on' : ''}"${tint} role="switch" tabindex="0" aria-checked="${r.on ? 'true' : 'false'}" data-toggle></div></div></div>`;
+    }
+    case 'seg':
+      /* Swift 的 Picker(...).labelsHidden()：本行不显示字段名，也不显示行徽章，仅显示选项控件 */
+      return `<div class="row"><div class="r-main"></div>`
+        + `<div class="r-control"><div class="segmented" role="radiogroup">`
+        + `${r.opts.map((o, i) => `<span class="seg ${i === r.sel ? 'on' : ''}" role="radio" aria-checked="${i === r.sel}" tabindex="0" data-seg>${o}</span>`).join('')}`
+        + `</div></div></div>`;
+    case 'control':
+      return `<div class="row">${bOut}<div class="r-main"><div class="r-label">${r.label}</div>`
+        + `${r.sub ? `<div class="r-sub">${r.sub}</div>` : ''}</div>`
+        + `<div class="r-control">${renderControl(r.control, r.colors, r.label)}</div></div>`;
+    case 'menuro':
+      /* 行内菜单：左侧 label + sub，右侧单击弹出的选项列表（与卡头菜单共用交互与样式） */
+      return `<div class="row">${bOut}<div class="r-main"><div class="r-label">${r.label}</div>`
+        + `${r.sub ? `<div class="r-sub">${r.sub}</div>` : ''}</div>`
+        + `<div class="r-control">${menuHTML(r.opts, r.sel)}</div></div>`;
+    case 'div':
+      return `<div class="divider"></div>`;
+    case 'notice': {
+      /* 状态文案徽章 = legacy 式（16% 底 / 34% 描边 / 尾色图标），跟随主题；
+         尺寸跟随 --tab-badge-size，与文字垂直居中。对应 Swift AidenteNotice 的 legacyStyle: true。 */
+      const [a, b] = pal(r.colors || 'general');
+      const ico = Math.round(TAB_BADGE_SIZE * 0.46);
+      return `<div class="notice" style="background:${rgba(a, .075)};border:1px solid ${rgba(a, .20)}">`
+        + `<span class="ib" style="width:${TAB_BADGE_SIZE}px;height:${TAB_BADGE_SIZE}px;`
+        + `border-radius:${Math.max(6, Math.round(TAB_BADGE_SIZE * 0.27))}px;`
+        + `background:${rgba(a, .16)};border:1px solid ${rgba(a, .34)};color:${b};--ico:${ico}px">`
+        + `${svg(r.icon || 'info')}</span><div>${r.text}</div></div>`;
+    }
+    case 'inset':
+      return `<div class="inset ${r.mono ? 'mono' : ''}">${r.html}</div>`;
+    case 'update': {
+      const [a] = pal(r.colors || 'permissions');
+      const badge = r.badge
+        ? `<span class="upd-badge" style="background:${rgba(a, .12)};color:${a}">${r.badge}</span>`
+        : '';
+      /* 2026-11-14 / 11-17：弹窗只呈现当前状态（标题 + 一句说明 + 版本胶囊），
+         徽章仅在标题区保留、卡片内不再绘制；不展示更新过程的阶段清单 / 进度条。 */
+      return `<div class="upd"><div class="upd-head">`
+        + `<div><div class="upd-title">${r.title}</div>`
+        + `<div class="upd-detail">${r.detail}</div></div>${badge}</div></div>`;
+    }
+    case 'text':
+      return `<div class="row-text">${r.text}</div>`;
+    case 'btn': {
+      const a = pal(r.colors || 'general')[0];
+      return `<div style="padding:6px 0 12px"><span class="btn" style="background:${rgba(a, .20)};`
+        + `border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${svg('bolt')}${r.label}</span></div>`;
+    }
+    case 'btnrow':
+      return `<div style="display:flex;gap:10px;padding:6px 0 12px">`
+        + r.list.map(([l, c, href]) => {
+          const a = pal(c || 'general')[0];
+          const style = `background:${rgba(a, .20)};border-color:${rgba(a, .34)};color:var(--text)`;
+          const inner = `${svg('bolt')}${l}`;
+          /* 有 href 时渲染成真链接（新标签打开），否则沿用静态按钮占位 */
+          if (href) return `<a class="btn" href="${href}" target="_blank" rel="noopener noreferrer" style="${style}">${inner}</a>`;
+          return `<span class="btn" style="${style}" role="button" tabindex="0">${inner}</span>`;
+        }).join('') + `</div>`;
+  }
+  return '';
+}
+function renderControl(c, colors, label) {
+  if (c.t === 'picker' || c.t === 'date') {
+    /* 带 opts 的 picker（电量数字位置 / 高温保护灯光）用与「语言」一致的单击弹出列表；
+       sheet 里的 picker 无 opts，沿用静态字段样式。 */
+    if (c.t === 'picker' && c.opts) return menuHTML(c.opts, c.sel || 0);
+    const caret = c.t === 'picker' ? ' <span style="opacity:.45;font-size:11px">▾</span>' : '';
+    return `<span class="field">${c.val}${caret}</span>`;
+  }
+  if (c.t === 'slider') {
+    return `<div class="slider-wrap"><input class="slider" type="range" min="${c.min}" max="${c.max}"`
+      + ` value="${c.val}" aria-label="${label || '数值'}">`
+      + `<span class="slider-val">${c.val}${c.suf}</span></div>`;
+  }
+  if (c.t === 'stepper') return `<span style="font-size:13px;color:var(--text)">${c.txt}</span>`;
+  if (c.t === 'button') {
+    const a = colors ? pal(colors)[0] : '#5856d6';
+    /* 行右侧内联按钮默认无图标（「开始电池校准」保持原样）；需要时由 control.icon 指定，
+       与 rBtn / rBtnRow / card.action 的动作按钮同款图标。 */
+    const ico = c.icon ? svg(c.icon) : '';
+    return `<span class="btn" style="background:${rgba(a, .20)};border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${ico}${c.label}</span>`;
+  }
+  return '';
+}
+
+/* 2026-11-11 设计规则：同一张卡片内颜色一致，不设强调色 / 状态色例外。
+   卡头选定色对后，卡内行徽章、开关行、状态点、状态文案、动作按钮、数值一律继承；
+   其中徽章为恒定实底，状态文案与动作按钮按半透明档位跟随主题变化。
+   PAGES 里各控件原有的 colors 值保留作 6.1.3 基线追溯，渲染时统一覆盖。 */
+function renderCard(card, legacyRows) {
+  const rows = card.rows.map(r => {
+    const row = { ...r, colors: card.colors };
+    /* 第三项 href 保留：链接型动作按钮用 <a>，其余仍是静态 <span> */
+    if (r.t === 'btnrow') row.list = r.list.map(([label, , href]) => [label, card.colors, href]);
+    return row;
+  });
+  /* 2026-11-14 破例：card.action 把动作按钮放到卡头标题右侧，色对继承卡色，
+     与卡内动作按钮同档（20% 底 / 34% 描边、文字系统色、随主题）。 */
+  const [a] = pal(card.colors);
+  /* 2026-11-14：软件更新 sheet 的卡片不设卡头——弹窗标题区已说明用途，
+     「更新检查 / 更新进度」这行重复。headless 跳过徽章、标题、副标题与分隔线。 */
+  const headless = !!card.headless;
+  /* 2026-11-17 用户规则：卡头徽章尺寸与设置项行徽章一致（26），标题字号与设置项标签一致（13px）；
+     卡片含 Inset 或含设置项（带 .r-label 的 toggle / control 行）时不渲染卡头徽章（卡头只剩标题），
+     两者都没有时才保留徽章。headOutside 让无设置项的卡（如「法律与开源」）也可显式外置卡头并去徽章。 */
+  const hasInset = card.rows.some(r => r.t === 'inset');
+  /* menuro（行内菜单，如「语言 / 外观 / 菜单栏实时读数」）也是设置项，纳入判定；
+     漏判会让含设置项的卡退化成「卡头在卡内当第一项」（2026-11-18 用户指出）。 */
+  const hasSettingRow = card.rows.some(
+    r => r.t === 'toggle' || r.t === 'control' || r.t === 'menuro');
+  /* headless 卡（如睡眠页，整页只一张卡、无卡头）不进 card-group，直接渲染纯卡片。 */
+  const headOutside = !headless && (hasInset || hasSettingRow || !!card.headOutside);
+  const headBadge = headOutside ? '' : iconBadge(card.icon, card.colors, 26);
+  const headAction = !headless && card.action
+    ? `<span class="btn" style="margin-left:auto;flex:0 0 auto;background:${rgba(a, .20)};`
+      + `border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${svg('bolt')}${card.action}</span>`
+    : '';
+  /* 卡头菜单选择器（语言 / 外观）：单击按钮弹出选项列表，与标题同行、不占卡片行。 */
+  const headMenu = !headless && card.headMenu ? menuHTML(card.headMenu.opts, card.headMenu.sel) : '';
+  /* 2026-11-17 规则：含设置项（或 Inset）的卡片卡头移到卡片之外（card-group：卡头 + 卡片）；
+     只有卡头、没有设置项的卡片不适用——卡头留在卡片内，保留卡头下方的 card-divider；
+     例外：显式标记 headOutside 的卡（如「法律与开源」）也外置卡头。卡头在卡内时带分隔线，在卡外时不带。 */
+  const headerBlock = headless ? '' : `<div class="card-head">
+      ${headBadge}
+      <div style="flex:1;min-width:0"><h2 class="card-title">${card.title}</h2>${card.sub ? `<div class="card-sub">${card.sub}</div>` : ''}</div>
+      ${headAction}
+      ${headMenu}
+    </div>`;
+  const contentRows = rows.map(r => renderRow(r, legacyRows)).join('');
+  if (headOutside) {
+    return `<div class="card-group">${headerBlock}<div class="card">${contentRows}</div></div>`;
+  }
+  /* headless 卡无卡头，不该输出卡头下方的横线（否则首个开关上方残留一条 divider）。 */
+  const header = headerBlock + (!headless && rows.length ? '<div class="card-divider"></div>' : '');
+  return `<div class="card${headless ? ' card-headless' : ''}">${header}${contentRows}</div>`;
+}
+
+/* 弹窗（sheet）静态预览：标题区 + 卡片 + 底部动作按钮。
+   弹窗标题徽章 26（2026-11-17 由 34 → 28 → 26，现与卡片 / 设置项徽章统一）属卡外元素；标题字号 15px（原 17px，比卡片标题 13px 略高半档）。
+   「添加计划任务」沿用 legacy 行徽章；「软件更新」用 constant 实底徽章（legacyRows:false）。
+   label / actions 可选；不传时保持「添加计划任务」弹窗的原样。 */
+function renderSheet(sheet) {
+  const [a] = pal(sheet.colors);
+  const actions = sheet.actions || [
+    { label:'取消', ghost:true },
+    { label:'添加任务' },
+  ];
+  const buttons = actions.map(act => act.ghost
+    ? `<span class="btn btn-ghost" role="button" tabindex="0">${act.label}</span>`
+    : `<span class="btn" style="background:${rgba(a, .20)};border-color:${rgba(a, .34)};color:var(--text)" role="button" tabindex="0">${act.label}</span>`
+  ).join('');
+  return `<div class="sheet-window"><div class="sheet-bg">`
+    + `<div class="sheet-title">${iconBadge(sheet.icon, sheet.colors, 26)}`
+    + `<div><h2 class="sheet-title-t">${sheet.title}</h2>`
+    + `${sheet.sub ? `<div class="sheet-title-s">${sheet.sub}</div>` : ''}</div></div>`
+    + renderCard(sheet.card, sheet.legacyRows !== false)
+    + `<div class="sheet-actions">${buttons}</div></div></div>`;
+}
+
+/* 一个页可预览多个弹窗状态（软件更新的检查 / 结果 / 进度 / 完成 / 失败）；
+   单对象仍是「添加计划任务」。flow 是可选的状态流转说明，放在最前。 */
+function renderSheetPreviews(sheets, flow) {
+  const list = Array.isArray(sheets) ? sheets : [sheets];
+  const flowBlock = flow ? `<div class="sheet-flow"><b>弹窗状态流转</b><br>${flow}</div>` : '';
+  return flowBlock + list.map(s => `<div class="sheet-wrap"><div class="sheet-label">${
+    s.label || '添加计划任务弹窗（点「添加计划任务」后弹出 · 520×450）'
+  }</div>${renderSheet(s)}</div>`).join('');
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = TABS.map((t, i) => {
+    return `<div class="nav-item ${i===0?'active':''}" role="tab" tabindex="0" aria-selected="${i===0}" data-tab="${t.id}">${badge(t.icon, t.colors)}<span>${t.title}</span></div>`;
+  }).join('');
+  nav.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => selectTab(el.dataset.tab));
+  });
+}
+
+/* tab 浏览历史栈：参考 macOS 系统设置窗口顶部的返回 / 前进按钮。
+   - history 是当前可回退的路径，idx 指向当前项。
+   - 点左栏导航 = 一次新的前进：截断 idx 之后的分支，push 新 tab。
+   - 点后退 / 前进只移动 idx，不写历史。
+   - 每次打开窗口历史重置为 [general]（见下方注释），两个按钮都不可用。 */
+let navHistory = ['general'];
+let navIndex = 0;
+let currentTab = 'general';
+
+function navigateTo(id, record) {
+  if (record) {
+    if (navHistory[navIndex] !== id) {
+      navHistory = navHistory.slice(0, navIndex + 1);
+      navHistory.push(id);
+      navIndex = navHistory.length - 1;
+    }
+  } else {
+    navIndex = id; // 后退/前进：id 即目标下标
+  }
+  currentTab = navHistory[navIndex];
+  renderSettings();
+}
+
+function selectTab(id) { navigateTo(id, true); }
+function goBack()    { if (navIndex > 0) navigateTo(navIndex - 1, false); }
+function goForward() { if (navIndex < navHistory.length - 1) navigateTo(navIndex + 1, false); }
+
+function renderSettings() {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const on = el.dataset.tab === currentTab;
+    el.classList.toggle('active', on);
+    el.setAttribute('aria-selected', String(on));
+  });
+  const page = PAGES[currentTab];
+  const tab = TABS.find(t => t.id === currentTab);
+  const canBack = navIndex > 0;
+  const canForward = navIndex < navHistory.length - 1;
+  const backTab = canBack ? TABS.find(t => t.id === navHistory[navIndex - 1]) : null;
+  const fwdTab = canForward ? TABS.find(t => t.id === navHistory[navIndex + 1]) : null;
+  const detail = document.getElementById('detail');
+  detail.innerHTML = `<div class="detail-head"><div class="page-head">`
+    + `<div class="nav-btns">`
+      + `<button class="navbtn ${canBack ? 'enabled' : ''}" id="navBack" aria-label="后退" title="${canBack ? '后退：' + backTab.title : '无后退历史'}" ${canBack ? '' : 'disabled'}>${svg('chevron.left')}</button>`
+      + `<button class="navbtn ${canForward ? 'enabled' : ''}" id="navForward" aria-label="前进" title="${canForward ? '前进：' + fwdTab.title : '无前进历史'}" ${canForward ? '' : 'disabled'}>${svg('chevron.right')}</button>`
+    + `</div>`
+    + `<h1 class="page-title">${tab.title}</h1></div>`
+    + `<div class="hdiv"></div></div>`
+    + `<div class="detail-scroll"><div class="cards">${page.cards.map(c => renderCard(c, false)).join('')}</div>`
+    + (page.sheet ? renderSheetPreviews(page.sheet, page.sheetFlow) : '')
+    + `</div>`;
+  document.getElementById('navBack').addEventListener('click', goBack);
+  document.getElementById('navForward').addEventListener('click', goForward);
+  bindInteractions();
+}
+
+function bindInteractions() {
+  // 非原生控件统一支持 Enter / Space 激活
+  document.querySelectorAll('[tabindex]:not(input):not(button)').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+  });
+  // toggles
+  document.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('on');
+      el.setAttribute('aria-checked', String(el.classList.contains('on')));
+    });
+  });
+  // segmented
+  document.querySelectorAll('.segmented').forEach(group => {
+    group.querySelectorAll('[data-seg]').forEach(seg => {
+      seg.addEventListener('click', () => {
+        group.querySelectorAll('[data-seg]').forEach(s => {
+          s.classList.remove('on'); s.setAttribute('aria-checked', 'false');
+        });
+        seg.classList.add('on'); seg.setAttribute('aria-checked', 'true');
+      });
+    });
+  });
+  // 卡头菜单选择器（语言 / 外观）：单击按钮展开选项列表，选中后更新按钮标签与勾选
+  document.querySelectorAll('[data-head-menu]').forEach(menu => {
+    const btn = menu.querySelector('[data-menu-btn]');
+    const pop = menu.querySelector('.head-menu-pop');
+    const label = menu.querySelector('[data-menu-label]');
+    const close = () => { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = pop.hidden;
+      document.querySelectorAll('[data-head-menu]').forEach(m => {
+        m.querySelector('.head-menu-pop').hidden = true;
+        m.querySelector('[data-menu-btn]').setAttribute('aria-expanded', 'false');
+      });
+      if (willOpen) { pop.hidden = false; btn.setAttribute('aria-expanded', 'true'); }
+    });
+    menu.querySelectorAll('[data-menu-item]').forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        menu.querySelectorAll('[data-menu-item]').forEach(i => i.setAttribute('aria-checked', 'false'));
+        item.setAttribute('aria-checked', 'true');
+        label.textContent = item.querySelector('[data-menu-value]').textContent;
+        close();
+      });
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('[data-head-menu]').forEach(m => {
+      m.querySelector('.head-menu-pop').hidden = true;
+      m.querySelector('[data-menu-btn]').setAttribute('aria-expanded', 'false');
+    });
+  });
+  // sliders value label
+  document.querySelectorAll('.slider').forEach(s => {
+    s.addEventListener('input', () => {
+      const v = s.parentElement.querySelector('.slider-val');
+      if (v) v.textContent = s.value + (v.textContent.replace(/[0-9]/g,''));
+    });
+  });
+}
+
+/* ---------- theme toggle ---------- */
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.setAttribute('aria-pressed', String(document.body.classList.contains('dark')));
+themeBtn.addEventListener('click', () => {
+  const dark = document.body.classList.toggle('dark');
+  themeBtn.setAttribute('aria-pressed', String(dark));
+});
+document.getElementById('appBadge').innerHTML = svg('bolt');
+
+/* ---------- 设置页玻璃化原型控制（只在原型里对照，不参与 App 实现） ---------- */
+(function () {
+  const body = document.body;
+  const modeBtn = document.getElementById('modeBtn');
+  const wallBtn = document.getElementById('wallBtn');
+  body.dataset.glass = 'on';
+  body.dataset.desktop = 'color';
+
+  // 实色/玻璃只切左栏侧栏；右栏恒实色，不受此处影响
+  modeBtn.addEventListener('click', () => {
+    const on = body.dataset.glass !== 'on';
+    body.dataset.glass = on ? 'on' : 'off';
+    modeBtn.classList.toggle('on', on);
+  });
+  wallBtn.addEventListener('click', () => {
+    const plain = body.dataset.desktop !== 'plain';
+    body.dataset.desktop = plain ? 'plain' : 'color';
+    wallBtn.classList.toggle('on', !plain);
+  });
+  modeBtn.classList.add('on');
+})();
+
+/* ---------- 规格说明（分层 spec 面板） ----------
+   分层顺序参考设计系统文档通行做法：Foundations（尺寸 / 字号 / 配色）
+   → 结构与组件 → 术语表；自上而下按依赖顺序，每层只引用上层概念。
+   数值即设计基准：原型 CSS 与 Swift 源码都以此为准。 */
+function renderLegend() {
+  /* 色板：直接遍历 TABS，色块顺序、取色、标签与导航栏 tab 一一对应。
+     tab 与色对是交叉的（仪表盘用 chargingColors 绿、充电管理用
+     dashboardColors 紫），由 TABS 自身表达，末尾补高温保护字面量色对。 */
+  const legendPairs = [
+    ...TABS.map(t => [t.colors, t.title]),
+    ['heat', '高温保护（字面量）'],
+  ];
+  const sw = legendPairs.map(([k, label]) =>
+    `<span class="sw"><i style="background:linear-gradient(135deg,${pal(k)[0]},${pal(k)[1]})"></i>${label}</span>`
+  ).join('');
+
+  /* 轻量 helper：一行 spec 卡（title 中文 + en 英文 + open 默认态 + body HTML） */
+  const card = (no, title, en, body, open = false) =>
+    `<details class="spec-card"${open ? ' open' : ''}>`
+    + `<summary><span class="no">${no}</span>${title}<span class="en">${en}</span></summary>`
+    + body + `</details>`;
+
+  const rows = (head, list, boldCols = [0, 1]) =>
+    `<table class="spec-table"><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr>`
+    + list.map(r => `<tr>${r.map((c, i) => `<td${boldCols.includes(i) ? ' class="v"' : ''}>${c}</td>`).join('')}</tr>`).join('')
+    + `</table>`;
+
+  const html =
+    `<h2 class="spec-title">设置页设计规格 · Settings Design Spec</h2>`
+    + `<p class="spec-sub">分层顺序：外框尺寸 → 窗口框架 → 页面设计 → 组件元素 → 字号 → 配色 → 术语；数值为设计基准，原型与 Swift 源码共同以此为准。</p>`
+
+    /* 01 外框尺寸 */
+    + card('01', '外框尺寸', 'Window', rows(['项', '值', '说明'], [
+      ['窗口总宽', '750px', '锁死不可横向拉伸（minSize / maxSize 同宽钳制）'],
+      ['窗口高度', '475px 默认 · 960px 上限', '纵向可拉伸'],
+      ['左栏（导航栏）', '214px', '固定宽度，玻璃材质'],
+      ['分隔线', '1px', '竖线从窗口顶贯通到底，不透明窗口底 + 中性描边'],
+      ['右栏（编辑栏）', '535px', '自适应 = 750 − 214 − 1，实色恒定'],
+    ]), true)
+
+    /* 02 窗口框架 */
+    + card('02', '窗口框架', 'Chrome',
+      `<div class="spec-note">无横贯标题栏；交通灯浮在侧栏左上角，<b>中心距顶 30pt、最左缘 20pt</b>——用透明 <code>NSTitlebarAccessoryViewController</code> 撑高 titlebar 使按钮留在热区，AppKit 在改标题 / resize / 切事件会重排拉回默认位置，需在对应时机反复重贴。主徽章 <code>34px</code> +「Aidente」<code>18pt</code> bold，中心线在交通灯中心下方 <code>47pt</code>（y=77）；导航区与主徽章解耦、自然排在头部之后。<b>深色模式窗口光圈</b>：1pt 白 <code>20%</code> 描边贴合 12pt 圆角（Swift 用 <code>strokeBorder</code> 画在裁切内侧），浅色无光圈。</div>`
+      + `<div class="spec-note"><b>前进 / 后退按钮</b>（页头左侧，参考系统设置）：平时无底色、可用 = 图标加深（浅色炭灰 <code>#535353</code>），悬停才出现 <code>var(--card)</code> 圆角底，不可用 = 浅灰禁用且无悬停反馈；两按钮始终占位，标题不跳动。历史栈每次开窗重置为「通用」。</div>`
+      + `<div class="spec-note"><b>类液态玻璃</b>：右栏恒实色不采样玻璃；左栏玻璃四层 = chrome 底 + 实时玻璃 + side-fill 染色（浅 <code>rgba(236,236,238,.60)</code> / 深 <code>rgba(52,52,56,.50)</code>）+ glassTint（浅 <code>clear</code> / 深 <code>rgb(30,30,34) .24</code>）。左栏文字用系统色、徽章实底渐变，玻璃下可读。</div>`)
+
+    /* 03 页面设计 */
+    + card('03', '页面设计', 'Page', rows(['项', '值', '说明'], [
+      ['页头', '高 60px · 不滚动', '实色遮挡下方卡片，整块可拖动窗口'],
+      ['页标题', '16pt bold', '纯标题无徽章 / 副标题；文字中心距窗口顶 30px'],
+      ['页头横线', '距标题中心 30px', '1px 分隔线固定不滚动'],
+      ['滚动区', 'padding 18px 30px 40px', '只有卡片与弹窗预览滚动'],
+      ['卡片间距', '16px', '卡片（组）之间的纵向 gap'],
+      ['卡组内间距', '8px', '外置卡头与卡片本体的 gap'],
+    ]), true)
+
+    /* 04 组件元素 */
+    + card('04', '组件元素', 'Components', rows(['元素', '规格', '说明'], [
+      ['卡片', 'padding 6px 16px', '首末行距卡边约 15px，由行 padding 11px 补足'],
+      ['卡头结构', '外置 / 内嵌 / headless', '含 Inset、设置项或 headOutside → 外置（只留标题无徽章无分隔线）；只有卡头无设置项 → 内嵌（保留徽章 + 分隔线）；headless → 完全无卡头'],
+      ['徽章尺寸', '34 / 26 / 22', '34 = 左栏主徽章；26 = 卡头、设置项 / Inset 行、弹窗标题区；22 = 导航 tab、状态文案、sheet 行徽章（唯一来源 <code>--tab-badge-size</code>）'],
+      ['徽章绘制', '135° 渐变实底 + 白图标', '恒定不随主题；tab 饱和 100%、详情区 90%（<code>badgeTint</code>）'],
+      ['开关', '开 = 首色实底 · 关 = 首色 16%', '两态都随卡色，不用系统灰 / 蓝'],
+      ['菜单选择器', '文字 + 右侧上下双箭头', '宽度随内容自适应；弹层对号在左、文字系统色；悬停 = 系统强调色圆角底白字（对齐 macOS）'],
+      ['状态文案', '首色 7.5% 底 / 20% 描边', '随主题；徽章与文字垂直居中，换行上下等量延伸'],
+      ['状态点', '8px 圆点', '位于状态文案左侧'],
+      ['动作按钮', '首色 20% 底 / 34% 描边', '随主题；含所有按钮与按钮组'],
+      ['Inset', '卡内嵌板', '间距统一交给卡片 VStack spacing，不单独加 margin'],
+      ['弹窗', '宽 520 · 任务弹窗 520×450', '标题区 = 26 徽章 + 15pt 标题、无副标题；底部按钮右对齐'],
+    ]), true)
+
+    /* 05 字号 */
+    + card('05', '字号', 'Type scale', rows(['字号', '用途', '备注'], [
+      ['16pt', '页标题', 'bold'],
+      ['15pt', '弹窗标题', 'bold，比卡头高半档'],
+      ['14pt', '卡头标题', 'semibold'],
+      ['13pt', '设置项标签 · 动作按钮 · 弹窗字段', 'headless 卡（语言 / 外观 / 访问仪表盘）标题也按此档'],
+      ['12.5pt', '菜单选择器文字', 'regular'],
+      ['11.5pt', '行副标题 · 状态文案 · 说明 · 等宽日志', 'secondary 色'],
+      ['11pt', '版本号 · 辅助说明', 'tertiary 色'],
+      ['18pt', '侧栏产品名「Aidente」', '品牌名独立档，不属于层级'],
+    ])
+    + `<div class="spec-note">注：设置页结构档位 = 16 / 15 / 14 / 13，其余为辅助档；全部 <code>.system(size:)</code> 固定 pt，不随 Dynamic Type。</div>`, true)
+
+    /* 06 配色 */
+    + card('06', '配色', 'Color tokens',
+      rows(['Token', '浅色', '深色', '用途'], [
+        ['<code>--window</code>', '#F7F8FA', '#2C2C2F', '内容区底'],
+        ['<code>--detail-pane</code>', '#EDEEF0', '#2C2C2F', '右栏专用底（略偏灰不过白）'],
+        ['<code>--chrome</code>', '#ECECEE', '#262629', '侧栏底'],
+        ['<code>--card</code>', '#F5F5F7', '#363639', '卡片底'],
+        ['<code>--text</code>', '#1D1D1F', '#F2F2F7', '主文字'],
+        ['<code>--text-2</code>', '#6E6E73', '#98989F', '副文字（副标题 / 说明）'],
+        ['<code>--text-3</code>', '#737378', '#96969D', '辅助文字（版本号等）'],
+        ['<code>--stroke</code>', 'rgba(0,0,0,.09)', 'rgba(255,255,255,.10)', '分隔线 / 描边'],
+        ['<code>--field</code>', '#FFFFFF', '#3A3A3E', '输入框 / 菜单弹层底'],
+      ])
+      + `<div class="spec-note"><b>卡内同色</b>：每张卡由自身色对（有卡头时由卡头体现），行徽章、开关、状态点、状态文案、动作按钮全部继承，无强调色例外；相邻卡允许同色。唯一例外：<b>数值读数用系统文字色</b>。</div>`
+      + `<div class="spec-note"><b>徽章恒定</b>：实底渐变不随主题（见上）。例外：状态文案与「添加计划任务」sheet 行徽章为 legacy 式（首色 16% 底 / 34% 描边 / 尾色图标），跟随主题。</div>`
+      + `<div class="swatches">${sw}</div>`, true)
+
+    /* 07 术语 */
+    + card('07', '术语', 'Glossary', rows(['术语', '英文', '定义'], [
+      ['导航栏 tab', 'Sidebar tab', '左栏导航区 7 项'],
+      ['页标题', 'Page title', '右栏页头纯标题 16pt'],
+      ['卡头', 'Card header', '卡片标题区；可外置、内嵌或缺失（headless）'],
+      ['设置项行', 'Setting row', '带徽章 + 标签的 toggle / control 行'],
+      ['状态文案', 'Status notice', '卡内说明状态 / 注意事项的文字行'],
+      ['状态点', 'Status dot', '状态文案前的 8px 圆点'],
+      ['动作按钮', 'Action button', '所有按钮与按钮组（AidenteActionButtonStyle / rBtn）'],
+      ['数值读数', 'Readout', '只读数字，统一系统文字色'],
+      ['Inset', 'Inset panel', '卡内嵌板（AidenteInsetPanel / .inset）'],
+      ['headless 卡', 'Headless card', '完全无卡头、只有内容的卡片'],
+      ['弹窗标题区', 'Sheet header', '26 徽章 + 15pt 标题，无副标题'],
+      ['徽章', 'Badge', '色对渐变实底 + 白图标的圆角方块'],
+    ], [0]))
+
+    + `<div class="spec-note" style="margin-top:10px">分层方式参考设计系统文档通行结构（Foundations → Components → Glossary）：上层是下层的基础，下层只引用上层概念；改任何数值先改本表，再同步原型 CSS 与 Swift。</div>`;
+
+  document.getElementById('legend').innerHTML = html;
+}
+
+/* ---------- init ---------- */
+renderNav();
+selectTab('general');
+renderLegend();
+</script>
+</body>
+</html>

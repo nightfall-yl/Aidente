@@ -13,19 +13,17 @@ struct PermissionsSettingsView: View {
         self.capabilities = capabilities
     }
 
-    private var hasChargingControl: Bool {
-        capabilities.chargingControl
-    }
-
     var body: some View {
         AidenteSettingsPage {
             // 自「充电管理」页移入并更名（2026-11-12）；本页首卡，颜色与
             // 页标题（advanced 靛，与仪表盘互换后）一致。
+            // v2: this page has a single card, so the header is removed and
+            // only the card body remains (headless).
             AidenteCard(
                 "睡眠行为",
-                subtitle: "决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。",
                 icon: "moon.stars.fill",
-                colors: AidenteTheme.advancedColors
+                colors: AidenteTheme.advancedColors,
+                headless: true
             ) {
                 AidenteSettingToggle(
                     "达到上限前阻止睡眠",
@@ -34,8 +32,7 @@ struct PermissionsSettingsView: View {
                     colors: AidenteTheme.dashboardColors,
                     isOn: $disableSleepUntilChargeLimit
                 )
-                .disabled(!hasChargingControl)
-                .opacity(hasChargingControl ? 1 : 0.5)
+                .aidenteGated(capabilities.chargingControl)
 
                 AidenteRowDivider()
                 AidenteSettingToggle(
@@ -45,8 +42,7 @@ struct PermissionsSettingsView: View {
                     colors: [AidenteTheme.ocean, AidenteTheme.violet],
                     isOn: $stopChargingWhileSleeping
                 )
-                .disabled(!hasChargingControl)
-                .opacity(hasChargingControl ? 1 : 0.5)
+                .aidenteGated(capabilities.chargingControl)
 
                 AidenteRowDivider()
                 AidenteSettingToggle(
@@ -56,8 +52,7 @@ struct PermissionsSettingsView: View {
                     colors: [AidenteTheme.coral, AidenteTheme.amber],
                     isOn: $stopChargingWhenAppClosed
                 )
-                .disabled(!hasChargingControl)
-                .opacity(hasChargingControl ? 1 : 0.5)
+                .aidenteGated(capabilities.chargingControl)
             }
         }
     }

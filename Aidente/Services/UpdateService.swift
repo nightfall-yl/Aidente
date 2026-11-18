@@ -6,9 +6,6 @@ import Observation
 
 struct AidenteUpdateRelease: Equatable, Sendable {
     let version: String
-    let name: String
-    let notes: String
-    let pageURL: URL
     let assetName: String
     let assetURL: URL
     let assetSize: Int
@@ -258,32 +255,6 @@ final class UpdateService {
             true
         default:
             false
-        }
-    }
-
-    var statusIcon: String {
-        switch phase {
-        case .checking: "arrow.triangle.2.circlepath"
-        case .available: "arrow.down.circle.fill"
-        case .downloading: "icloud.and.arrow.down.fill"
-        case .preparing: "checkmark.shield.fill"
-        case .installing: "arrow.clockwise.circle.fill"
-        case .upToDate, .installed: "checkmark.seal.fill"
-        case .failed: "exclamationmark.triangle.fill"
-        case .idle: "sparkles"
-        }
-    }
-
-    var statusColor: NSColor {
-        switch phase {
-        case .available, .downloading, .preparing, .installing:
-            .systemOrange
-        case .upToDate, .installed:
-            .systemGreen
-        case .failed:
-            .systemRed
-        default:
-            .systemTeal
         }
     }
 
@@ -618,9 +589,6 @@ final class UpdateService {
 
         return AidenteUpdateRelease(
             version: version,
-            name: decoded.name ?? "Aidente \(version)",
-            notes: decoded.body ?? "",
-            pageURL: decoded.htmlURL,
             assetName: asset.name,
             assetURL: asset.browserDownloadURL,
             assetSize: asset.size,
@@ -682,9 +650,6 @@ final class UpdateService {
 
         return AidenteUpdateRelease(
             version: version,
-            name: "Aidente \(version)",
-            notes: "",
-            pageURL: finalURL,
             assetName: assetName,
             assetURL: assetURL,
             assetSize: 0,
@@ -920,8 +885,8 @@ final class UpdateService {
         alert.alertStyle = .informational
         alert.messageText = AidenteL10n.t(title, englishTitle)
         alert.informativeText = AidenteL10n.t(
-            "主程序已改变，后台控制服务登记的身份不再匹配，充电管理暂时不可用。点击「立即重新授权」，通过 macOS 管理员弹窗重新登记即可恢复；无需开发者账号。",
-            "The app changed, so the helper's pinned identity no longer matches and charging control is paused. Click Re-authorize Now to re-register through the macOS administrator prompt — no developer account needed."
+            "主程序已改变，后台控制服务登记的身份不再匹配，充电管理暂时不可用。点击「立即重新授权」，通过 macOS 管理员弹窗重新登记即可恢复。",
+            "The app changed, so the helper's pinned identity no longer matches and charging control is paused. Click Re-authorize Now to re-register through the macOS administrator prompt."
         )
         alert.addButton(withTitle: AidenteL10n.t("立即重新授权", "Re-authorize Now"))
         alert.addButton(withTitle: AidenteL10n.t("稍后", "Later"))
@@ -1217,11 +1182,6 @@ final class UpdateService {
 
     private static let previewRelease = AidenteUpdateRelease(
         version: "6.1",
-        name: "Aidente 6.1",
-        notes: "Update preview",
-        pageURL: URL(
-            string: "https://github.com/nightfall-yl/Aidente/releases/tag/v6.1"
-        )!,
         assetName: "Aidente-6.1-macOS-arm64.zip",
         assetURL: URL(
             string: "https://github.com/nightfall-yl/Aidente/releases/download/v6.1/Aidente-6.1-macOS-arm64.zip"

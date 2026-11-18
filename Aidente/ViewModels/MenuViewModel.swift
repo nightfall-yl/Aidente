@@ -12,13 +12,10 @@ class MenuViewModel {
     private let bootTimestamp: Date?
 
     var batteryPercentageText: String = "0%"
-    var powerSourceText: String = AidenteL10n.t("电池")
     var timeRemainingText: String = AidenteL10n.t("正在估算…")
     var uptimeText: String = AidenteL10n.t("0 分钟", "0 min")
     var batteryModeText: String = AidenteL10n.t("未知")
     var batteryTemperatureText: String = "0°C"
-    var externalInputText: String = "0V @ 0A"
-    var internalInputText: String = "0V @ 0A"
     var adapterElectricalText: String = "0V · 0A"
     var batteryElectricalText: String = "0V · 0A"
     var cycleCountText: String = "0"
@@ -28,7 +25,6 @@ class MenuViewModel {
     var designCapacityText: String = "—"
     var batteryCapacityHistory: [BatteryCapacitySample] = []
     var batteryHistoryTrackingText: String = AidenteL10n.t("每日记录 · 今天开始")
-    var adapterSpecificationText: String = "—"
     var chargerDisplayName: String = AidenteL10n.t("未连接电源", "No Power Source")
 
     var displayPercentage: Int = 0
@@ -190,15 +186,6 @@ class MenuViewModel {
 
         let derivedPowerSource = derivePowerSource(battery: metrics, adapter: adapter)
 
-        switch derivedPowerSource {
-        case .battery:
-            powerSourceText = AidenteL10n.t("电池")
-        case .acAdapter:
-            powerSourceText = AidenteL10n.t("电源适配器")
-        case .both:
-            powerSourceText = AidenteL10n.t("电池与电源适配器")
-        }
-
         let formatted = formatTimeRemaining(minutes: metrics.timeRemaining)
         if !formatted.isEmpty {
             timeRemainingText = formatted
@@ -229,12 +216,6 @@ class MenuViewModel {
         let voltageFormat = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(2))
         let currentFormat = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(2))
 
-        externalInputText =
-            "\(adapter.adapterVoltage.formatted(voltageFormat))V @ \(adapter.adapterCurrent.formatted(currentFormat))A"
-
-        internalInputText =
-            "\(metrics.batteryVoltage.formatted(voltageFormat))V @ \(metrics.batteryCurrent.formatted(currentFormat))A"
-
         adapterElectricalText =
             "\(abs(adapter.adapterVoltage).formatted(voltageFormat))V · \(abs(adapter.adapterCurrent).formatted(currentFormat))A"
         batteryElectricalText =
@@ -246,7 +227,6 @@ class MenuViewModel {
         powerSource = derivedPowerSource
         isCharging = metrics.isCharging
         adapterConnected = adapter.adapterConnected
-        adapterSpecificationText = formatAdapterSpecification(adapter)
 
         cycleCountText = "\(metrics.cycleCount)"
         batteryHealthText = String(format: "%.1f%%", metrics.batteryHealth)
@@ -380,37 +360,27 @@ class MenuViewModel {
         return "\(milliampHours) mAh"
     }
 
-    private func formatAdapterSpecification(_ adapter: AdapterMetrics) -> String {
-        let protocolText: String
-        switch adapter.protocolName {
-        case "USB PD": protocolText = "USB PD"
-        case "Wireless": protocolText = AidenteL10n.t("无线供电", "Wireless")
-        default: protocolText = AidenteL10n.t("未识别", "Unknown")
-        }
-
-        if let active = adapter.powerProfiles.first(where: \.isActive) {
-            return "\(protocolText) · \(formatSpecification(active.voltage))V · \(formatSpecification(active.current))A · \(formatSpecification(active.power))W"
-        }
-        if adapter.maximumSupportedPower > 0 {
-            return "\(protocolText) · \(formatSpecification(adapter.maximumSupportedPower))W"
-        }
-        return protocolText
-    }
-
-    private func formatSpecification(_ value: Double) -> String {
-        value.formatted(
-            .number.precision(
-                .fractionLength(value.rounded() == value ? 0 : 1)
-            )
-        )
-    }
-
-    private func formatHistoryTrackingText(_ startDate: Date) -> String {
+    // Cached per language: DateFormatter construction is expensive and this
+    // runs on every history sample refresh.
+    private static let trackingDateFormatterEn: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: AidenteL10n.isEnglish ? "en_US" : "zh_CN")
+        formatter.locale = Locale(identifier: "en_US")
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        let dateText = formatter.string(from: startDate)
+        return formatter
+    }()
+    private static let trackingDateFormatterZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    private func formatHistoryTrackingText(_ startDate: Date) -> String {
+        let dateText = AidenteL10n.isEnglish
+            ? Self.trackingDateFormatterEn.string(from: startDate)
+            : Self.trackingDateFormatterZh.string(from: startDate)
         return AidenteL10n.t(
             "自 \(dateText) 开始记录 · 每天 1 个数据点",
             "Tracking since \(dateText) · 1 point per day"

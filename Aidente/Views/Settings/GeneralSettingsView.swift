@@ -10,9 +10,6 @@ struct GeneralSettingsView: View {
     @Default(.showBatteryStateInStatusIcon) var showBatteryStateInStatusIcon
     @Default(.useHardwarePercentage) var useHardwarePercentage
     @Default(.appAppearance) var appAppearance
-    @Default(.manageMagSafeLED) var manageMagSafeLED
-    @Default(.heatProtectionMagSafeLEDState) var heatProtectionMagSafeLEDState
-    @Default(.enableHeatProtectionMode) var enableHeatProtectionMode
 
     private let capabilities: DeviceCapabilities
 
@@ -22,70 +19,61 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         AidenteSettingsPage {
+            // 2026-11-18 用户指令：语言 / 外观合并为一张卡，卡头外置只有标题、无徽章。
             AidenteCard(
-                "语言",
-                subtitle: "切换菜单栏和设置界面的显示语言。",
+                "语言与外观",
                 icon: "character.bubble.fill",
-                colors: AidenteTheme.generalColors
+                colors: AidenteTheme.generalColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
-                Picker(AidenteL10n.t("语言"), selection: $appLanguage) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.title)
-                            .tag(language)
-                    }
+                AidenteControlRow(
+                    "语言",
+                    subtitle: "切换菜单栏和设置界面的显示语言。",
+                    icon: "character.bubble.fill",
+                    colors: AidenteTheme.generalColors
+                ) {
+                    AidenteMenuPicker(
+                        options: AidenteMenuOption<AppLanguage>.options(for: \.title),
+                        selection: $appLanguage
+                    )
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .id(appLanguage)
-            }
 
-            AidenteCard(
-                "外观",
-                subtitle: "选择浅色、深色，或跟随系统。",
-                icon: "paintbrush.fill",
-                colors: AidenteTheme.generalColors
-            ) {
-                Picker(AidenteL10n.t("外观模式"), selection: $appAppearance) {
-                    ForEach(AppAppearance.allCases) { appearance in
-                        Text(appearance.title)
-                            .tag(appearance)
-                    }
+                AidenteRowDivider()
+
+                AidenteControlRow(
+                    "外观",
+                    subtitle: "选择浅色、深色，或跟随系统。",
+                    icon: "paintbrush.fill",
+                    colors: AidenteTheme.generalColors
+                ) {
+                    AidenteMenuPicker(
+                        options: AidenteMenuOption<AppAppearance>.options(for: \.title),
+                        selection: $appAppearance
+                    )
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .id(appLanguage)
             }
 
+            // 2026-11-18 用户指令：菜单栏提前到第二张。
+            // v2: the card is titled "菜单栏"; the old title/subtitle became
+            // the first setting row, with the same popup-list control language.
             AidenteCard(
-                "启动",
-                subtitle: "让电池保护在登录后自动开始工作。",
-                icon: "power.circle.fill",
-                colors: AidenteTheme.generalColors
-            ) {
-                AidenteSettingToggle(
-                    "登录时启动 Aidente",
-                    subtitle: "登录后自动启动，并在菜单栏显示图标",
-                    icon: "arrow.up.forward.app.fill",
-                    colors: AidenteTheme.generalColors,
-                    isOn: $launchAtLogin
-                )
-            }
-
-            AidenteCard(
-                "菜单栏实时读数",
-                subtitle: "在电量、功率或两者同时显示之间切换。",
+                "菜单栏",
                 icon: "gauge.with.dots.needle.67percent",
-                colors: AidenteTheme.chargingColors
+                colors: AidenteTheme.chargingColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
-                Picker(AidenteL10n.t("菜单栏显示内容"), selection: $menuBarReadoutStyle) {
-                    ForEach(MenuBarReadoutStyle.allCases) { style in
-                        Label(style.title, systemImage: style.icon)
-                            .tag(style)
-                    }
+                AidenteControlRow(
+                    "菜单栏实时读数",
+                    icon: "gauge.with.dots.needle.67percent",
+                    colors: AidenteTheme.chargingColors
+                ) {
+                    AidenteMenuPicker(
+                        options: AidenteMenuOption<MenuBarReadoutStyle>.options(for: \.title),
+                        selection: $menuBarReadoutStyle
+                    )
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .id(appLanguage)
 
                 if menuBarReadoutStyle == .batteryPercentage {
                     AidenteRowDivider()
@@ -95,13 +83,23 @@ struct GeneralSettingsView: View {
                         icon: "percent",
                         colors: AidenteTheme.chargingColors
                     ) {
-                        Picker("", selection: $batteryPercentageDisplayLocation) {
-                            Text(AidenteL10n.t("不显示")).tag(PercentageDisplayLocation.hidden)
-                            Text(AidenteL10n.t("图标旁")).tag(PercentageDisplayLocation.nextToIcon)
-                            Text(AidenteL10n.t("图标内")).tag(PercentageDisplayLocation.insideIcon)
-                        }
-                        .labelsHidden()
-                        .frame(width: 150)
+                        AidenteMenuPicker(
+                            options: [
+                                AidenteMenuOption<PercentageDisplayLocation>(
+                                    title: AidenteL10n.t("不显示", "Hidden"),
+                                    value: PercentageDisplayLocation.hidden
+                                ),
+                                AidenteMenuOption<PercentageDisplayLocation>(
+                                    title: AidenteL10n.t("图标旁", "Next to Icon"),
+                                    value: PercentageDisplayLocation.nextToIcon
+                                ),
+                                AidenteMenuOption<PercentageDisplayLocation>(
+                                    title: AidenteL10n.t("图标内", "Inside Icon"),
+                                    value: PercentageDisplayLocation.insideIcon
+                                ),
+                            ],
+                            selection: $batteryPercentageDisplayLocation
+                        )
                     }
                 }
 
@@ -134,55 +132,25 @@ struct GeneralSettingsView: View {
                 )
             }
 
-            // Moved from the charging page; still gated by the device's
-            // MagSafe capability, and the heat-protection row follows the
-            // heat-protection preference owned by the charging page.
-            if capabilities.hasMagSafe {
-                AidenteCard(
-                    "MagSafe 指示灯",
-                    subtitle: "在受支持机型上用颜色显示充电、暂停和保护状态。",
-                    icon: "lightbulb.led.fill",
-                    colors: AidenteTheme.automationColors
-                ) {
-                    AidenteSettingToggle(
-                        "由 Aidente 控制指示灯",
-                        icon: "lightbulb.fill",
-                        colors: AidenteTheme.automationColors,
-                        isOn: $manageMagSafeLED
-                    )
-                    .disabled(!capabilities.magsafeLEDControl)
-                    .opacity(capabilities.magsafeLEDControl ? 1 : 0.5)
-
-                    if manageMagSafeLED && enableHeatProtectionMode {
-                        AidenteRowDivider()
-                        AidenteControlRow(
-                            "高温保护时的灯光",
-                            icon: "lightspectrum.horizontal",
-                            colors: AidenteTheme.automationColors
-                        ) {
-                            Picker("", selection: $heatProtectionMagSafeLEDState) {
-                                Text(AidenteL10n.t("关闭")).tag(MagSafeLEDState.off)
-                                Text(AidenteL10n.t("绿色")).tag(MagSafeLEDState.green)
-                                Text(AidenteL10n.t("橙色")).tag(MagSafeLEDState.orange)
-                                Text(AidenteL10n.t("橙色慢闪"))
-                                    .tag(MagSafeLEDState.blinkOrangeSlow)
-                                Text(AidenteL10n.t("橙色快闪"))
-                                    .tag(MagSafeLEDState.blinkOrangeFast)
-                            }
-                            .labelsHidden()
-                            .frame(width: 140)
-                        }
-                    }
-
-                    if !capabilities.magsafeLEDControl {
-                        AidenteNotice(text: "当前设备不支持 MagSafe 指示灯控制。")
-                    }
-                }
+            // 2026-11-18 用户定：登录时启动改用 amber/gold（automation 色对），启动语义。
+            AidenteCard(
+                "登录时启动",
+                icon: "power.circle.fill",
+                colors: AidenteTheme.automationColors,
+                headerOutside: true,
+                showsHeaderBadge: false
+            ) {
+                AidenteSettingToggle(
+                    "登录时启动 Aidente",
+                    subtitle: "登录后自动启动，并在菜单栏显示图标",
+                    icon: "arrow.up.forward.app.fill",
+                    colors: AidenteTheme.automationColors,
+                    isOn: $launchAtLogin
+                )
             }
         }
         .onChange(of: launchAtLogin) { _, newValue in
             LaunchAtLoginService.shared.setLaunchAtLogin(newValue)
         }
-        .animation(.default, value: manageMagSafeLED)
     }
 }

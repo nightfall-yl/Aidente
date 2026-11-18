@@ -28,7 +28,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: AidenteL10n.t("通用")
         case .dashboard: AidenteL10n.t("仪表盘")
         case .charging: AidenteL10n.t("充电管理")
-        case .permissions: AidenteL10n.t("睡眠管理")
+        case .permissions: AidenteL10n.t("睡眠行为", "Sleep Behavior")
         case .automation: AidenteL10n.t("自动化")
         case .diagnostics: AidenteL10n.t("诊断")
         case .about: AidenteL10n.t("关于")
@@ -57,7 +57,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var colors: [Color] {
         switch self {
         // 方案 A（2026-11-12）：蓝 → 紫 → 绿 → 靛 → 橙 → 橙红 → 蓝紫，
-        // 7 个 tab 顺序不变；仪表盘 / 睡眠管理色对互换，每页首卡与 tab 同色。
+        // 7 个 tab 顺序不变；仪表盘 / 睡眠行为色对互换，每页首卡与 tab 同色。
         case .general: AidenteTheme.generalColors
         case .dashboard: AidenteTheme.chargingColors
         case .charging: AidenteTheme.dashboardColors
@@ -124,7 +124,7 @@ struct SettingsView: View {
         ZStack {
             HStack(spacing: 0) {
                 sidebar
-                    .frame(width: 236)
+                    .frame(width: 214)
 
                 // The 1pt pane divider must be opaque: this window has no
                 // full-width backdrop and `backgroundColor = .clear`, so a
@@ -143,6 +143,22 @@ struct SettingsView: View {
             .ignoresSafeArea(.container, edges: .top)
         }
         .ignoresSafeArea(.container, edges: .top)
+        // Dark-mode-only outer light ring, matching macOS System Settings'
+        // hairline window outline. strokeBorder keeps the 1pt line fully
+        // inside the contentView's 12pt-corner clip, so it hugs the rounded
+        // edge exactly. Light mode stays clear — the window already has its
+        // natural edge highlight there and doubling it looks muddy.
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(
+                    colorScheme == .dark
+                        ? Color.white.opacity(0.20)
+                        : .clear,
+                    lineWidth: 1
+                )
+                .ignoresSafeArea(.container, edges: .top)
+                .allowsHitTesting(false)
+        }
         .tint(AidenteTheme.jade)
         .environment(\.aidenteCanSampleBackdrop, false)
         // Settings cards use a dimmer light-mode fill than the global L2 token
@@ -150,7 +166,10 @@ struct SettingsView: View {
         // here (not on .card itself) so dashboard / menu cards keep #FCFCFC.
         // Sheets presented from settings inherit this and stay consistent.
         .environment(\.aidenteUsesSettingsCardFill, true)
-        .frame(minWidth: 960, minHeight: 640)
+        .frame(
+            minWidth: 750, idealWidth: 750, maxWidth: 750,
+            minHeight: 475, maxHeight: 960
+        )
         .preferredColorScheme(resolvedPreferredScheme)
         .onAppear {
             updateWindowTitle()
@@ -181,9 +200,9 @@ struct SettingsView: View {
             // Fixed header height; the detail pane no longer aligns with it.
             .frame(height: headerContentHeight)
             // Sidebar-only clearance for the AppKit traffic lights floating
-            // at the window's top-left. 60 + 46/2 = 83pt header center, i.e.
-            // 51pt below the traffic-light center at y=32pt.
-            .padding(.top, 60)
+            // at the window's top-left. 54 + 46/2 = 77pt header center, i.e.
+            // 47pt below the traffic-light center at y=30pt.
+            .padding(.top, 54)
             .padding(.bottom, 12)
 
             ScrollView {
@@ -256,7 +275,7 @@ struct SettingsView: View {
             : Color(red: 0.0, green: 0.478, blue: 1.0).opacity(0.80)
     }
 
-    // MARK: Header back / forward navigation (settings-redesign-prototype.html)
+    // MARK: Header back / forward navigation (settings-prototype.html)
 
     private var canGoBack: Bool { navIndex > 0 }
     private var canGoForward: Bool { navIndex < navHistory.count - 1 }
@@ -352,15 +371,15 @@ struct SettingsView: View {
                         ) { goForward() }
                     }
                     Text(selectedTab.title)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         // Clicks pass through to the drag layer below.
                         .allowsHitTesting(false)
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 20)
-                .frame(height: 64)
+                .frame(height: 60)
 
-                // y = 64pt, i.e. 32pt below the title center. Cards keep
+                // y = 60pt, i.e. 30pt below the title center. Cards keep
                 // their own top spacing and no longer line up with the
                 // sidebar's first nav row.
                 Divider()

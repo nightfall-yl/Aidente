@@ -26,6 +26,37 @@ private enum DashboardEditableCard: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Resolve a saved comma-separated order into the full canonical card
+    /// list. Memoized on the last key: the dashboard body re-evaluates
+    /// frequently and re-splitting the string each time was pure waste.
+    private static var orderCache: (key: String, cards: [DashboardEditableCard])?
+    static func resolvedOrder(_ raw: String) -> [DashboardEditableCard] {
+        if let cache = orderCache, cache.key == raw { return cache.cards }
+        var result: [DashboardEditableCard] = []
+        for part in raw.split(separator: ",") {
+            if let card = DashboardEditableCard(rawValue: String(part)),
+               !result.contains(card) {
+                result.append(card)
+            }
+        }
+        // Insert newly added cards at their canonical position instead of
+        // appending: a saved 4-card order keeps its relative order and the
+        // battery card lands back where the metrics strip used to be.
+        let canonical = DashboardEditableCard.allCases
+        for card in canonical where !result.contains(card) {
+            let canonicalIndex = canonical.firstIndex(of: card) ?? 0
+            if let next = result.first(where: { candidate in
+                (canonical.firstIndex(of: candidate) ?? 0) > canonicalIndex
+            }), let insertAt = result.firstIndex(of: next) {
+                result.insert(card, at: insertAt)
+            } else {
+                result.append(card)
+            }
+        }
+        orderCache = (raw, result)
+        return result
+    }
+
     /// Reuse the existing wording so the dock and the card always agree in
     /// both languages — no hand-written English labels here.
     var title: String {
@@ -250,28 +281,7 @@ struct DashboardPopoverView: View {
     // MARK: - Editable dashboard cards
 
     private var orderedCards: [DashboardEditableCard] {
-        var result: [DashboardEditableCard] = []
-        for raw in dashboardCardOrder.split(separator: ",") {
-            if let card = DashboardEditableCard(rawValue: String(raw)),
-               !result.contains(card) {
-                result.append(card)
-            }
-        }
-        // Insert newly added cards at their canonical position instead of
-        // appending: a saved 4-card order keeps its relative order and the
-        // battery card lands back where the metrics strip used to be.
-        let canonical = DashboardEditableCard.allCases
-        for card in canonical where !result.contains(card) {
-            let canonicalIndex = canonical.firstIndex(of: card) ?? 0
-            if let next = result.first(where: { candidate in
-                (canonical.firstIndex(of: candidate) ?? 0) > canonicalIndex
-            }), let insertAt = result.firstIndex(of: next) {
-                result.insert(card, at: insertAt)
-            } else {
-                result.append(card)
-            }
-        }
-        return result
+        DashboardEditableCard.resolvedOrder(dashboardCardOrder)
     }
 
     private var visibleCards: [DashboardEditableCard] {

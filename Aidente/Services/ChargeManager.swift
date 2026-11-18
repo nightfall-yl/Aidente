@@ -1,3 +1,4 @@
+import AppKit
 import Defaults
 import Foundation
 import IOKit.pwr_mgt
@@ -797,8 +798,28 @@ class ChargeManager {
         do {
             try await ChargingHelperManager.shared.repair()
             retryControlAfterRepair()
+            // Match UpdateService's re-authorization path: tell the user the
+            // one-tap repair actually completed. runModal keeps the popover
+            // open underneath, same as the update-triggered alert.
+            let alert = NSAlert()
+            alert.alertStyle = .informational
+            alert.messageText = AidenteL10n.t("重新授权完成", "Re-authorization Complete")
+            alert.informativeText = AidenteL10n.t(
+                "后台控制服务已与当前 Aidente 重新匹配，充电管理已恢复。",
+                "The helper now matches this Aidente build; charging control is available again."
+            )
+            alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
         } catch {
             logger.error("QUICK_REPAIR_FAILED \(error.localizedDescription, privacy: .public)")
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = AidenteL10n.t("重新授权未完成", "Re-authorization Failed")
+            alert.informativeText = error.localizedDescription
+            alert.addButton(withTitle: AidenteL10n.t("好", "OK"))
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
         }
     }
 

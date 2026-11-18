@@ -12,8 +12,6 @@ enum AidenteTheme {
     static let amber = Color(red: 1.00, green: 0.59, blue: 0.18)
     static let gold = Color(red: 1.00, green: 0.76, blue: 0.27)
     static let coral = Color(red: 0.98, green: 0.34, blue: 0.30)
-    static let graphite = Color(red: 0.11, green: 0.12, blue: 0.14)
-    static let panel = Color(red: 0.13, green: 0.13, blue: 0.14)
 
     // Deep "ink" variants for colored TEXT / small ICONS on light surfaces.
     // The accents above are tuned for dark surfaces and wash out on the light,
@@ -55,7 +53,7 @@ enum AidenteTheme {
     static let permissionColors = [ocean, violet]
 }
 
-// MARK: - Settings card color context (settings-redesign-prototype.html, 2026-11-11)
+// MARK: - Settings card color context (settings-prototype.html, 2026-11-11)
 
 /// A settings card publishes its color pair to every descendant so
 /// "one card = one color pair" holds without rewriting each row's call site.
@@ -540,12 +538,6 @@ struct AidenteWindowBackdrop: View {
     }
 }
 
-struct AidenteChromeBar: View {
-    var body: some View {
-        AidenteLevelSurface(level: .chrome)
-    }
-}
-
 struct AidenteMaterialLayer: View {
     var cornerRadius: CGFloat = 0
     /// Dashboard-only: let the L0 glass show through the card paint. Settings
@@ -620,7 +612,7 @@ struct AidenteIconBadge: View {
     private var effectiveColors: [Color] { cardColors ?? colors }
 
     var body: some View {
-        let radius = cornerRadius ?? max(7, size * 0.27)
+        let radius = cornerRadius ?? max(6, size * 0.27)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         let tint = effectiveColors.first ?? AidenteTheme.jade
         let iconTint = effectiveColors.last ?? tint
@@ -676,6 +668,165 @@ struct AidenteCardSubtitleLink {
     }
 }
 
+/// Shared linked-subtitle builder for card headers and row subtitles. Only
+/// the linked phrase uses the system primary text color; the rest stays
+/// secondary, matching the prototype's inline link treatment.
+func aidenteAttributedSubtitle(
+    _ subtitle: String,
+    link: AidenteCardSubtitleLink
+) -> AttributedString? {
+    let localized = AidenteL10n.t(subtitle)
+    let phrase = link.localizedPhrase
+    guard let range = localized.range(of: phrase) else { return nil }
+
+    var result = AttributedString(String(localized[..<range.lowerBound]))
+    result.foregroundColor = .secondary
+
+    var linked = AttributedString(phrase)
+    linked.foregroundColor = .primary
+    linked.link = link.url
+    result.append(linked)
+
+    var tail = AttributedString(String(localized[range.upperBound...]))
+    tail.foregroundColor = .secondary
+    result.append(tail)
+    return result
+}
+
+/// One option in the prototype's single-click popup list. `title` is already
+/// localized by the caller; the menu shows it with a checkmark on the left.
+struct AidenteMenuOption<Value: Hashable>: Identifiable {
+    let title: String
+    let value: Value
+    var id: Value { value }
+
+    /// Build one option per `CaseIterable` case, titled by the given key path
+    /// (every picker enum exposes a localized `title`). Replaces the
+    /// `allCases.map { AidenteMenuOption(title: $0.title, value: $0) }`
+    /// boilerplate repeated at every call site.
+    static func options(
+        for title: KeyPath<Value, String>
+    ) -> [AidenteMenuOption<Value>] where Value: CaseIterable {
+        Value.allCases.map { AidenteMenuOption(title: $0[keyPath: title], value: $0) }
+    }
+}
+
+/// Standard gating for rows that depend on a device capability: disabled plus
+/// 50% opacity, matching the prototype's dimmed state. Replaces the repeated
+/// `.disabled(!x).opacity(x ? 1 : 0.5)` pair.
+private struct AidenteCapabilityGate: ViewModifier {
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .disabled(!isEnabled)
+            .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+extension View {
+    func aidenteGated(_ isEnabled: Bool) -> some View {
+        modifier(AidenteCapabilityGate(isEnabled: isEnabled))
+    }
+}
+
+/// Prototype v2's popup list: a compact current-value button that opens a
+/// checkmarked menu, replacing segmented controls and inline Pickers.
+struct AidenteMenuPicker<Value: Hashable>: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Default(.appLanguage) private var appLanguage
+
+    let options: [AidenteMenuOption<Value>]
+    @Binding var selection: Value
+
+    private var selectedTitle: String {
+        options.first { $0.value == selection }?.title ?? ""
+    }
+
+    @State private var isPresented = false
+    /// Hovered option in the open popover, mirroring native menu highlight.
+    @State private var hoveredOption: Value?
+
+    var body: some View {
+        // A native SwiftUI Menu draws its own trailing disclosure chevron in
+        // addition to any custom label image. Use a plain Button + popover so
+        // the control has exactly one indicator: our up/down chevrons right
+        // after the value, with system text color throughout.
+        Button {
+            isPresented.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Text(selectedTitle)
+                    .lineLimit(1)
+                    .foregroundStyle(Color.primary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(Color.primary.opacity(0.08))
+                    )
+            }
+            .font(.system(size: 12.5))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(AidenteSurfaceTokens.controlFill(scheme: colorScheme))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(AidenteSurfaceTokens.stroke(scheme: colorScheme))
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            // Keep the ideal (intrinsic) width so the button hugs the value and
+            // the chevrons instead of stretching across the whole row.
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(options) { option in
+                    let isHovered = hoveredOption == option.value
+                    Button {
+                        selection = option.value
+                        isPresented = false
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(isHovered ? Color.white : Color.primary)
+                                .opacity(option.value == selection ? 1 : 0)
+                                .frame(width: 13, alignment: .center)
+                            Text(option.title)
+                                .font(.system(size: 12.5))
+                                .foregroundStyle(isHovered ? Color.white : Color.primary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isHovered ? Color.accentColor : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        hoveredOption = hovering ? option.value : nil
+                    }
+                }
+            }
+            .padding(4)
+            .fixedSize()
+        }
+    }
+}
+
 struct AidenteSectionHeader: View {
     @Default(.appLanguage) private var appLanguage
 
@@ -685,6 +836,9 @@ struct AidenteSectionHeader: View {
     let icon: String
     let colors: [Color]
     let accessory: AnyView?
+    /// Prototype v2 puts the header outside the card for Inset / setting-row
+    /// cards and drops its badge there. Header-only cards keep the badge.
+    let showsBadge: Bool
 
     init(
         _ title: String,
@@ -692,7 +846,8 @@ struct AidenteSectionHeader: View {
         subtitleLink: AidenteCardSubtitleLink? = nil,
         icon: String,
         colors: [Color],
-        accessory: AnyView? = nil
+        accessory: AnyView? = nil,
+        showsBadge: Bool = true
     ) {
         self.title = title
         self.subtitle = subtitle
@@ -700,18 +855,21 @@ struct AidenteSectionHeader: View {
         self.icon = icon
         self.colors = colors
         self.accessory = accessory
+        self.showsBadge = showsBadge
     }
 
     var body: some View {
         HStack(alignment: .center, spacing: 11) {
-            AidenteIconBadge(icon: icon, colors: colors, size: 28)
+            if showsBadge {
+                AidenteIconBadge(icon: icon, colors: colors, size: 26)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
                     .font(.system(size: 14, weight: .semibold))
                 if let subtitle {
                     if let link = subtitleLink,
-                        let attributed = linkedSubtitle(subtitle, link: link)
+                        let attributed = aidenteAttributedSubtitle(subtitle, link: link)
                     {
                         Text(attributed)
                             .font(.system(size: 11.5))
@@ -732,30 +890,6 @@ struct AidenteSectionHeader: View {
             }
         }
     }
-
-    /// Splits the localized subtitle around the linked phrase so the link
-    /// stays inline and wraps with the rest of the sentence.
-    private func linkedSubtitle(
-        _ subtitle: String,
-        link: AidenteCardSubtitleLink
-    ) -> AttributedString? {
-        let localized = AidenteL10n.t(subtitle)
-        let phrase = link.localizedPhrase
-        guard let range = localized.range(of: phrase) else { return nil }
-
-        var result = AttributedString(String(localized[..<range.lowerBound]))
-        result.foregroundColor = .secondary
-
-        var linked = AttributedString(phrase)
-        linked.foregroundColor = .primary
-        linked.link = link.url
-        result.append(linked)
-
-        var tail = AttributedString(String(localized[range.upperBound...]))
-        tail.foregroundColor = .secondary
-        result.append(tail)
-        return result
-    }
 }
 
 struct AidenteCard<Content: View>: View {
@@ -768,6 +902,11 @@ struct AidenteCard<Content: View>: View {
     let colors: [Color]
     let showDivider: Bool
     let headerAccessory: AnyView
+    /// Prototype v2: cards with Inset / setting rows put the header above the
+    /// card (no badge, no divider); headless cards drop the header entirely.
+    let headerOutside: Bool
+    let showsHeaderBadge: Bool
+    let headless: Bool
     @ViewBuilder let content: Content
 
     /// Existing call sites: no card-header button and no subtitle link.
@@ -778,6 +917,9 @@ struct AidenteCard<Content: View>: View {
         colors: [Color],
         showDivider: Bool = true,
         subtitleLink: AidenteCardSubtitleLink? = nil,
+        headerOutside: Bool = false,
+        showsHeaderBadge: Bool = true,
+        headless: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.init(
@@ -787,12 +929,15 @@ struct AidenteCard<Content: View>: View {
             colors: colors,
             showDivider: showDivider,
             subtitleLink: subtitleLink,
+            headerOutside: headerOutside,
+            showsHeaderBadge: showsHeaderBadge,
+            headless: headless,
             headerAccessory: { EmptyView() },
             content: content
         )
     }
 
-    /// Card header with a trailing action button (e.g. "打开仪表盘").
+    /// Card header with a trailing action button (e.g. "添加计划任务").
     init<Accessory: View>(
         _ title: String,
         subtitle: String? = nil,
@@ -800,6 +945,9 @@ struct AidenteCard<Content: View>: View {
         colors: [Color],
         showDivider: Bool = true,
         subtitleLink: AidenteCardSubtitleLink? = nil,
+        headerOutside: Bool = false,
+        showsHeaderBadge: Bool = true,
+        headless: Bool = false,
         @ViewBuilder headerAccessory: () -> Accessory,
         @ViewBuilder content: () -> Content
     ) {
@@ -809,31 +957,88 @@ struct AidenteCard<Content: View>: View {
         self.icon = icon
         self.colors = colors
         self.showDivider = showDivider
+        self.headerOutside = headerOutside
+        self.showsHeaderBadge = showsHeaderBadge
+        self.headless = headless
         self.headerAccessory = AnyView(headerAccessory())
         self.content = content()
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AidenteSectionHeader(
-                title,
-                subtitle: subtitle,
-                subtitleLink: subtitleLink,
-                icon: icon,
-                colors: colors,
-                accessory: headerAccessory
+    // Prototype `.card` radius (12px). Window shell and dark-mode ring use
+    // the same 12pt value so the whole chrome reads as one family.
+    private let cardCornerRadius: CGFloat = 12
+
+    private var strokeOverlay: some View {
+        RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
+            .strokeBorder(
+                AidenteSurfaceTokens.stroke(scheme: colorScheme),
+                lineWidth: 1
             )
+    }
 
-            if showDivider {
-                Rectangle()
-                    .fill(.primary.opacity(0.10))
-                    .frame(height: 1)
-            }
+    @ViewBuilder
+    private var headerView: some View {
+        AidenteSectionHeader(
+            title,
+            subtitle: subtitle,
+            subtitleLink: subtitleLink,
+            icon: icon,
+            colors: colors,
+            accessory: headerAccessory,
+            showsBadge: showsHeaderBadge
+        )
+    }
 
+    @ViewBuilder
+    private var cardSurface: some View {
+        if headerOutside || headless {
+            // v2: the card itself only holds rows, with symmetric 6/16 padding.
+            // Prototype rows carry 11pt vertical padding; Swift rows carry 2pt.
+            // Add 7pt around the whole content so the first/last row sits
+            // ~15pt from the card edge instead of looking flush.
             VStack(alignment: .leading, spacing: 11) {
                 content
             }
+            .padding(.vertical, 7)
+            .padding(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .background { AidenteMaterialLayer(cornerRadius: cardCornerRadius) }
+            .overlay { strokeOverlay }
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                headerView
+
+                if showDivider {
+                    Rectangle()
+                        .fill(.primary.opacity(0.10))
+                        .frame(height: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 11) {
+                    content
+                }
+            }
+            .padding(16)
+            .background { AidenteMaterialLayer(cornerRadius: cardCornerRadius) }
+            .overlay { strokeOverlay }
         }
+    }
+
+    @ViewBuilder
+    private var contentBody: some View {
+        if headerOutside {
+            // Header sits just above the card, aligned to the card's content.
+            VStack(alignment: .leading, spacing: 8) {
+                headerView
+                    .padding(.horizontal, 16)
+                cardSurface
+            }
+        } else {
+            cardSurface
+        }
+    }
+
+    var body: some View {
+        contentBody
         // One card = one color pair: every badge, toggle tint, notice,
         // action button and numeric value below inherits `colors` here.
         // Call sites keep their 6.1.3 baseline values for traceability.
@@ -841,17 +1046,6 @@ struct AidenteCard<Content: View>: View {
         // Native controls (Picker / Slider / Stepper) inherit the card's
         // first color instead of the page-wide jade tint.
         .tint(colors.first ?? AidenteTheme.jade)
-        .padding(16)
-        .background {
-            AidenteMaterialLayer(cornerRadius: 15)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .strokeBorder(
-                    AidenteSurfaceTokens.stroke(scheme: colorScheme),
-                    lineWidth: 1
-                )
-        }
     }
 }
 
@@ -866,7 +1060,7 @@ struct AidenteSettingsPage<Content: View>: View {
     /// sibling above it and stays pinned. Keep this container free of a nested
     /// ScrollView, otherwise the cards scroll independently of the pane.
     var body: some View {
-        LazyVStack(spacing: 14) {
+        LazyVStack(spacing: 16) {
             content
         }
         .padding(20)
@@ -883,6 +1077,7 @@ struct AidenteSettingToggle: View {
 
     let title: String
     let subtitle: String?
+    let subtitleLink: AidenteCardSubtitleLink?
     let icon: String
     let colors: [Color]
     /// Row badge size. Defaults to 26 (option-row band); the schedule-task
@@ -899,6 +1094,7 @@ struct AidenteSettingToggle: View {
     init(
         _ title: String,
         subtitle: String? = nil,
+        subtitleLink: AidenteCardSubtitleLink? = nil,
         icon: String,
         colors: [Color],
         badgeSize: CGFloat = 26,
@@ -907,6 +1103,7 @@ struct AidenteSettingToggle: View {
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.subtitleLink = subtitleLink
         self.icon = icon
         self.colors = colors
         self.badgeSize = badgeSize
@@ -916,7 +1113,7 @@ struct AidenteSettingToggle: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Right-edge align the 26/22px row badge inside a fixed 28px slot
+            // Right-edge align the 26/22px row badge inside a fixed 26px slot
             // so it shares the card-header badge's right edge (grouped look).
             AidenteIconBadge(
                 icon: icon,
@@ -924,15 +1121,23 @@ struct AidenteSettingToggle: View {
                 size: badgeSize,
                 legacyStyle: legacyStyle
             )
-            .frame(width: 28, alignment: .trailing)
+            .frame(width: 26, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
                     .font(.system(size: 13, weight: .medium))
                 if let subtitle {
-                    Text(AidenteL10n.t(subtitle))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    if let link = subtitleLink,
+                       let attributed = aidenteAttributedSubtitle(subtitle, link: link)
+                    {
+                        Text(attributed)
+                            .font(.system(size: 11))
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(AidenteL10n.t(subtitle))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -982,7 +1187,7 @@ struct AidenteControlRow<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Right-edge align the 26/22px row badge inside a fixed 28px slot
+            // Right-edge align the 26/22px row badge inside a fixed 26px slot
             // so it shares the card-header badge's right edge (grouped look).
             AidenteIconBadge(
                 icon: icon,
@@ -990,7 +1195,7 @@ struct AidenteControlRow<Trailing: View>: View {
                 size: badgeSize,
                 legacyStyle: legacyStyle
             )
-            .frame(width: 28, alignment: .trailing)
+            .frame(width: 26, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(AidenteL10n.t(title))
@@ -1121,9 +1326,19 @@ private struct AidenteActionButtonSurface: View {
 
 struct AidenteInsetPanel<Content: View>: View {
     @ViewBuilder let content: Content
+    /// Prototype `.inset` uses `margin: 6px 0 10px`. Keep it opt-in so the
+    /// update sheet (which is not an inset row) can stay flush.
+    var marginTop: CGFloat = 0
+    var marginBottom: CGFloat = 0
 
-    init(@ViewBuilder content: () -> Content) {
+    init(
+        marginTop: CGFloat = 0,
+        marginBottom: CGFloat = 0,
+        @ViewBuilder content: () -> Content
+    ) {
         self.content = content()
+        self.marginTop = marginTop
+        self.marginBottom = marginBottom
     }
 
     var body: some View {
@@ -1137,6 +1352,10 @@ struct AidenteInsetPanel<Content: View>: View {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .strokeBorder(.primary.opacity(0.09), lineWidth: 1)
             }
+            // Transparent spacing outside the panel, matching the prototype's
+            // inset margin rather than shrinking the card's 6pt top padding.
+            .padding(.top, marginTop)
+            .padding(.bottom, marginBottom)
     }
 }
 

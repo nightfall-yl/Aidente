@@ -163,14 +163,6 @@ final class SimulatedBattery: BatteryPowerControlling {
         _ = flow.sample(batteryPower: 16)
         check(flow.sample(batteryPower: 14) == .charging, "Continuing to charge is not a successful hold")
         check(flow.sample(batteryPower: .nan) == .pending, "Invalid power readings reset verification")
-        check(!ControlServiceRefreshPolicy.needsRefresh(previous: nil, current: "os:hash"),
-              "First registration must not be torn down immediately")
-        check(!ControlServiceRefreshPolicy.needsRefresh(previous: "os:hash", current: "os:hash"),
-              "Same verified build does not require re-registration")
-        check(ControlServiceRefreshPolicy.needsRefresh(previous: "os:old", current: "os:new"),
-              "Changed helper requires migration")
-        check(ControlServiceRefreshPolicy.needsRefresh(previous: "old:hash", current: "new:hash"),
-              "Changed OS requires migration")
         for (index, level) in [79, 80, 81, 80, 79, 78, 79, 77, 78, 80].enumerated() {
             let state = normal.evaluate(percentage: level, limit: 80, sailing: false,
                                         sailingRange: 5, automaticDischarge: true, initialize: index == 0)

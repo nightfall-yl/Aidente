@@ -46,7 +46,10 @@ struct AutomationSettingsView: View {
         AidenteSettingsPage {
             AidenteCard(
                 "计划任务",
-                subtitle: "按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。错过的任务可在 Mac 唤醒后补做。",
+                subtitle: AidenteL10n.t(
+                    "按设定时间自动调整上限、补电、校准、暂停、放电或恢复充电。",
+                    "Automatically adjust the charge limit, top up, calibrate, pause, discharge, or resume charging at scheduled times."
+                ),
                 icon: "calendar.badge.clock",
                 colors: AidenteTheme.automationColors,
                 showDivider: !scheduleStore.tasks.isEmpty,
@@ -67,7 +70,7 @@ struct AutomationSettingsView: View {
                             AidenteIconBadge(
                                 icon: task.action.icon,
                                 colors: task.action.colors,
-                                size: 34
+                                size: 26
                             )
 
                             VStack(alignment: .leading, spacing: 3) {
@@ -117,7 +120,9 @@ struct AutomationSettingsView: View {
                     "Use the Open URL action in Shortcuts to control Aidente."
                 ),
                 icon: "terminal.fill",
-                colors: AidenteTheme.dashboardColors
+                colors: AidenteTheme.dashboardColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 AidenteInsetPanel {
                     VStack(alignment: .leading, spacing: 4) {
@@ -144,6 +149,7 @@ struct AutomationSettingsView: View {
 }
 
 private struct NewScheduleTaskView: View {
+    @Default(.appLanguage) private var appLanguage
     @Binding var isPresented: Bool
 
     @State private var action: ScheduleActionKind = .setChargeLimit
@@ -161,26 +167,24 @@ private struct NewScheduleTaskView: View {
                     AidenteIconBadge(
                         icon: "calendar.badge.plus",
                         colors: AidenteTheme.automationColors,
-                        size: 34
+                        size: 26
                     )
                     // The sheet title sits outside any AidenteCard, so the
                     // badge would fall back to the translucent non-card style.
                     // The prototype draws it as a solid gradient — inject the
                     // card-color environment explicitly to match.
                     .environment(\.aidenteCardColors, AidenteTheme.automationColors)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(AidenteL10n.t("添加计划任务"))
-                            .font(.title2.bold())
-                        Text(AidenteL10n.t("选择动作、执行时间和重复规则"))
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(AidenteL10n.t("添加计划任务"))
+                        .font(.system(size: 15, weight: .bold))
                     Spacer()
                 }
 
                 AidenteCard(
                     "任务设置",
                     icon: "slider.horizontal.3",
-                    colors: AidenteTheme.automationColors
+                    colors: AidenteTheme.automationColors,
+                    headerOutside: true,
+                    showsHeaderBadge: false
                 ) {
                     AidenteControlRow(
                         "执行动作",
@@ -189,13 +193,10 @@ private struct NewScheduleTaskView: View {
                         badgeSize: 22,
                         legacyStyle: true
                     ) {
-                        Picker("", selection: $action) {
-                            ForEach(ScheduleActionKind.allCases) { action in
-                                Text(action.title).tag(action)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 170)
+                        AidenteMenuPicker(
+                            options: AidenteMenuOption<ScheduleActionKind>.options(for: \.title),
+                            selection: $action
+                        )
                     }
 
                     if action.usesValue {
@@ -264,13 +265,10 @@ private struct NewScheduleTaskView: View {
                         badgeSize: 22,
                         legacyStyle: true
                     ) {
-                        Picker("", selection: $repeatRule) {
-                            ForEach(ScheduleRepeatRule.allCases) { rule in
-                                Text(rule.title).tag(rule)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 130)
+                        AidenteMenuPicker(
+                            options: AidenteMenuOption<ScheduleRepeatRule>.options(for: \.title),
+                            selection: $repeatRule
+                        )
                     }
 
                     AidenteRowDivider()
@@ -285,13 +283,13 @@ private struct NewScheduleTaskView: View {
                     )
                 }
 
-                HStack {
+                HStack(spacing: 10) {
+                    Spacer(minLength: 0)
+
                     Button(AidenteL10n.t("取消")) {
                         isPresented = false
                     }
                     .keyboardShortcut(.cancelAction)
-
-                    Spacer()
 
                     Button {
                         ScheduleStore.shared.add(
@@ -314,7 +312,7 @@ private struct NewScheduleTaskView: View {
             }
             .padding(24)
         }
-        .frame(width: 560, height: 590)
+        .frame(width: 520, height: 450)
     }
 }
 

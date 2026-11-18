@@ -285,8 +285,8 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         }
         if let handle = try? FileHandle(forWritingTo: url) {
             defer { try? handle.close() }
-            try? handle.seekToEnd()
-            try? handle.write(line.data(using: .utf8)!)
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: line.data(using: .utf8)!)
         } else {
             try? line.data(using: .utf8)?.write(to: url)
             try? FileManager.default.setAttributes(

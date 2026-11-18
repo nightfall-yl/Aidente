@@ -317,10 +317,24 @@ struct BatteryCapacityChartView: View {
         )
     }
 
-    private func formattedDate(_ date: Date) -> String {
+    // Cached per language: the chart axis renders on every layout pass and
+    // DateFormatter construction is expensive.
+    private static let axisDateFormatterEn: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: AidenteL10n.isEnglish ? "en_US" : "zh_CN")
-        formatter.dateFormat = AidenteL10n.isEnglish ? "MMM d" : "M/d"
-        return formatter.string(from: date)
+        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateFormat = "MMM d"
+        return formatter
+    }()
+    private static let axisDateFormatterZh: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M/d"
+        return formatter
+    }()
+
+    private func formattedDate(_ date: Date) -> String {
+        AidenteL10n.isEnglish
+            ? Self.axisDateFormatterEn.string(from: date)
+            : Self.axisDateFormatterZh.string(from: date)
     }
 }

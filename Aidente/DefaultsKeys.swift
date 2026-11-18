@@ -82,17 +82,9 @@ enum MenuBarReadoutStyle: String, Defaults.Serializable, CaseIterable, Identifia
 
     var title: String {
         switch self {
-        case .batteryPercentage: AidenteL10n.t("实时电量")
-        case .systemPower: AidenteL10n.t("实时功率")
-        case .batteryAndPower: AidenteL10n.t("电量与功率")
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .batteryPercentage: "battery.75percent"
-        case .systemPower: "waveform.path.ecg"
-        case .batteryAndPower: "gauge.with.dots.needle.67percent"
+        case .batteryPercentage: AidenteL10n.t("电量", "Battery")
+        case .systemPower: AidenteL10n.t("功率", "Power")
+        case .batteryAndPower: AidenteL10n.t("电量 + 功率", "Battery + Power")
         }
     }
 }
@@ -103,7 +95,7 @@ enum MenuBarReadoutStyle: String, Defaults.Serializable, CaseIterable, Identifia
 extension Defaults.Keys {
     // General
     static let appLanguage = Key<AppLanguage>("appLanguage", default: .system)
-    static let appAppearance = Key<AppAppearance>("appAppearance", default: .auto)
+    static let appAppearance = Key<AppAppearance>("appAppearance", default: .dark)
     static let launchAtLogin = Key<Bool>("launchAtLogin", default: false)
     static let automaticallyCheckForUpdates = Key<Bool>(
         "automaticallyCheckForUpdates", default: true)
@@ -122,21 +114,13 @@ extension Defaults.Keys {
 
     // Menu Dashboard
     static let showTimeTillDischarge = Key<Bool>("showTimeTillDischarge", default: true)
-    static let showBatteryCycleCount = Key<Bool>("showBatteryCycleCount", default: true)
-    static let showBatteryHealth = Key<Bool>("showBatteryHealth", default: true)
-    static let showBatteryTemperature = Key<Bool>("showBatteryTemperature", default: true)
-    static let showPowerSource = Key<Bool>("showPowerSource", default: false)
     static let showUptime = Key<Bool>("showUptime", default: true)
-    static let showBatteryMode = Key<Bool>("showBatteryMode", default: true)
-    static let showInternalPower = Key<Bool>("showInternalPower", default: true)
-    static let showExternalPower = Key<Bool>("showExternalPower", default: true)
     static let showPowerDistribution = Key<Bool>("showPowerDistribution", default: true)
     static let showCapacityHistory = Key<Bool>("showCapacityHistory", default: true)
     static let showEnergyAppRanking = Key<Bool>("showEnergyAppRanking", default: true)
     static let showCareActions = Key<Bool>("showCareActions", default: true)
     static let showAutomaticProtection = Key<Bool>("showAutomaticProtection", default: true)
-    /// Controls the whole battery-metrics card; the three `showBattery*` keys
-    /// above describe individual metrics and are all on by default.
+    /// Controls the whole battery-metrics card.
     static let showBatteryHealthCard = Key<Bool>("showBatteryHealthCard", default: true)
     /// Comma-separated order of the six editable dashboard cards. Missing
     /// identifiers are inserted at their default positions, so adding a card
@@ -152,7 +136,7 @@ extension Defaults.Keys {
     static let sailingMode = Key<Bool>("sailingMode", default: true)
     static let sailingModeLimit = Key<Int>("sailingModeLimit", default: 5)
     static let automaticDischarge = Key<Bool>("automaticDischarge", default: false)
-    static let disableSleepUntilChargeLimit = Key<Bool>("disableSleepUntilChargeLimit", default: false)
+    static let disableSleepUntilChargeLimit = Key<Bool>("disableSleepUntilChargeLimit", default: true)
 
     // Charging - Heat Protection
     static let enableHeatProtectionMode = Key<Bool>(
@@ -166,9 +150,9 @@ extension Defaults.Keys {
 
     // Charging - Advanced workflows
     static let stopChargingWhenAppClosed = Key<Bool>(
-        "stopChargingWhenAppClosed", default: false)
+        "stopChargingWhenAppClosed", default: true)
     static let stopChargingWhileSleeping = Key<Bool>(
-        "stopChargingWhileSleeping", default: true)
+        "stopChargingWhileSleeping", default: false)
     static let topUpActive = Key<Bool>("topUpActive", default: false)
     static let manualPauseActive = Key<Bool>("manualPauseActive", default: false)
     static let forcedDischargeTarget = Key<Int>("forcedDischargeTarget", default: 80)

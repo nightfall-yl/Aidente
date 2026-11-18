@@ -23,19 +23,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let updateService: UpdateService
 
     /// AppKit parks the traffic lights at ~16pt under a hidden transparent
-    /// title bar. Move their centers to 32pt so they line up with the detail
+    /// title bar. Move their centers to 30pt so they line up with the detail
     /// pane's title, and shift the row right to the 20pt left inset used by
     /// the detail title. AppKit re-lays them out on resize / appearance
     /// changes, so the delegate callbacks below re-apply this.
-    private static let trafficLightInset: CGFloat = 32
+    private static let trafficLightInset: CGFloat = 30
     private static let trafficLightLeftInset: CGFloat = 20
     /// The buttons' superview (the titlebar container) is only ~28pt tall by
-    /// default. Moving the buttons down to a 32pt center yields a negative y
+    /// default. Moving the buttons down to a 30pt center yields a negative y
     /// in that container, pushing them outside its hit-test bounds — clicks
     /// land on the SwiftUI content instead. A transparent bottom accessory
     /// grows the container to this height so `positionTrafficLights()` keeps
     /// the buttons inside it and their click targets stay alive.
-    private static let targetTitlebarHeight: CGFloat = 64
+    private static let targetTitlebarHeight: CGFloat = 60
     private var titlebarAccessory: NSTitlebarAccessoryViewController?
 
     init(
@@ -176,10 +176,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         newWindow.isOpaque = false
         newWindow.backgroundColor = .clear
         newWindow.contentView?.wantsLayer = true
-        newWindow.contentView?.layer?.cornerRadius = 14
+        newWindow.contentView?.layer?.cornerRadius = 12
         newWindow.contentView?.layer?.masksToBounds = true
+        // Width is locked at 750pt; height is resizable from 475pt (default)
+        // up to 960pt. minSize/maxSize pin the width so AppKit's resize handles
+        // cannot drag it horizontally. A new autosave key avoids restoring the
+        // old fixed 640pt-tall frame while still remembering window position.
+        newWindow.minSize = NSSize(width: 750, height: 475)
+        newWindow.maxSize = NSSize(width: 750, height: 960)
+        newWindow.setContentSize(NSSize(width: 750, height: 475))
         newWindow.center()
-        newWindow.setFrameAutosaveName("SettingsWindow")
+        newWindow.setFrameAutosaveName("SettingsWindow750x475")
         newWindow.isReleasedWhenClosed = false
         newWindow.delegate = self
         newWindow.makeKeyAndOrderFront(nil)

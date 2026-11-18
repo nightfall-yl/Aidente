@@ -69,17 +69,10 @@ struct AboutSettingsView: View {
         AidenteSettingsPage {
             AidenteCard(
                 "软件更新",
-                subtitle: AidenteL10n.t(
-                    "从 Aidente 官方 GitHub 发行版安全获取更新。",
-                    "Get updates safely from Aidente's official GitHub Releases."
-                ),
                 icon: "arrow.triangle.2.circlepath.circle.fill",
                 colors: AidenteTheme.permissionColors,
-                subtitleLink: AidenteCardSubtitleLink(
-                    phrase: "GitHub 发行版",
-                    englishPhrase: "GitHub Releases",
-                    url: UpdateService.releasesPageURL
-                )
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 AidenteControlRow(
                     AidenteL10n.t("当前版本", "Current Version"),
@@ -107,7 +100,15 @@ struct AboutSettingsView: View {
 
                 AidenteSettingToggle(
                     "自动检查更新",
-                    subtitle: "启动后检查，并每隔六小时检查一次正式发行版。",
+                    subtitle: AidenteL10n.t(
+                        "启动后检查，并每隔六小时检查一次正式发行版。",
+                        "Check at launch and every six hours for official releases."
+                    ),
+                    subtitleLink: AidenteCardSubtitleLink(
+                        phrase: "发行版",
+                        englishPhrase: "Releases",
+                        url: UpdateService.releasesPageURL
+                    ),
                     icon: "clock.arrow.2.circlepath",
                     colors: AidenteTheme.permissionColors,
                     isOn: $automaticallyCheckForUpdates
@@ -116,9 +117,10 @@ struct AboutSettingsView: View {
 
             AidenteCard(
                 "法律与开源",
-                subtitle: "开源许可、商标与安全声明。",
                 icon: "shield",
-                colors: AidenteTheme.generalColors
+                colors: AidenteTheme.generalColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 VStack(alignment: .leading, spacing: 12) {
                     legalBlock(
@@ -228,9 +230,9 @@ struct AboutSettingsView: View {
 
 /// Every update state lives in one sheet. It reads `UpdateService.phase` live,
 /// so a check result replaces "checking" without re-presenting the window.
-/// The panel shows only the current state: icon, title, one line of detail and
-/// (for results) a version capsule — no header row, stage list, progress bar
-/// or status notice.
+/// The panel shows only the current state: title, one line of detail and
+/// (for results) a version capsule. The badge lives only in the sheet header;
+/// there is no header row, stage list, progress bar or status notice.
 private struct UpdateProgressSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -241,33 +243,6 @@ private struct UpdateProgressSheet: View {
     }
 
     private var phase: AidenteUpdatePhase { updateService.phase }
-
-    private var subtitle: String {
-        switch phase {
-        case .idle:
-            "Aidente"
-        case .checking:
-            AidenteL10n.t(
-                "正在连接 nightfall-yl/Aidente",
-                "Connecting to nightfall-yl/Aidente"
-            )
-        case .upToDate:
-            "Aidente \(updateService.currentVersion) · "
-                + AidenteL10n.t("检查完成", "Check Complete")
-        case .available(let release):
-            "Aidente \(release.version) · "
-                + AidenteL10n.t("可更新", "Update Available")
-        case .downloading(let release), .preparing(let release),
-            .installing(let release):
-            "Aidente \(release.version) · "
-                + AidenteL10n.t("正在后台更新", "Updating in the Background")
-        case .installed(let version):
-            "Aidente \(version) · "
-                + AidenteL10n.t("更新完成", "Update Complete")
-        case .failed:
-            "Aidente · " + AidenteL10n.t("更新未完成", "Update Not Completed")
-        }
-    }
 
     private var versionBadge: String? {
         switch phase {
@@ -302,24 +277,17 @@ private struct UpdateProgressSheet: View {
                 AidenteIconBadge(
                     icon: "arrow.triangle.2.circlepath.circle.fill",
                     colors: AidenteTheme.permissionColors,
-                    size: 34
+                    size: 26
                 )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(AidenteL10n.t("软件更新", "Software Update"))
-                        .font(.system(size: 17, weight: .bold))
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                // Sheet title badge sits outside a card; inject the card color
+                // pair so it draws the same solid 90%-saturated gradient.
+                .environment(\.aidenteCardColors, AidenteTheme.permissionColors)
+                Text(AidenteL10n.t("软件更新", "Software Update"))
+                    .font(.system(size: 15, weight: .bold))
             }
 
             AidenteInsetPanel {
                 HStack(spacing: 12) {
-                    AidenteIconBadge(
-                        icon: updateService.statusIcon,
-                        colors: AidenteTheme.permissionColors,
-                        size: 28
-                    )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(updateService.statusTitle)
                             .font(.system(size: 13.5, weight: .semibold))
@@ -347,7 +315,7 @@ private struct UpdateProgressSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 560)
+        .frame(width: 520)
     }
 
     @ViewBuilder

@@ -10,9 +10,10 @@ struct DiagnosticsSettingsView: View {
             // 控件行置顶，编号行不再展示（对齐 HTML 原型）。
             AidenteCard(
                 "诊断与导出",
-                subtitle: "诊断信息始终由用户决定是否生成和发送。",
                 icon: "square.and.arrow.up.on.square.fill",
-                colors: AidenteTheme.aboutColors
+                colors: AidenteTheme.aboutColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 AidenteControlRow(
                     diagnosticCenter.isRecording
@@ -133,7 +134,9 @@ struct DiagnosticsSettingsView: View {
                 "可选 CLI",
                 subtitle: "高级用户可以从终端查看状态或触发操作，CLI 不会常驻后台。",
                 icon: "terminal.fill",
-                colors: AidenteTheme.permissionColors
+                colors: AidenteTheme.permissionColors,
+                headerOutside: true,
+                showsHeaderBadge: false
             ) {
                 AidenteInsetPanel {
                     VStack(alignment: .leading, spacing: 7) {
