@@ -138,8 +138,8 @@ struct DashboardPopoverView: View {
     @Default(.disableSleepUntilChargeLimit) private var preventSleepEnabled
     @Default(.sailingMode) private var sailingModeEnabled
     @Default(.appLanguage) private var appLanguage
-    @Default(.showTimeTillDischarge) private var showTimeTillDischarge
-    @Default(.showUptime) private var showUptime
+    @Default(.showPowerSourceTitle) private var showPowerSourceTitle
+    @Default(.showPowerElectricalSubtitle) private var showPowerElectricalSubtitle
     @Default(.showPowerDistribution) private var showPowerDistribution
     @Default(.showCapacityHistory) private var showCapacityHistory
     @Default(.showEnergyAppRanking) private var showEnergyAppRanking
@@ -621,15 +621,22 @@ struct DashboardPopoverView: View {
                 }
             }
 
-            if showUptime || showTimeTillDischarge {
+            if showPowerSourceTitle || showPowerElectricalSubtitle {
                 VStack(alignment: .leading, spacing: 2) {
-                    if showUptime {
-                        Text(AidenteL10n.t("系统运行时间：") + viewModel.uptimeText)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                    // 标题位：原「系统运行时间」位置，10pt 次要色；
+                    // 适配器供电显示适配器名，电池供电显示电池供电。
+                    if showPowerSourceTitle {
+                        Text(
+                            viewModel.powerSource == .battery
+                                ? AidenteL10n.t("电池供电", "Battery Power")
+                                : viewModel.chargerDisplayName
+                        )
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     }
-                    if showTimeTillDischarge {
-                        Text(AidenteL10n.t("电池剩余时间：") + viewModel.timeRemainingText)
+                    if showPowerElectricalSubtitle {
+                        Text(powerFlowElectricalSubtitle)
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -650,11 +657,11 @@ struct DashboardPopoverView: View {
                         ? (viewModel.isCharging ? "bolt.fill" : "powerplug.fill")
                         : "battery.75percent"
                 )
-                .font(.system(size: 21, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(colorScheme == .dark ? Color.white : heroTint)
-                .frame(width: 39, height: 39)
+                .frame(width: 34, height: 34)
                 .background(
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(heroTint.opacity(0.17))
                 )
 
@@ -787,34 +794,33 @@ struct DashboardPopoverView: View {
 
     private var powerSummary: some View {
         PopoverCompactCard {
-            VStack(spacing: 8) {
-                HStack {
-                    Label(
-                        AidenteL10n.t("能量分流"),
-                        systemImage: "point.3.connected.trianglepath.dotted"
-                    )
-                    .font(.system(size: 13, weight: .semibold))
-                    Spacer()
-                    // 充电器统一显示名：左边缘钉在「卡片内右界 − 135pt」（红线处），从那里左对齐。
-                    // 数值越小越靠右，越大越靠左。
-                    Text(viewModel.chargerDisplayName)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .frame(width: 135, alignment: .leading)
-                }
-
-                CompactPowerFlowDiagram(
-                    powerSource: viewModel.powerSource,
-                    isCharging: viewModel.isCharging,
-                    adapterPower: viewModel.adapterPower,
-                    systemPower: viewModel.systemPower,
-                    batteryPower: viewModel.batteryPower,
-                    adapterElectricalText: viewModel.adapterElectricalText,
-                    batteryElectricalText: viewModel.batteryElectricalText
-                )
-            }
+            // 标题与副标题已移到仪表盘顶部（由两个开关控制），本卡只保留桑基图。
+            CompactPowerFlowDiagram(
+                powerSource: viewModel.powerSource,
+                isCharging: viewModel.isCharging,
+                adapterPower: viewModel.adapterPower,
+                systemPower: viewModel.systemPower,
+                batteryPower: viewModel.batteryPower,
+                adapterElectricalText: viewModel.adapterElectricalText,
+                batteryElectricalText: viewModel.batteryElectricalText
+            )
         }
+    }
+
+    /// 副标题：电池读数恒显示；非适配器供电（powerSource == .battery）不显示适配器。
+    private var powerFlowElectricalSubtitle: String {
+        let battery = viewModel.batteryElectricalText.replacingOccurrences(
+            of: " · ", with: " @ "
+        )
+        // 适配器供电时适配器在前；电池供电时只有电池读数。
+        guard viewModel.powerSource != .battery else {
+            return "\(AidenteL10n.t("电池", "Battery"))：\(battery)"
+        }
+        let adapter = viewModel.adapterElectricalText.replacingOccurrences(
+            of: " · ", with: " @ "
+        )
+        return "\(AidenteL10n.t("适配器", "Adapter"))：\(adapter)　"
+            + "\(AidenteL10n.t("电池", "Battery"))：\(battery)"
     }
 
     private var capacityHistory: some View {
@@ -902,49 +908,13 @@ struct DashboardPopoverView: View {
     private var energyAppRanking: some View {
         PopoverCompactCard {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Label(
-                        AidenteL10n.t("当前耗电 App"),
-                        systemImage: "bolt.horizontal.circle.fill"
-                    )
-                        .font(.system(size: 13, weight: .semibold))
-                    Spacer()
-                    Text(AidenteL10n.t("按处理器活动实时估算"))
-                        .font(.system(size: 9.5, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                }
-
-                if !viewModel.hasEnergyUsageSample {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(AidenteL10n.t("正在采样当前应用活动…"))
-                            .font(.system(size: 10.5))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
-                } else if viewModel.topEnergyApps.isEmpty {
-                    Text(AidenteL10n.t("当前没有检测到明显耗电的前台应用"))
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 4)
+                if let app = viewModel.highlightedEnergyApp {
+                    EnergyAppRow(app: app, tint: AidenteTheme.amber)
                 } else {
-                    let maximum = max(
-                        viewModel.topEnergyApps.map(\.cpuUsage).max() ?? 1,
-                        1
-                    )
-                    ForEach(
-                        Array(viewModel.topEnergyApps.prefix(3).enumerated()),
-                        id: \.element.id
-                    ) { item in
-                        EnergyAppRow(
-                            rank: item.offset + 1,
-                            app: item.element,
-                            maximumCPUUsage: maximum,
-                            tint: energyTint(for: item.offset)
-                        )
-                    }
+                    Text(AidenteL10n.t("当前无高功耗应用", "No high-power app right now"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .center)
                 }
             }
         }
@@ -1062,13 +1032,6 @@ struct DashboardPopoverView: View {
         colorScheme == .dark ? AidenteTheme.amber : AidenteTheme.amberInk
     }
 
-    private func energyTint(for index: Int) -> Color {
-        switch index {
-        case 0: AidenteTheme.amber
-        case 1: AidenteTheme.ocean
-        default: AidenteTheme.violet
-        }
-    }
 }
 
 private struct BatteryChargeLimitControl: View {
@@ -1089,7 +1052,7 @@ private struct BatteryChargeLimitControl: View {
             HStack(alignment: .lastTextBaseline) {
                 HStack(alignment: .lastTextBaseline, spacing: 5) {
                     Text("\(batteryLevel)%")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(tint)
                     Text(AidenteL10n.t("实时电量"))
@@ -1104,7 +1067,7 @@ private struct BatteryChargeLimitControl: View {
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text("\(chargeLimit)%")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(tint)
                 }
@@ -1228,7 +1191,8 @@ private struct BatteryChargeLimitControl: View {
 }
 
 private struct CompactPowerFlowDiagram: View {
-    @Default(.appLanguage) private var appLanguage
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     let powerSource: PowerSource
     let isCharging: Bool
@@ -1238,159 +1202,19 @@ private struct CompactPowerFlowDiagram: View {
     let adapterElectricalText: String
     let batteryElectricalText: String
 
-    private let nodeWidth: CGFloat = 124
-    private let nodeHeight: CGFloat = 54
-    /// Cap the distance between the two node columns so a wider panel does
-    /// not stretch the flow line all the way out to both edges.
-    private let maxNodeGap: CGFloat = 72
-    /// Keep wire ends clear of the node cards: their background is now
-    /// semi-transparent, and round line caps extend past the endpoint.
-    private let flowEndInset: CGFloat = 6
+    private let nodeWidth: CGFloat = 60
+    private let flowInset: CGFloat = 5
+    private let fullNodeHeight: CGFloat = 120
+    private let nodeGap: CGFloat = 20
+    private let nodeRadius: CGFloat = 16
+    // 充电动效：扫描 2.6s + 出框停顿 0.4s = 周期 3s（对齐 v2 原型与独立高光原型）
+    private let animationPeriod: Double = 3.0
+    private let sheenScanFraction: Double = 2.6 / 3.0
 
-    private var diagramHeight: CGFloat {
-        switch diagramMode {
-        case .adapterSplit, .sourcesMerge:
-            136
-        case .adapterOnly, .batteryOnly:
-            68
-        }
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            let availableGap = max(0, geometry.size.width - nodeWidth * 2)
-            let gap = min(availableGap, maxNodeGap)
-            let leading = (geometry.size.width - nodeWidth * 2 - gap) / 2
-            let leftX = leading + nodeWidth / 2
-            let rightX = leftX + nodeWidth + gap
-            // Shrink the inset on very narrow panels so the wire never folds
-            // back on itself.
-            let wireInset = min(flowEndInset, gap / 4)
-            let topY: CGFloat = nodeHeight / 2
-            let middleY = diagramHeight / 2
-            let bottomY = diagramHeight - nodeHeight / 2
-
-            ZStack {
-                Canvas { context, _ in
-                    drawFlows(
-                        context: context,
-                        leftX: leftX + nodeWidth / 2 + wireInset,
-                        rightX: rightX - nodeWidth / 2 - wireInset,
-                        arrowTipX: rightX - nodeWidth / 2,
-                        topY: topY,
-                        middleY: middleY,
-                        bottomY: bottomY
-                    )
-                }
-                .clipped()
-
-                switch diagramMode {
-                case .adapterSplit:
-                    PowerFlowNode(
-                        title: "适配器",
-                        icon: "powerplug.fill",
-                        power: adapterPower,
-                        electricalText: adapterElectricalText,
-                        tint: AidenteTheme.amber
-                    )
-                    .position(x: leftX, y: middleY)
-
-                    PowerFlowNode(
-                        title: "电池充入",
-                        icon: isCharging ? "battery.100.bolt" : "battery.100",
-                        power: batteryPower,
-                        electricalText: batteryElectricalText,
-                        tint: AidenteTheme.jade
-                    )
-                    .position(x: rightX, y: topY)
-
-                    PowerFlowNode(
-                        title: "系统使用",
-                        icon: "laptopcomputer",
-                        power: systemPower,
-                        electricalText: nil,
-                        tint: AidenteTheme.ocean
-                    )
-                    .position(x: rightX, y: bottomY)
-
-                case .sourcesMerge:
-                    PowerFlowNode(
-                        title: "电池输出",
-                        icon: "battery.100",
-                        power: batteryPower,
-                        electricalText: batteryElectricalText,
-                        tint: AidenteTheme.jade
-                    )
-                    .position(x: leftX, y: topY)
-
-                    PowerFlowNode(
-                        title: "适配器",
-                        icon: "powerplug.fill",
-                        power: adapterPower,
-                        electricalText: adapterElectricalText,
-                        tint: AidenteTheme.amber
-                    )
-                    .position(x: leftX, y: bottomY)
-
-                    PowerFlowNode(
-                        title: "系统使用",
-                        icon: "laptopcomputer",
-                        power: systemPower,
-                        electricalText: nil,
-                        tint: AidenteTheme.ocean
-                    )
-                    .position(x: rightX, y: middleY)
-
-                case .adapterOnly:
-                    PowerFlowNode(
-                        title: "适配器",
-                        icon: "powerplug.fill",
-                        power: adapterPower,
-                        electricalText: adapterElectricalText,
-                        tint: AidenteTheme.amber
-                    )
-                    .position(x: leftX, y: middleY)
-
-                    PowerFlowNode(
-                        title: "系统使用",
-                        icon: "laptopcomputer",
-                        power: systemPower,
-                        electricalText: nil,
-                        tint: AidenteTheme.ocean
-                    )
-                    .position(x: rightX, y: middleY)
-
-                case .batteryOnly:
-                    PowerFlowNode(
-                        title: "电池输出",
-                        icon: "battery.100",
-                        power: batteryPower,
-                        electricalText: batteryElectricalText,
-                        tint: AidenteTheme.jade
-                    )
-                    .position(x: leftX, y: middleY)
-
-                    PowerFlowNode(
-                        title: "系统使用",
-                        icon: "laptopcomputer",
-                        power: systemPower,
-                        electricalText: nil,
-                        tint: AidenteTheme.ocean
-                    )
-                    .position(x: rightX, y: middleY)
-                }
-            }
-        }
-        .frame(height: diagramHeight)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(AidenteL10n.t("实时功率分流图", "Live Power Flow Diagram"))
-        .accessibilityValue(
-            AidenteL10n.t(
-                "适配器 \(formatted(adapterPower))，\(adapterElectricalText)；系统 \(formatted(systemPower))；电池 \(formatted(batteryPower))，\(batteryElectricalText)",
-                "Adapter \(formatted(adapterPower)), \(adapterElectricalText); system \(formatted(systemPower)); battery \(formatted(batteryPower)), \(batteryElectricalText)"
-            )
-        )
-    }
+    // 信息层三色渐变的中间过渡色（方案 B，去脏色），对齐 v2 原型
+    private let midAmberJade = Color(red: 0.714, green: 0.769, blue: 0.306)   // #b6c44e
+    private let midAmberOcean = Color(red: 0.494, green: 0.576, blue: 0.722)  // #7e93b8
+    private let midJadeOcean = Color(red: 0.345, green: 0.694, blue: 0.776)   // #58b1c6
 
     private enum DiagramMode {
         case adapterSplit
@@ -1410,197 +1234,413 @@ private struct CompactPowerFlowDiagram: View {
         }
     }
 
-    private func drawFlows(
-        context: GraphicsContext,
-        leftX: CGFloat,
-        rightX: CGFloat,
-        arrowTipX: CGFloat,
-        topY: CGFloat,
-        middleY: CGFloat,
-        bottomY: CGFloat
-    ) {
+    private var diagramHeight: CGFloat {
+        switch diagramMode {
+        case .adapterSplit, .sourcesMerge:
+            fullNodeHeight + nodeGap
+        case .adapterOnly, .batteryOnly:
+            fullNodeHeight
+        }
+    }
+
+    private var upperNodeHeight: CGFloat {
+        // 上节点按「上 : 下」两股功率的贡献占比分配：
+        // 适配器分流时右侧 = 电池 : 系统（适配器输入 = 电池 + 系统）；
+        // 双源汇流时左侧 = 电池 : 适配器。
+        let upper: Double
+        let lower: Double
         switch diagramMode {
         case .adapterSplit:
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: middleY),
-                to: CGPoint(x: rightX, y: topY),
-                power: batteryPower,
-                startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.jade,
-                arrowTipX: arrowTipX
+            upper = abs(batteryPower)
+            lower = abs(systemPower)
+        case .sourcesMerge:
+            upper = abs(batteryPower)
+            lower = abs(adapterPower)
+        case .adapterOnly, .batteryOnly:
+            return fullNodeHeight
+        }
+        let total = max(upper + lower, 0.1)
+        let fraction = min(max(upper / total, 0.15), 0.85)
+        return fullNodeHeight * fraction
+    }
+
+    var body: some View {
+        TimelineView<AnimationTimelineSchedule, AnyView>(.animation) { timeline in
+            AnyView(
+                GeometryReader { geometry in
+                let width = geometry.size.width
+                let flowStart = nodeWidth + flowInset
+                let flowEnd = width - nodeWidth - flowInset
+                let leftX = nodeWidth / 2
+                let rightX = width - nodeWidth / 2
+                let nodeTop = (diagramHeight - fullNodeHeight) / 2
+                let phase = reduceMotion
+                    ? 0
+                    : timeline.date.timeIntervalSinceReferenceDate
+                        .truncatingRemainder(dividingBy: animationPeriod) / animationPeriod
+                // 移动高光：扫描段 0→sheenScanFraction 光带从左侧框外移到右侧框外；
+                // 其余时间光带停在右框外作为循环间隔，彩色渐变（信息层）全程常驻。
+                let scan = reduceMotion ? 1 : min(phase / sheenScanFraction, 1)
+                let flowSpan = flowEnd - flowStart
+                let sheenWidth = flowSpan * 0.16          // 光带总跨度（柔光底）
+                let sheenCenter = flowStart - sheenWidth + scan * (flowSpan + 2 * sheenWidth)
+
+                ZStack {
+                    let bands = flowBands(
+                        flowStart: flowStart,
+                        flowEnd: flowEnd,
+                        nodeTop: nodeTop
+                    )
+
+                    // ① 无色底管常驻
+                    Canvas { context, _ in
+                        for band in bands {
+                            context.fill(band.path, with: .color(Color.primary.opacity(0.15)))
+                        }
+                    }
+
+                    // ② 彩色渐变常驻 = 信息层（功率分配 / 方向 / 三色语义），不随动效淡入淡出
+                    Canvas { context, _ in
+                        for band in bands {
+                            context.fill(
+                                band.path,
+                                with: .linearGradient(
+                                    Gradient(stops: [
+                                        .init(color: band.start.opacity(0.32), location: 0),
+                                        .init(color: band.mid.opacity(0.30), location: 0.5),
+                                        .init(color: band.end.opacity(0.28), location: 1),
+                                    ]),
+                                    startPoint: CGPoint(x: flowStart, y: 0),
+                                    endPoint: CGPoint(x: flowEnd, y: 0)
+                                )
+                            )
+                        }
+                    }
+
+                    // ③ 白色光带平移 = 动效层：柔光底 + 亮芯两层。
+                    // 减弱动态效果、或循环间隔（光带已停在右框外不可见）时不绘制，省去每帧开销。
+                    if !reduceMotion && phase < sheenScanFraction {
+                        Canvas { context, _ in
+                            let start = CGPoint(x: sheenCenter - sheenWidth / 2, y: 0)
+                            let end = CGPoint(x: sheenCenter + sheenWidth / 2, y: 0)
+                            // 光带透明度分主题：白色光带在浅色卡片上对比度低，亮色用更浓的值（对齐 v2 原型）。
+                            let glowEdge1 = colorScheme == .dark ? 0.009 : 0.02
+                            let glowEdge2 = colorScheme == .dark ? 0.029 : 0.06
+                            let glowPeak = colorScheme == .dark ? 0.069 : 0.144
+                            let coreEdge = colorScheme == .dark ? 0.025 : 0.048
+                            let corePeak = colorScheme == .dark ? 0.172 : 0.36
+                            let glow = Gradient(stops: [
+                                .init(color: .white.opacity(0), location: 0),
+                                .init(color: .white.opacity(glowEdge1), location: 0.219),
+                                .init(color: .white.opacity(glowEdge2), location: 0.375),
+                                .init(color: .white.opacity(glowPeak), location: 0.5),
+                                .init(color: .white.opacity(glowEdge2), location: 0.625),
+                                .init(color: .white.opacity(glowEdge1), location: 0.781),
+                                .init(color: .white.opacity(0), location: 1),
+                            ])
+                            let core = Gradient(stops: [
+                                .init(color: .white.opacity(0), location: 0),
+                                .init(color: .white.opacity(coreEdge), location: 0.25),
+                                .init(color: .white.opacity(corePeak), location: 0.5),
+                                .init(color: .white.opacity(coreEdge), location: 0.75),
+                                .init(color: .white.opacity(0), location: 1),
+                            ])
+                            for band in bands {
+                                context.fill(band.path, with: .linearGradient(glow, startPoint: start, endPoint: end))
+                                context.fill(band.path, with: .linearGradient(core, startPoint: start, endPoint: end))
+                            }
+                        }
+                    }
+
+                    flowNodes(leftX: leftX, rightX: rightX, nodeTop: nodeTop)
+
+                    flowLabels(flowStart: flowStart, flowEnd: flowEnd, nodeTop: nodeTop)
+                }
+                }
             )
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: middleY),
-                to: CGPoint(x: rightX, y: bottomY),
-                power: systemPower,
-                startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean,
-                arrowTipX: arrowTipX
+        }
+        .frame(height: diagramHeight)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(AidenteL10n.t("实时功率分流图", "Live Power Flow Diagram"))
+        .accessibilityValue(
+            AidenteL10n.t(
+                "适配器 \(formatted(adapterPower))，\(adapterElectricalText)；系统 \(formatted(systemPower))；电池 \(formatted(batteryPower))，\(batteryElectricalText)",
+                "Adapter \(formatted(adapterPower)), \(adapterElectricalText); system \(formatted(systemPower)); battery \(formatted(batteryPower)), \(batteryElectricalText)"
             )
+        )
+    }
+
+    private struct FlowBand {
+        let path: Path
+        let start: Color
+        let mid: Color
+        let end: Color
+        let label: String?
+        let labelY: CGFloat
+    }
+
+    private func flowBands(
+        flowStart: CGFloat,
+        flowEnd: CGFloat,
+        nodeTop: CGFloat
+    ) -> [FlowBand] {
+        func path(
+            _ leftTop: CGFloat, _ leftBottom: CGFloat,
+            _ rightTop: CGFloat, _ rightBottom: CGFloat
+        ) -> Path {
+            let control = flowStart + (flowEnd - flowStart) * 0.5
+            return Path { p in
+                p.move(to: CGPoint(x: flowStart, y: leftTop))
+                p.addCurve(
+                    to: CGPoint(x: flowEnd, y: rightTop),
+                    control1: CGPoint(x: control, y: leftTop),
+                    control2: CGPoint(x: control, y: rightTop)
+                )
+                p.addLine(to: CGPoint(x: flowEnd, y: rightBottom))
+                p.addCurve(
+                    to: CGPoint(x: flowStart, y: leftBottom),
+                    control1: CGPoint(x: control, y: rightBottom),
+                    control2: CGPoint(x: control, y: leftBottom)
+                )
+                p.closeSubpath()
+            }
+        }
+
+        switch diagramMode {
+        case .adapterSplit:
+            let leftSplit = nodeTop + upperNodeHeight
+            return [
+                FlowBand(
+                    path: path(nodeTop, leftSplit, 0, upperNodeHeight),
+                    start: AidenteTheme.amber, mid: midAmberJade, end: AidenteTheme.jade,
+                    label: formatted(batteryPower),
+                    labelY: ((nodeTop + leftSplit) / 2 + upperNodeHeight / 2) / 2
+                ),
+                FlowBand(
+                    path: path(leftSplit, nodeTop + fullNodeHeight,
+                               upperNodeHeight + nodeGap, diagramHeight),
+                    start: AidenteTheme.amber, mid: midAmberOcean, end: AidenteTheme.ocean,
+                    label: formatted(systemPower),
+                    labelY: ((leftSplit + nodeTop + fullNodeHeight) / 2
+                             + (upperNodeHeight + nodeGap + diagramHeight) / 2) / 2
+                ),
+            ]
+        case .sourcesMerge:
+            let leftSplit = nodeTop + upperNodeHeight
+            let rightMiddle = nodeTop + fullNodeHeight / 2
+            return [
+                FlowBand(
+                    path: path(nodeTop, leftSplit, nodeTop, rightMiddle),
+                    start: AidenteTheme.jade, mid: midJadeOcean, end: AidenteTheme.ocean,
+                    label: formatted(batteryPower),
+                    labelY: ((nodeTop + leftSplit) / 2 + (nodeTop + rightMiddle) / 2) / 2
+                ),
+                FlowBand(
+                    path: path(leftSplit + nodeGap, nodeTop + fullNodeHeight,
+                               rightMiddle, nodeTop + fullNodeHeight),
+                    start: AidenteTheme.amber, mid: midAmberOcean, end: AidenteTheme.ocean,
+                    label: formatted(adapterPower),
+                    labelY: ((leftSplit + nodeGap + nodeTop + fullNodeHeight) / 2
+                             + (rightMiddle + nodeTop + fullNodeHeight) / 2) / 2
+                ),
+            ]
+        case .adapterOnly:
+            return [FlowBand(
+                path: path(nodeTop, nodeTop + fullNodeHeight,
+                           nodeTop, nodeTop + fullNodeHeight),
+                start: AidenteTheme.amber, mid: midAmberOcean, end: AidenteTheme.ocean,
+                label: formatted(adapterPower),
+                labelY: nodeTop + fullNodeHeight / 2
+            )]
+        case .batteryOnly:
+            return [FlowBand(
+                path: path(nodeTop, nodeTop + fullNodeHeight,
+                           nodeTop, nodeTop + fullNodeHeight),
+                start: AidenteTheme.jade, mid: midJadeOcean, end: AidenteTheme.ocean,
+                label: formatted(systemPower),
+                labelY: nodeTop + fullNodeHeight / 2
+            )]
+        }
+    }
+
+    @ViewBuilder
+    private func flowNodes(leftX: CGFloat, rightX: CGFloat, nodeTop: CGFloat) -> some View {
+        switch diagramMode {
+        case .adapterSplit:
+            FlowNodeView(
+                icon: viewModelIcon(isAdapter: true, isCharging: isCharging),
+                tint: AidenteTheme.amber,
+                height: fullNodeHeight,
+                side: .left,
+                powerText: formattedWhole(adapterPower),
+                colorScheme: colorScheme
+            )
+            .position(x: leftX, y: nodeTop + fullNodeHeight / 2)
+
+            VStack(spacing: nodeGap) {
+                FlowNodeView(
+                    icon: isCharging ? "battery.100.bolt" : "battery.100",
+                    tint: AidenteTheme.jade,
+                    height: upperNodeHeight,
+                    side: .right,
+                    powerText: nil,
+                    colorScheme: colorScheme
+                )
+                FlowNodeView(
+                    icon: "laptopcomputer",
+                    tint: AidenteTheme.ocean,
+                    height: fullNodeHeight - upperNodeHeight,
+                    side: .right,
+                    powerText: nil,
+                    colorScheme: colorScheme
+                )
+            }
+            .position(x: rightX, y: diagramHeight / 2)
 
         case .sourcesMerge:
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: topY),
-                to: CGPoint(x: rightX, y: middleY),
-                power: batteryPower,
-                startColor: AidenteTheme.jade,
-                endColor: AidenteTheme.ocean,
-                arrowTipX: arrowTipX
+            VStack(spacing: nodeGap) {
+                FlowNodeView(
+                    icon: "battery.100",
+                    tint: AidenteTheme.jade,
+                    height: upperNodeHeight,
+                    side: .left,
+                    powerText: nil,
+                    colorScheme: colorScheme
+                )
+                FlowNodeView(
+                    icon: "powerplug.fill",
+                    tint: AidenteTheme.amber,
+                    height: fullNodeHeight - upperNodeHeight,
+                    side: .left,
+                    powerText: nil,
+                    colorScheme: colorScheme
+                )
+            }
+            .position(x: leftX, y: diagramHeight / 2)
+
+            FlowNodeView(
+                icon: "laptopcomputer",
+                tint: AidenteTheme.ocean,
+                height: fullNodeHeight,
+                side: .right,
+                powerText: nil,
+                colorScheme: colorScheme
             )
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: bottomY),
-                to: CGPoint(x: rightX, y: middleY),
-                power: adapterPower,
-                startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean,
-                arrowTipX: arrowTipX
-            )
+            .position(x: rightX, y: nodeTop + fullNodeHeight / 2)
 
         case .adapterOnly:
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: middleY),
-                to: CGPoint(x: rightX, y: middleY),
-                power: adapterPower,
-                startColor: AidenteTheme.amber,
-                endColor: AidenteTheme.ocean,
-                arrowTipX: arrowTipX
+            FlowNodeView(
+                icon: "powerplug.fill",
+                tint: AidenteTheme.amber,
+                height: fullNodeHeight,
+                side: .left,
+                powerText: nil,
+                colorScheme: colorScheme
             )
+            .position(x: leftX, y: nodeTop + fullNodeHeight / 2)
+            FlowNodeView(
+                icon: "laptopcomputer",
+                tint: AidenteTheme.ocean,
+                height: fullNodeHeight,
+                side: .right,
+                powerText: nil,
+                colorScheme: colorScheme
+            )
+            .position(x: rightX, y: nodeTop + fullNodeHeight / 2)
 
         case .batteryOnly:
-            drawFlow(
-                context: context,
-                from: CGPoint(x: leftX, y: middleY),
-                to: CGPoint(x: rightX, y: middleY),
-                power: systemPower,
-                startColor: AidenteTheme.jade,
-                endColor: AidenteTheme.ocean,
-                arrowTipX: arrowTipX
+            FlowNodeView(
+                icon: "battery.100",
+                tint: AidenteTheme.jade,
+                height: fullNodeHeight,
+                side: .left,
+                powerText: nil,
+                colorScheme: colorScheme
             )
+            .position(x: leftX, y: nodeTop + fullNodeHeight / 2)
+            FlowNodeView(
+                icon: "laptopcomputer",
+                tint: AidenteTheme.ocean,
+                height: fullNodeHeight,
+                side: .right,
+                powerText: nil,
+                colorScheme: colorScheme
+            )
+            .position(x: rightX, y: nodeTop + fullNodeHeight / 2)
         }
     }
 
-    private func drawFlow(
-        context: GraphicsContext,
-        from start: CGPoint,
-        to end: CGPoint,
-        power: Double,
-        startColor: Color,
-        endColor: Color,
-        arrowTipX: CGFloat
-    ) {
-        let controlX = start.x + (end.x - start.x) * 0.50
-        let path = Path { path in
-            path.move(to: start)
-            path.addCurve(
-                to: end,
-                control1: CGPoint(x: controlX, y: start.y),
-                control2: CGPoint(x: controlX, y: end.y)
-            )
-        }
-        let width = min(max(CGFloat(sqrt(abs(power))) * 1.15, 3), 8)
-
-        context.stroke(
-            path,
-            with: .color(.black.opacity(0.24)),
-            style: StrokeStyle(lineWidth: width + 3, lineCap: .round)
-        )
-        context.stroke(
-            path,
-            with: .linearGradient(
-                Gradient(colors: [
-                    startColor.opacity(0.82),
-                    endColor.opacity(0.88),
-                ]),
-                startPoint: start,
-                endPoint: end
-            ),
-            style: StrokeStyle(lineWidth: width, lineCap: .round)
-        )
-
-        // The wire stops short of the node card, but the arrow should still
-        // point at its leading edge instead of hanging in the gap.
-        var arrow = Path()
-        arrow.move(to: CGPoint(x: arrowTipX, y: end.y))
-        arrow.addLine(to: CGPoint(x: arrowTipX - 7, y: end.y - 5))
-        arrow.addLine(to: CGPoint(x: arrowTipX - 7, y: end.y + 5))
-        arrow.closeSubpath()
-        context.fill(arrow, with: .color(endColor.opacity(0.95)))
+    private func viewModelIcon(isAdapter: Bool, isCharging: Bool) -> String {
+        isAdapter ? (isCharging ? "bolt.fill" : "powerplug.fill") : "battery.75percent"
     }
 
+    @ViewBuilder
+    private func flowLabels(flowStart: CGFloat, flowEnd: CGFloat, nodeTop: CGFloat) -> some View {
+        let bands = flowBands(
+            flowStart: flowStart, flowEnd: flowEnd, nodeTop: nodeTop
+        )
+        ForEach(Array(bands.enumerated()), id: \.offset) { _, band in
+            if let label = band.label {
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .position(x: (flowStart + flowEnd) / 2, y: band.labelY)
+            }
+        }
+    }
+
+    /// 流管中的功率文字：保留两位小数。
     private func formatted(_ power: Double) -> String {
         String(format: "%.2f W", abs(power))
     }
+
+    /// 节点徽章中的功率文字：只显示整数。
+    private func formattedWhole(_ power: Double) -> String {
+        String(format: "%.0f W", abs(power))
+    }
 }
 
-private struct PowerFlowNode: View {
-    @Default(.appLanguage) private var appLanguage
-    @Environment(\.colorScheme) private var colorScheme
-
-    let title: String
+private struct FlowNodeView: View {
     let icon: String
-    let power: Double
-    let electricalText: String?
     let tint: Color
+    let height: CGFloat
+    let side: FlowNodeSide
+    let powerText: String?
+    let colorScheme: ColorScheme
 
     var body: some View {
-        HStack(spacing: 7) {
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: side == .left ? nodeRadius : 0,
+            bottomLeadingRadius: side == .left ? nodeRadius : 0,
+            bottomTrailingRadius: side == .right ? nodeRadius : 0,
+            topTrailingRadius: side == .right ? nodeRadius : 0,
+            style: .continuous
+        )
+        ZStack {
+            shape.fill(tint.opacity(0.14))
+            shape.strokeBorder(tint.opacity(0.34), lineWidth: 1)
+
+            VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16))
                     .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
-                    .frame(width: 23, height: 23)
-                .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(AidenteL10n.t(title))
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                Text(String(format: "%.2f W", abs(power)))
-                    .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-
-                if let electricalText {
-                    Text(electricalText)
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                if let powerText {
+                    Text(powerText)
+                        .font(.system(size: 11, weight: .medium))
                         .monospacedDigit()
-                        .foregroundStyle(
-                            AidenteTheme.legibleTextTint(tint, scheme: colorScheme)
-                                .opacity(0.92)
-                        )
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.76)
+                        .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
                 }
             }
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .frame(width: 124, height: 54)
-        .background {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(
-                    colorScheme == .dark
-                        ? Color.black.opacity(0.19)
-                        : tint.opacity(0.07)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .strokeBorder(
-                            tint.opacity(colorScheme == .dark ? 0.30 : 0.32),
-                            lineWidth: 1
-                        )
-                }
-        }
-        .shadow(color: tint.opacity(0.12), radius: 5, y: 2)
+        .frame(width: 60, height: height)
     }
+
+    private var nodeRadius: CGFloat { 16 }
+}
+
+private enum FlowNodeSide: Equatable {
+    case left
+    case right
 }
 
 private struct PopoverCompactCard<Content: View>: View {
@@ -1757,9 +1797,7 @@ private struct CompactActionRow: View {
 private struct EnergyAppRow: View {
     @Environment(\.colorScheme) private var colorScheme
 
-    let rank: Int
     let app: AppEnergyUsageSnapshot
-    let maximumCPUUsage: Double
     let tint: Color
 
     var body: some View {
@@ -1771,10 +1809,6 @@ private struct EnergyAppRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text("\(rank)")
-                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(AidenteTheme.legibleTextTint(tint, scheme: colorScheme))
-                        .frame(width: 13)
                     Text(app.name)
                         .font(.system(size: 11.5, weight: .semibold))
                         .lineLimit(1)
@@ -1795,11 +1829,12 @@ private struct EnergyAppRow: View {
                             )
                         Capsule()
                             .fill(tint)
+                            // 单条展示：进度按 100% 一个核心刻度，不再按榜首归一（否则恒满格）
                             .frame(
                                 width: max(
                                     3,
                                     geometry.size.width
-                                        * min(app.cpuUsage / maximumCPUUsage, 1)
+                                        * min(app.cpuUsage / 100, 1)
                                 )
                             )
                     }

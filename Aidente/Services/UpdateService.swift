@@ -358,7 +358,10 @@ final class UpdateService {
         else { return }
 
         Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(700))
+            // Short launch buffer (was 700 ms) — the adaptive re-pin poll
+            // below now supplies the pacing, so launch feedback lands ~2 s
+            // after the swap instead of a fixed ~3 s.
+            try? await Task.sleep(for: .milliseconds(300))
             guard let self else { return }
             switch outcome {
             case .failed(let message):
@@ -842,16 +845,18 @@ final class UpdateService {
         let helper = ChargingHelperManager.shared
         helper.refreshStatus()
 
-        if helper.isInstalled, updatedVersion != nil {
-            // Wait out the daemon's re-pin first (it lands ~2 s after the
-            // swap), then poll a bounded window — feedback lands in a
-            // deliberate 3–4 s band: long enough to never race the pin,
-            // short enough to feel responsive.
-            try? await Task.sleep(for: .milliseconds(2000))
-            for _ in 0..<2 {
+        if updatedVersion != nil, !helper.isInstalled {
+            // Poll adaptively for the daemon's re-pin instead of sleeping a
+            // fixed band (was: 2 s wait + 2 × 1 s confirm). Feedback lands as
+            // soon as the pin converges (~2 s after the swap), so the success
+            // alert tracks the daemon's actual timing. The bounded window
+            // stays ≥4 s — never shorten it, or a slow daemon would be
+            // misjudged as missing and trigger a false re-authorization
+            // prompt.
+            for _ in 0..<14 {
+                try? await Task.sleep(for: .milliseconds(300))
                 helper.refreshStatus()
                 if helper.isInstalled { break }
-                try? await Task.sleep(for: .milliseconds(1000))
             }
         }
 

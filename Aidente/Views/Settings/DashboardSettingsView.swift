@@ -3,31 +3,31 @@ import Defaults
 import SwiftUI
 
 struct DashboardSettingsView: View {
-    @Default(.showTimeTillDischarge) var showTimeTillDischarge
-    @Default(.showUptime) var showUptime
+    @Default(.showPowerSourceTitle) var showPowerSourceTitle
+    @Default(.showPowerElectricalSubtitle) var showPowerElectricalSubtitle
 
     var body: some View {
         AidenteSettingsPage {
             AidenteCard(
-                "状态信息",
-                subtitle: "选择仪表盘顶部显示的系统与电池时间信息。",
+                "电源信息",
+                subtitle: "仪表盘菜单栏副标题。",
                 icon: "gauge.with.dots.needle.67percent",
                 colors: AidenteTheme.chargingColors,
                 headerOutside: true,
                 showsHeaderBadge: false
             ) {
                 AidenteSettingToggle(
-                    "系统运行时间",
-                    icon: "clock.fill",
+                    "电源适配器",
+                    icon: "powerplug.fill",
                     colors: AidenteTheme.dashboardColors,
-                    isOn: $showUptime
+                    isOn: $showPowerSourceTitle
                 )
                 AidenteRowDivider()
                 AidenteSettingToggle(
-                    "电池剩余时间",
-                    icon: "hourglass.bottomhalf.filled",
+                    "电压与电流",
+                    icon: "bolt.horizontal.circle.fill",
                     colors: AidenteTheme.dashboardColors,
-                    isOn: $showTimeTillDischarge
+                    isOn: $showPowerElectricalSubtitle
                 )
             }
 

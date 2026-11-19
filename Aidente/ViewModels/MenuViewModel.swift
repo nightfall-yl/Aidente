@@ -37,6 +37,21 @@ class MenuViewModel {
     var isLowPowerModeEnabled: Bool = false
     var topEnergyApps: [AppEnergyUsageSnapshot] = []
     var hasEnergyUsageSample: Bool = false
+    /// 仪表盘「当前耗电 App」唯一展示项：经过阈值 + 迟滞筛选，可能为空。
+    var highlightedEnergyApp: AppEnergyUsageSnapshot?
+
+    /// 高功耗判定：绝对门槛 25%（约一个核心 1/4 负载）+ 相对优势 1.5×；
+    /// 连续 2 次采样（约 8 秒）达标才显示，跌破 12% 连续 3 次才撤下。
+    private enum EnergyHighlightPolicy {
+        static let showThreshold = 25.0
+        static let hideThreshold = 12.0
+        static let relativeAdvantage = 1.5
+        static let samplesToShow = 2
+        static let samplesToHide = 3
+    }
+    private var energyCandidateID: String?
+    private var energyCandidateCount = 0
+    private var energyMissCount = EnergyHighlightPolicy.samplesToHide
 
     var chargeLimitOverrideActive: Bool { chargeManager.chargeLimitOverrideActive }
     var forceDischargeActive: Bool { chargeManager.forceDischargeActive }
@@ -298,8 +313,7 @@ class MenuViewModel {
                 }.value
 
                 guard !Task.isCancelled else { return }
-                self?.topEnergyApps = snapshots
-                self?.hasEnergyUsageSample = true
+                self?.applyEnergyUsageSnapshots(snapshots)
 
                 try? await Task.sleep(for: .seconds(4))
             }
@@ -317,8 +331,53 @@ class MenuViewModel {
                 AppEnergyUsageService.readTopApps()
             }.value
             guard !Task.isCancelled else { return }
-            self?.topEnergyApps = snapshots
-            self?.hasEnergyUsageSample = true
+            self?.applyEnergyUsageSnapshots(snapshots)
+        }
+    }
+
+    /// 统一入口：原始快照照常保存（诊断 / 其它视图仍可用），
+    /// 仪表盘展示项按阈值 + 迟滞收敛为至多一个 App。
+    private func applyEnergyUsageSnapshots(_ snapshots: [AppEnergyUsageSnapshot]) {
+        topEnergyApps = snapshots
+        hasEnergyUsageSample = true
+
+        guard let leader = snapshots.first else {
+            energyCandidateID = nil
+            energyCandidateCount = 0
+            energyMissCount += 1
+            if energyMissCount >= EnergyHighlightPolicy.samplesToHide {
+                highlightedEnergyApp = nil
+            }
+            return
+        }
+
+        let runnerUp = snapshots.dropFirst().first?.cpuUsage ?? 0
+        let qualifies = leader.cpuUsage >= EnergyHighlightPolicy.showThreshold
+            && leader.cpuUsage >= runnerUp * EnergyHighlightPolicy.relativeAdvantage
+
+        if qualifies {
+            energyMissCount = 0
+            if energyCandidateID == leader.id {
+                energyCandidateCount += 1
+            } else {
+                energyCandidateID = leader.id
+                energyCandidateCount = 1
+            }
+            if energyCandidateCount >= EnergyHighlightPolicy.samplesToShow {
+                highlightedEnergyApp = leader
+            }
+        } else {
+            energyCandidateID = nil
+            energyCandidateCount = 0
+            if leader.cpuUsage < EnergyHighlightPolicy.hideThreshold {
+                energyMissCount += 1
+            } else {
+                // 介于两档之间：保持当前展示但不再累积撤下计数。
+                energyMissCount = 0
+            }
+            if energyMissCount >= EnergyHighlightPolicy.samplesToHide {
+                highlightedEnergyApp = nil
+            }
         }
     }
 

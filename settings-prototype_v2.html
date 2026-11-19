@@ -447,6 +447,62 @@
   .upd-badge { margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 700;
     padding: 4px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
   /* 弹窗状态流转说明（页下方预览区顶部） */
+  /* 能量分流（对齐 srimanachanta/Stasis 的 PowerSankeyView 展示图）：
+     单色流管 = 系统文字色 15%，节点 = 文字色 5% 底 / 20% 描边、外侧 16px 圆角，
+     13px 中等字重 W 数值，不引入彩色，深浅色都跟随系统语义色。 */
+  .sankey { position: relative; height: 120px; margin: 2px 0 4px; }
+  .sankey > svg { width: calc(100% - 130px); height: 120px; display: block; margin-left: 65px; }
+  .sankey .node {
+    position: absolute; width: 60px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    color: var(--text-2); font-size: 11px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .sankey .node.left {
+    left: 0;
+    background: color-mix(in srgb, var(--node) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--node) 34%, transparent);
+    color: var(--node);
+    border-radius: 16px 0 0 16px;
+  }
+  .sankey .node.right {
+    right: 0;
+    background: color-mix(in srgb, var(--node) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--node) 34%, transparent);
+    color: var(--node);
+    border-radius: 0 16px 16px 0;
+  }
+  /* 节点三色对齐 Swift AidenteTheme：amber / jade / ocean；浅色用加深 ink */
+  .sankey .node.amber { --node: #ff972e; }
+  .sankey .node.jade  { --node: #2ed680; }
+  .sankey .node.ocean { --node: #3d8ffa; }
+  body:not(.dark) .sankey .node.amber { color: #c76604; }
+  body:not(.dark) .sankey .node.jade  { color: #0d8547; }
+  body:not(.dark) .sankey .node.ocean { color: #0f66cc; }
+  .sankey .watt {
+    /* 上下左右居中：left 50% + translateX(-50%)，垂直用 top + translateY(-50%) */
+    position: absolute; left: 50%; transform: translate(-50%, -50%);
+    color: var(--text); font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .sankey .node svg { width: 16px; height: 16px; }
+  .sankey .charging-battery { position: relative; width: 16px; height: 16px; }
+  .sankey .charging-battery svg:last-child { position: absolute; width: 8px; height: 8px; left: 4px; top: 4px; }
+  /* 移动高光：彩色渐变常驻为信息层，白色光带沿流管移动为动效层；
+     尊重系统「减弱动态效果」——关闭动效时只保留彩色渐变。
+     白色光带在浅色卡片上对比度低，亮色模式用 CSS 覆盖为更浓的透明度（暗色用渐变属性里的淡值）。 */
+  body:not(.dark) .sankey .sheen-stop.glow-e1 { stop-opacity: .02; }
+  body:not(.dark) .sankey .sheen-stop.glow-e2 { stop-opacity: .06; }
+  body:not(.dark) .sankey .sheen-stop.glow-peak { stop-opacity: .144; }
+  body:not(.dark) .sankey .sheen-stop.core-e { stop-opacity: .048; }
+  body:not(.dark) .sankey .sheen-stop.core-peak { stop-opacity: .36; }
+  @media (prefers-reduced-motion: reduce) {
+    .sankey .sheen { display: none; }
+  }
+  .sankey .caption {
+    position: absolute; top: -2px; left: 0; right: 0; text-align: center;
+    color: var(--text-3); font-size: 10.5px; font-variant-numeric: tabular-nums;
+  }
   .sheet-flow { max-width: 720px; margin-top: 20px; padding: 10px 12px;
     border-radius: 9px; background: var(--card); border: 1px solid var(--stroke);
     font-size: 11.5px; color: var(--text-2); line-height: 1.65; }
@@ -487,6 +543,8 @@
 /* ---------- icon paths (lucide-style) ---------- */
 const ICON = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  plug: '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v5a6 6 0 0 1-12 0V8Z"/><path d="M12 19v3"/>',
+  laptop: '<rect x="4" y="4" width="16" height="12" rx="2"/><path d="M2 20h20"/>',
   gauge: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
   battery: '<path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-3"/><path d="M9 7H8a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1"/><path d="m11 7-3 5h4l-3 5"/><line x1="22" x2="22" y1="11" y2="13"/>',
   calendar: '<path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.25V14"/><path d="M22 16a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>',
@@ -657,10 +715,20 @@ const PAGES = {
   },
   dashboard: {
     cards: [
-      { title:'状态信息', sub:'选择仪表盘顶部显示的系统与电池时间信息。', icon:'gauge', colors:'charging', rows:[
-        rToggle('系统运行时间', '', true, 'dashboard', 'gauge'),
+      /* 2026-11-19 用户指令：供电方式 / 电压电流移到仪表盘顶部（原系统运行时间 / 电池剩余时间位置），
+         字号同原两行 10px；开关按内容命名为「电源适配器」/「电压与电流」。 */
+      { title:'电源信息', sub:'仪表盘菜单栏副标题。', icon:'gauge', colors:'charging', rows:[
+        rToggle('电源适配器', '', true, 'dashboard', 'gauge'),
         rDiv(),
-        rToggle('电池剩余时间', '', true, 'dashboard', 'gauge'),
+        rToggle('电压与电流', '', true, 'dashboard', 'gauge'),
+      ]},
+      /* 2026-11-19 用户指令：按 Stasis 项目展示图重画「能量分流」桑基图（单色流管 + 外侧圆角节点） */
+      { title:'能量分流', sub:'实时展示适配器、电池与系统之间的功率分配。', icon:'bolt.fill', colors:'charging', rows:[
+        rSankey('adapter', 'a'),
+      ]},
+      /* 2026-11-19 用户指令：补电池供电态——电池 → 屏幕单股流，左端暖色渐隐 */
+      { title:'能量分流 · 电池供电', sub:'电池向系统供电时的单股功率流。', icon:'battery', colors:'charging', rows:[
+        rSankey('battery', 'b'),
       ]},
       /* 2026-11-17 用户指令：访问仪表盘不给卡头，标题下移为卡片设置项行、与设置项同字号；
          动作按钮落在该行右侧。 */
@@ -938,6 +1006,7 @@ function rDiv() { return { t:'div' }; }
 function rNotice(text, icon, colors) { return { t:'notice', text, icon, colors }; }
 function rInset(html, mono) { return { t:'inset', html, mono }; }
 function rText(text) { return { t:'text', text }; }
+function rSankey(mode, uid) { return { t:'sankey', mode: mode || 'adapter', uid: uid || 'a' }; }
 function rBtn(label, colors) { return { t:'btn', label, colors }; }
 function rBtnRow(list) { return { t:'btnrow', list }; }
 /* 软件更新弹窗专用：状态头 + 线性进度条 + 阶段清单 + 状态文案。
@@ -1001,6 +1070,90 @@ function renderRow(r, legacy) {
         + `<div><div class="upd-title">${r.title}</div>`
         + `<div class="upd-detail">${r.detail}</div></div>${badge}</div></div>`;
     }
+    case 'sankey':
+      /* 移动高光（双层）：彩色渐变常驻 = 信息层（功率分配 / 方向 / 三色语义）；
+         白色光带沿流管移动 = 动效层，pad + animateTransform 平移实现「左框外→右框外→停顿0.4s→重来」。
+         扫描 2.6s + 停顿 0.4s = 周期 3s，keyTimes 中段 0.867。节点色对齐 Swift AidenteTheme。 */
+      const sheenDefs = uid => `
+        <linearGradient id="sglow-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="660" y2="0" spreadMethod="pad">
+          <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="0.07" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="0.105" class="sheen-stop glow-e1" stop-color="#fff" stop-opacity=".009"/>
+          <stop offset="0.13" class="sheen-stop glow-e2" stop-color="#fff" stop-opacity=".029"/>
+          <stop offset="0.15" class="sheen-stop glow-peak" stop-color="#fff" stop-opacity=".069"/>
+          <stop offset="0.17" class="sheen-stop glow-e2" stop-color="#fff" stop-opacity=".029"/>
+          <stop offset="0.195" class="sheen-stop glow-e1" stop-color="#fff" stop-opacity=".009"/>
+          <stop offset="0.23" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          <animateTransform attributeName="gradientTransform" type="translate"
+            values="-152 0; 660 0; 660 0" keyTimes="0;0.867;1"
+            calcMode="linear" dur="3s" repeatCount="indefinite"/>
+        </linearGradient>
+        <linearGradient id="score-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="660" y2="0" spreadMethod="pad">
+          <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="0.065" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="0.105" class="sheen-stop core-e" stop-color="#fff" stop-opacity=".025"/>
+          <stop offset="0.145" class="sheen-stop core-peak" stop-color="#fff" stop-opacity=".172"/>
+          <stop offset="0.185" class="sheen-stop core-e" stop-color="#fff" stop-opacity=".025"/>
+          <stop offset="0.225" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          <animateTransform attributeName="gradientTransform" type="translate"
+            values="-152 0; 660 0; 660 0" keyTimes="0;0.867;1"
+            calcMode="linear" dur="3s" repeatCount="indefinite"/>
+        </linearGradient>`;
+      if (r.mode === 'battery') {
+        return `<div class="sankey">
+          <svg viewBox="0 0 660 120" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="flow-${r.uid}" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stop-color="#2ed680" stop-opacity=".32"/>
+                <stop offset=".5" stop-color="#58b1c6" stop-opacity=".3"/>
+                <stop offset="1" stop-color="#3d8ffa" stop-opacity=".28"/>
+              </linearGradient>
+              ${sheenDefs(r.uid)}
+            </defs>
+            <path d="M0 0 H660 V120 H0 Z" fill="currentColor" fill-opacity=".15"/>
+            <path d="M0 0 H660 V120 H0 Z" fill="url(#flow-${r.uid})"/>
+            <path class="sheen" d="M0 0 H660 V120 H0 Z" fill="url(#sglow-${r.uid})"/>
+            <path class="sheen" d="M0 0 H660 V120 H0 Z" fill="url(#score-${r.uid})"/>
+          </svg>
+          <div class="node left jade" style="top:0;height:120px">${svg('battery')}</div>
+          <div class="node right ocean" style="top:0;height:120px">${svg('laptop')}</div>
+          <span class="watt" style="top:50%">4.15 W</span>
+        </div>`;
+      }
+      return `<div class="sankey" style="height:140px">
+        <svg viewBox="0 0 660 140" preserveAspectRatio="none" style="height:140px" aria-hidden="true">
+          <defs>
+            <linearGradient id="flow-up-${r.uid}" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stop-color="#ff972e" stop-opacity=".32"/>
+              <stop offset=".5" stop-color="#b6c44e" stop-opacity=".3"/>
+              <stop offset="1" stop-color="#2ed680" stop-opacity=".28"/>
+            </linearGradient>
+            <linearGradient id="flow-down-${r.uid}" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stop-color="#ff972e" stop-opacity=".32"/>
+              <stop offset=".5" stop-color="#7e93b8" stop-opacity=".3"/>
+              <stop offset="1" stop-color="#3d8ffa" stop-opacity=".28"/>
+            </linearGradient>
+            ${sheenDefs(r.uid)}
+          </defs>
+          <g fill="currentColor" fill-opacity=".15">
+            <path d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z"/>
+            <path d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z"/>
+          </g>
+          <path d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#flow-up-${r.uid})"/>
+          <path d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#flow-down-${r.uid})"/>
+          <path class="sheen" d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#sglow-${r.uid})"/>
+          <path class="sheen" d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#score-${r.uid})"/>
+          <path class="sheen" d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#sglow-${r.uid})"/>
+          <path class="sheen" d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#score-${r.uid})"/>
+        </svg>
+        <div class="node left amber" style="top:10px;height:120px">${svg('plug')}<span>45 W</span></div>
+        <div class="node right jade" style="top:0;height:102px"><span class="charging-battery">${svg('battery')}${svg('bolt.fill')}</span></div>
+        <div class="node right ocean" style="top:122px;height:18px">${svg('laptop')}</div>
+        <span class="watt" style="top:56px">38.15 W</span>
+        <span class="watt" style="top:126px">6.5 W</span>
+      </div>`;
     case 'text':
       return `<div class="row-text">${r.text}</div>`;
     case 'btn': {

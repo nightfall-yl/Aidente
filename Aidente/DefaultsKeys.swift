@@ -113,8 +113,9 @@ extension Defaults.Keys {
         "showBatteryStateInStatusIcon", default: true)
 
     // Menu Dashboard
-    static let showTimeTillDischarge = Key<Bool>("showTimeTillDischarge", default: true)
-    static let showUptime = Key<Bool>("showUptime", default: true)
+    // 仪表盘顶部两行：电源适配器名 / 电压电流（2026-11-19 由时间信息开关改义）
+    static let showPowerSourceTitle = Key<Bool>("showPowerSourceTitle", default: true)
+    static let showPowerElectricalSubtitle = Key<Bool>("showPowerElectricalSubtitle", default: true)
     static let showPowerDistribution = Key<Bool>("showPowerDistribution", default: true)
     static let showCapacityHistory = Key<Bool>("showCapacityHistory", default: true)
     static let showEnergyAppRanking = Key<Bool>("showEnergyAppRanking", default: true)
