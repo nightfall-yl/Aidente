@@ -33,8 +33,6 @@ import Foundation
         reply: @escaping @Sendable (Bool, String?) -> Void
     )
     func setResetOnDisconnect(_ enabled: Bool)
-    func resetToDefaults()
-    func restoreDefaults(reply: @escaping @Sendable (Bool, String?) -> Void)
     /// Announces a self-update so the daemon can re-pin the client manifest
     /// after the updater swaps /Applications (new ad-hoc build → new cdhash),
     /// sparing the user a re-authorization. Only honored over an already-pinned

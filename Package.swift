@@ -38,7 +38,6 @@ let package = Package(
             ],
             path: "Helper",
             exclude: [
-                "HelperProtocol.swift",
                 "Info.plist",
             ]
         ),
@@ -50,7 +49,6 @@ let package = Package(
             ],
             path: "ChargingHelper",
             exclude: [
-                "ChargingHelperProtocol.swift",
                 "com.aidente.app.control.plist",
             ]
         ),
@@ -64,7 +62,6 @@ let package = Package(
             path: "Aidente",
             exclude: [
                 "Assets.xcassets",
-                "L10n",
             ]
         ),
         .executableTarget(

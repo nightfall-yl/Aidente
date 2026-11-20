@@ -509,10 +509,6 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         }
     }
 
-    func resetToDefaults() {
-        queue.sync { resetOnQueue() }
-    }
-
     func restoreDefaults(reply: @escaping @Sendable (Bool, String?) -> Void) {
         queue.async {
             do {
@@ -526,7 +522,7 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
 
     private func resetOnQueue() {
         do { try restoreOnQueue() }
-        catch { logger.error("resetToDefaults failed: \(error.localizedDescription)") }
+        catch { logger.error("reset after disconnect failed: \(error.localizedDescription)") }
     }
 
     private func restoreOnQueue() throws {

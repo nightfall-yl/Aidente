@@ -116,19 +116,20 @@ extension Defaults.Keys {
     // 仪表盘顶部两行：电源适配器名 / 电压电流（2026-11-19 由时间信息开关改义）
     static let showPowerSourceTitle = Key<Bool>("showPowerSourceTitle", default: true)
     static let showPowerElectricalSubtitle = Key<Bool>("showPowerElectricalSubtitle", default: true)
+    // 功率桑基图的白色流动光效（只关动效层，保留彩色信息层）
+    static let showPowerFlowSheen = Key<Bool>("showPowerFlowSheen", default: true)
     static let showPowerDistribution = Key<Bool>("showPowerDistribution", default: true)
     static let showCapacityHistory = Key<Bool>("showCapacityHistory", default: true)
     static let showEnergyAppRanking = Key<Bool>("showEnergyAppRanking", default: true)
     static let showCareActions = Key<Bool>("showCareActions", default: true)
-    static let showAutomaticProtection = Key<Bool>("showAutomaticProtection", default: true)
     /// Controls the whole battery-metrics card.
     static let showBatteryHealthCard = Key<Bool>("showBatteryHealthCard", default: true)
-    /// Comma-separated order of the six editable dashboard cards. Missing
+    /// Comma-separated order of the editable dashboard cards. Missing
     /// identifiers are inserted at their default positions, so adding a card
     /// does not move it to the end for users with a saved order.
     static let dashboardCardOrder = Key<String>(
         "dashboardCardOrder",
-        default: "colorEnergyFlow,batteryHealth,capacityHistory,energyAppRanking,careActions,automaticProtection"
+        default: "colorEnergyFlow,batteryHealth,energyAppRanking,careActions,capacityHistory"
     )
 
     // Charging

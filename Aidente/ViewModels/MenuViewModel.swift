@@ -9,12 +9,7 @@ class MenuViewModel {
     private let batteryService: BatteryService
     private let chargeManager: ChargeManager
     private let batteryHistoryService: BatteryHistoryService
-    private let bootTimestamp: Date?
 
-    var batteryPercentageText: String = "0%"
-    var timeRemainingText: String = AidenteL10n.t("正在估算…")
-    var uptimeText: String = AidenteL10n.t("0 分钟", "0 min")
-    var batteryModeText: String = AidenteL10n.t("未知")
     var batteryTemperatureText: String = "0°C"
     var adapterElectricalText: String = "0V · 0A"
     var batteryElectricalText: String = "0V · 0A"
@@ -35,9 +30,7 @@ class MenuViewModel {
     var powerSource: PowerSource = .battery
     var isCharging: Bool = false
     var isLowPowerModeEnabled: Bool = false
-    var topEnergyApps: [AppEnergyUsageSnapshot] = []
-    var hasEnergyUsageSample: Bool = false
-    /// 仪表盘「当前耗电 App」唯一展示项：经过阈值 + 迟滞筛选，可能为空。
+    /// 仪表盘「高能耗应用」唯一展示项：经过阈值 + 迟滞筛选，可能为空。
     var highlightedEnergyApp: AppEnergyUsageSnapshot?
 
     /// 高功耗判定：绝对门槛 25%（约一个核心 1/4 负载）+ 相对优势 1.5×；
@@ -59,16 +52,13 @@ class MenuViewModel {
     var calibrationActive: Bool { chargeManager.calibrationStage != .idle }
     var operationStatusText: String { chargeManager.operationStatusTitle }
     var canQuickRepair: Bool { chargeManager.canQuickRepair }
-    var isRepairing: Bool { chargeManager.isRepairing }
     func quickRepair() async { await chargeManager.attemptQuickRepair() }
     var hasControlError: Bool { chargeManager.controlError != nil }
-    var manageChargingEnabled: Bool { Defaults[.manageCharging] }
     var adapterConnected: Bool = false
 
     private var metricsObservation: Task<Void, Never>?
     private var historyObservation: Task<Void, Never>?
     private var settingsObservation: Task<Void, Never>?
-    private var uptimeTask: Task<Void, Never>?
     private var powerModeObserver: NSObjectProtocol?
     private var energyUsageTask: Task<Void, Never>?
 
@@ -80,7 +70,6 @@ class MenuViewModel {
         self.batteryService = batteryService
         self.chargeManager = chargeManager
         self.batteryHistoryService = batteryHistoryService
-        self.bootTimestamp = SystemService.bootTimestamp()
         startObservingMetrics()
         startObservingHistory()
         startObservingSettings()
@@ -184,12 +173,6 @@ class MenuViewModel {
         }
     }
 
-    func refresh() {
-        updateUptimeText()
-        batteryService.scheduleSinglePoll(delay: .zero)
-        refreshEnergyUsage()
-    }
-
     private func updateFormattedValues(from metrics: BatteryMetrics, adapter: AdapterMetrics) {
         let useHardware = Defaults[.useHardwarePercentage]
         let percentage =
@@ -197,32 +180,17 @@ class MenuViewModel {
             ? metrics.hardwareBatteryPercentage : metrics.batteryPercentage
         displayPercentage = percentage
         chargerDisplayName = ChargerInfoProvider.displayName(adapter: adapter)
-        batteryPercentageText = "\(percentage)%"
 
         let derivedPowerSource = derivePowerSource(battery: metrics, adapter: adapter)
-
-        let formatted = formatTimeRemaining(minutes: metrics.timeRemaining)
-        if !formatted.isEmpty {
-            timeRemainingText = formatted
-        } else if derivedPowerSource == .acAdapter && !metrics.isCharging {
-            timeRemainingText = AidenteL10n.t("未在充电")
-        } else {
-            timeRemainingText = AidenteL10n.t("正在估算…")
-        }
-
-        updateUptimeText()
 
         if derivedPowerSource == .acAdapter {
             if metrics.isCharging {
                 chargingMode = .charging
-                batteryModeText = AidenteL10n.t("正在充电")
             } else {
                 chargingMode = .pluggedIn
-                batteryModeText = AidenteL10n.t("已接通电源（未充电）")
             }
         } else {
             chargingMode = .discharging
-            batteryModeText = AidenteL10n.t("正在使用电池")
         }
 
         batteryTemperatureText =
@@ -264,45 +232,6 @@ class MenuViewModel {
         }
     }
 
-    private func updateUptimeText() {
-        guard let bootTimestamp else {
-            uptimeText = AidenteL10n.t("未知")
-            return
-        }
-
-        let totalMinutes = max(0, Int(Date().timeIntervalSince(bootTimestamp) / 60))
-        let days = totalMinutes / 1_440
-        let hours = (totalMinutes % 1_440) / 60
-        let minutes = totalMinutes % 60
-        var components: [String] = []
-        if days > 0 {
-            components.append(AidenteL10n.t("\(days) 天", "\(days)d"))
-        }
-        if hours > 0 {
-            components.append(AidenteL10n.t("\(hours) 小时", "\(hours)h"))
-        }
-        if minutes > 0 || components.isEmpty {
-            components.append(AidenteL10n.t("\(minutes) 分钟", "\(minutes)m"))
-        }
-        uptimeText = components.prefix(2).joined(separator: " ")
-    }
-
-    private func startUptimeTimer() {
-        guard uptimeTask == nil else { return }
-
-        uptimeTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                self?.updateUptimeText()
-            }
-        }
-    }
-
-    private func stopUptimeTimer() {
-        uptimeTask?.cancel()
-        uptimeTask = nil
-    }
-
     private func startEnergyUsageTimer() {
         guard energyUsageTask == nil else { return }
 
@@ -335,12 +264,8 @@ class MenuViewModel {
         }
     }
 
-    /// 统一入口：原始快照照常保存（诊断 / 其它视图仍可用），
-    /// 仪表盘展示项按阈值 + 迟滞收敛为至多一个 App。
+    /// 统一入口：仪表盘展示项按阈值 + 迟滞收敛为至多一个 App。
     private func applyEnergyUsageSnapshots(_ snapshots: [AppEnergyUsageSnapshot]) {
-        topEnergyApps = snapshots
-        hasEnergyUsageSample = true
-
         guard let leader = snapshots.first else {
             energyCandidateID = nil
             energyCandidateCount = 0
@@ -382,36 +307,18 @@ class MenuViewModel {
     }
 
     func menuWillOpen() {
-        updateUptimeText()
         batteryHistoryService.captureCurrent()
-        startUptimeTimer()
         startEnergyUsageTimer()
         batteryService.enableFastPolling()
     }
 
     func menuDidClose() {
-        stopUptimeTimer()
         stopEnergyUsageTimer()
         batteryService.disableFastPolling()
     }
 
     func quit() {
         NSApplication.shared.terminate(nil)
-    }
-
-    private func formatTimeRemaining(minutes: Int) -> String {
-        if minutes < 0 {
-            return ""
-        }
-        let hours = minutes / 60
-        let mins = minutes % 60
-        if hours == 0 {
-            return AidenteL10n.t("\(mins) 分钟", "\(mins) min")
-        }
-        return AidenteL10n.t(
-            "\(hours) 小时 \(mins) 分钟",
-            "\(hours) hr \(mins) min"
-        )
     }
 
     private func formatCapacity(_ milliampHours: Int) -> String {
@@ -451,7 +358,6 @@ class MenuViewModel {
             metricsObservation?.cancel()
             historyObservation?.cancel()
             settingsObservation?.cancel()
-            uptimeTask?.cancel()
             if let powerModeObserver {
                 NotificationCenter.default.removeObserver(powerModeObserver)
             }

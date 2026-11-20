@@ -100,20 +100,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A6AE1A372F484C94003B09FA /* Exceptions for "Helper" folder in "Aidente" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				HelperProtocol.swift,
-			);
-			target = A68B3E0B2F19AB4B00F115E4 /* Aidente */;
-		};
-		A6E6D7352F3A00000069CF9F /* Exceptions for "ChargingHelper" folder in "Aidente" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				ChargingHelperProtocol.swift,
-			);
-			target = A68B3E0B2F19AB4B00F115E4 /* Aidente */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -129,17 +115,11 @@
 		};
 		A68B3E1F2F19ABCB00F115E4 /* Helper */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A6AE1A372F484C94003B09FA /* Exceptions for "Helper" folder in "Aidente" target */,
-			);
 			path = Helper;
 			sourceTree = "<group>";
 		};
 		A6E6D71F2F39DD350069CF9F /* ChargingHelper */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A6E6D7352F3A00000069CF9F /* Exceptions for "ChargingHelper" folder in "Aidente" target */,
-			);
 			path = ChargingHelper;
 			sourceTree = "<group>";
 		};

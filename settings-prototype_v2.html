@@ -451,7 +451,7 @@
      单色流管 = 系统文字色 15%，节点 = 文字色 5% 底 / 20% 描边、外侧 16px 圆角，
      13px 中等字重 W 数值，不引入彩色，深浅色都跟随系统语义色。 */
   .sankey { position: relative; height: 120px; margin: 2px 0 4px; }
-  .sankey > svg { width: calc(100% - 130px); height: 120px; display: block; margin-left: 65px; }
+  .sankey > svg { width: calc(100% - 130px); height: 120px; display: block; margin-left: 65px; clip-path: inset(0 round 5px); }
   .sankey .node {
     position: absolute; width: 60px; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
@@ -463,14 +463,14 @@
     background: color-mix(in srgb, var(--node) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--node) 34%, transparent);
     color: var(--node);
-    border-radius: 16px 0 0 16px;
+    border-radius: 16px 5px 5px 16px;
   }
   .sankey .node.right {
     right: 0;
     background: color-mix(in srgb, var(--node) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--node) 34%, transparent);
     color: var(--node);
-    border-radius: 0 16px 16px 0;
+    border-radius: 5px 16px 16px 5px;
   }
   /* 节点三色对齐 Swift AidenteTheme：amber / jade / ocean；浅色用加深 ink */
   .sankey .node.amber { --node: #ff972e; }
@@ -482,7 +482,7 @@
   .sankey .watt {
     /* 上下左右居中：left 50% + translateX(-50%)，垂直用 top + translateY(-50%) */
     position: absolute; left: 50%; transform: translate(-50%, -50%);
-    color: var(--text); font-size: 13px; font-weight: 600;
+    color: var(--text); font-size: 11px; font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .sankey .node svg { width: 16px; height: 16px; }
@@ -578,6 +578,8 @@ const ICON = {
   'chevron.down': '<path d="m6 9 6 6 6-6"/>',
   'chevron.up.down': '<path d="m7 9 5-5 5 5"/><path d="m7 15 5 5 5-5"/>',
   'check': '<polyline points="20 6 9 17 4 12"/>',
+  /* 「显示流动光效」开关行徽章（lucide sparkles） */
+  sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]||''}</svg>`;
 
@@ -717,17 +719,22 @@ const PAGES = {
     cards: [
       /* 2026-11-19 用户指令：供电方式 / 电压电流移到仪表盘顶部（原系统运行时间 / 电池剩余时间位置），
          字号同原两行 10px；开关按内容命名为「电源适配器」/「电压与电流」。 */
-      { title:'电源信息', sub:'仪表盘菜单栏副标题。', icon:'gauge', colors:'charging', rows:[
+      /* 2026-11-20 用户指令：删副标题——「电源适配器」/「电压与电流」控制菜单栏，「显示流动光效」控制能量分流图，
+         三者作用位置不同，副标题「仪表盘菜单栏副标题。」不再准确。 */
+      /* 2026-11-20 用户指令：卡名「电源信息」→「控制面板」，流动光效移到第一行。 */
+      { title:'控制面板', icon:'gauge', colors:'charging', rows:[
+        rToggle('流动光效', '', true, 'dashboard', 'sparkles'),
+        rDiv(),
         rToggle('电源适配器', '', true, 'dashboard', 'gauge'),
         rDiv(),
         rToggle('电压与电流', '', true, 'dashboard', 'gauge'),
       ]},
-      /* 2026-11-19 用户指令：按 Stasis 项目展示图重画「能量分流」桑基图（单色流管 + 外侧圆角节点） */
+      /* 2026-11-19 用户指令：按 Stasis 项目展示图重画「能量分流」桑基图（单色流管 + 外侧圆角节点）；
+         2026-11-20 用户指令：电池供电态并入同一张卡，不再单独开卡。 */
       { title:'能量分流', sub:'实时展示适配器、电池与系统之间的功率分配。', icon:'bolt.fill', colors:'charging', rows:[
         rSankey('adapter', 'a'),
-      ]},
-      /* 2026-11-19 用户指令：补电池供电态——电池 → 屏幕单股流，左端暖色渐隐 */
-      { title:'能量分流 · 电池供电', sub:'电池向系统供电时的单股功率流。', icon:'battery', colors:'charging', rows:[
+        rDiv(),
+        rText('电池供电'),
         rSankey('battery', 'b'),
       ]},
       /* 2026-11-17 用户指令：访问仪表盘不给卡头，标题下移为卡片设置项行、与设置项同字号；
@@ -1073,7 +1080,7 @@ function renderRow(r, legacy) {
     case 'sankey':
       /* 移动高光（双层）：彩色渐变常驻 = 信息层（功率分配 / 方向 / 三色语义）；
          白色光带沿流管移动 = 动效层，pad + animateTransform 平移实现「左框外→右框外→停顿0.4s→重来」。
-         扫描 2.6s + 停顿 0.4s = 周期 3s，keyTimes 中段 0.867。节点色对齐 Swift AidenteTheme。 */
+         扫描 2.5s + 停顿 1.5s = 周期 4s，keyTimes 中段 0.625。节点色对齐 Swift AidenteTheme。 */
       const sheenDefs = uid => `
         <linearGradient id="sglow-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="660" y2="0" spreadMethod="pad">
           <stop offset="0" stop-color="#fff" stop-opacity="0"/>
@@ -1086,8 +1093,8 @@ function renderRow(r, legacy) {
           <stop offset="0.23" stop-color="#fff" stop-opacity="0"/>
           <stop offset="1" stop-color="#fff" stop-opacity="0"/>
           <animateTransform attributeName="gradientTransform" type="translate"
-            values="-152 0; 660 0; 660 0" keyTimes="0;0.867;1"
-            calcMode="linear" dur="3s" repeatCount="indefinite"/>
+            values="-152 0; 660 0; 660 0" keyTimes="0;0.625;1"
+            calcMode="linear" dur="4s" repeatCount="indefinite"/>
         </linearGradient>
         <linearGradient id="score-${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="660" y2="0" spreadMethod="pad">
           <stop offset="0" stop-color="#fff" stop-opacity="0"/>
@@ -1098,8 +1105,8 @@ function renderRow(r, legacy) {
           <stop offset="0.225" stop-color="#fff" stop-opacity="0"/>
           <stop offset="1" stop-color="#fff" stop-opacity="0"/>
           <animateTransform attributeName="gradientTransform" type="translate"
-            values="-152 0; 660 0; 660 0" keyTimes="0;0.867;1"
-            calcMode="linear" dur="3s" repeatCount="indefinite"/>
+            values="-152 0; 660 0; 660 0" keyTimes="0;0.625;1"
+            calcMode="linear" dur="4s" repeatCount="indefinite"/>
         </linearGradient>`;
       if (r.mode === 'battery') {
         return `<div class="sankey">
@@ -1138,15 +1145,15 @@ function renderRow(r, legacy) {
             ${sheenDefs(r.uid)}
           </defs>
           <g fill="currentColor" fill-opacity=".15">
-            <path d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z"/>
-            <path d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z"/>
+            <path d="M0 15 Q0 10 5 10 C330 10 330 0 655 0 Q660 0 660 5 L660 97 Q660 102 655 102 C330 102 330 112 0 112 Z"/>
+            <path d="M0 112 L0 125 Q0 130 5 130 C330 130 330 140 655 140 Q660 140 660 135 L660 127 Q660 122 655 122 C330 122 330 112 0 112 Z"/>
           </g>
-          <path d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#flow-up-${r.uid})"/>
-          <path d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#flow-down-${r.uid})"/>
-          <path class="sheen" d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#sglow-${r.uid})"/>
-          <path class="sheen" d="M0 10 C330 10 330 0 660 0 L660 102 C330 102 330 112 0 112 Z" fill="url(#score-${r.uid})"/>
-          <path class="sheen" d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#sglow-${r.uid})"/>
-          <path class="sheen" d="M0 112 C330 112 330 122 660 122 L660 140 C330 140 330 130 0 130 Z" fill="url(#score-${r.uid})"/>
+          <path d="M0 15 Q0 10 5 10 C330 10 330 0 655 0 Q660 0 660 5 L660 97 Q660 102 655 102 C330 102 330 112 0 112 Z" fill="url(#flow-up-${r.uid})"/>
+          <path d="M0 112 L0 125 Q0 130 5 130 C330 130 330 140 655 140 Q660 140 660 135 L660 127 Q660 122 655 122 C330 122 330 112 0 112 Z" fill="url(#flow-down-${r.uid})"/>
+          <path class="sheen" d="M0 15 Q0 10 5 10 C330 10 330 0 655 0 Q660 0 660 5 L660 97 Q660 102 655 102 C330 102 330 112 0 112 Z" fill="url(#sglow-${r.uid})"/>
+          <path class="sheen" d="M0 15 Q0 10 5 10 C330 10 330 0 655 0 Q660 0 660 5 L660 97 Q660 102 655 102 C330 102 330 112 0 112 Z" fill="url(#score-${r.uid})"/>
+          <path class="sheen" d="M0 112 L0 125 Q0 130 5 130 C330 130 330 140 655 140 Q660 140 660 135 L660 127 Q660 122 655 122 C330 122 330 112 0 112 Z" fill="url(#sglow-${r.uid})"/>
+          <path class="sheen" d="M0 112 L0 125 Q0 130 5 130 C330 130 330 140 655 140 Q660 140 660 135 L660 127 Q660 122 655 122 C330 122 330 112 0 112 Z" fill="url(#score-${r.uid})"/>
         </svg>
         <div class="node left amber" style="top:10px;height:120px">${svg('plug')}<span>45 W</span></div>
         <div class="node right jade" style="top:0;height:102px"><span class="charging-battery">${svg('battery')}${svg('bolt.fill')}</span></div>
@@ -1359,6 +1366,12 @@ function bindInteractions() {
     el.addEventListener('click', () => {
       el.classList.toggle('on');
       el.setAttribute('aria-checked', String(el.classList.contains('on')));
+      // 「显示流动光效」开关联动：只隐藏白色光带动效层（.sheen），保留彩色信息层（flow 渐变）
+      const label = el.closest('.row')?.querySelector('.r-label')?.textContent;
+      if (label === '流动光效') {
+        const show = el.classList.contains('on');
+        document.querySelectorAll('.sankey .sheen').forEach(p => { p.style.display = show ? '' : 'none'; });
+      }
     });
   });
   // segmented

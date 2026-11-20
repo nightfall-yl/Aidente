@@ -112,9 +112,6 @@ class ChargeManager {
     }
     private var powerFlowError: String?
     private var powerHoldVerified = false
-    /// Set while a hero-triggered one-tap repair is running; the hero shows a
-    /// transient "Repairing…" state until it finishes.
-    var isRepairing = false
 
     var controlError: String? {
         guard let rawError =
@@ -793,8 +790,6 @@ class ChargeManager {
     /// power policy through `retryControlAfterRepair`.
     func attemptQuickRepair() async {
         guard canQuickRepair else { return }
-        isRepairing = true
-        defer { isRepairing = false }
         do {
             try await ChargingHelperManager.shared.repair()
             retryControlAfterRepair()

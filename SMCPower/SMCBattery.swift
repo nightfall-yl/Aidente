@@ -116,10 +116,6 @@ public struct SMCBattery: Sendable, BatteryPowerControlling {
         return value.boolValue
     }
 
-    public static func firmwarePercentage() throws -> Int {
-        max(1, Int(try firmwarePercentageExact().rounded(.down)))
-    }
-
     /// Retain fractional raw capacity until the control policy selects an
     /// integer firmware boundary. Display rounding is not a control decision.
     public static func firmwarePercentageExact() throws -> Double {
