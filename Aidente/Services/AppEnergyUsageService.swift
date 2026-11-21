@@ -16,8 +16,11 @@ enum AppEnergyUsageService {
 
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
         process.arguments = ["-wwaxo", "pid=,%cpu=,comm="]
+        // C locale makes ps escape every non-ASCII byte in `comm` cat -v style
+        // (抖音 → M-fM^JM^V...), which then leaks through the command-path
+        // fallback as a garbled display name. UTF-8 keeps paths verbatim.
         process.environment = ProcessInfo.processInfo.environment.merging(
-            ["LC_ALL": "C"]
+            ["LC_ALL": "en_US.UTF-8"]
         ) { _, newValue in newValue }
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
@@ -118,9 +121,14 @@ enum AppEnergyUsageService {
 
     private static func applicationURL(fromCommand command: String) -> URL? {
         guard !command.contains("\u{FFFD}") else { return nil }
-        return outermostApplicationURL(
-            containing: URL(fileURLWithPath: command)
-        )
+        let url = outermostApplicationURL(containing: URL(fileURLWithPath: command))
+        // The escaped-or-mangled path may not exist on disk (no .app bundle
+        // there); without this check its last path component would surface as
+        // a phantom display name.
+        guard let url, FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+        return url
     }
 
     private static func outermostApplicationURL(containing url: URL) -> URL? {

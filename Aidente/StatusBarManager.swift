@@ -75,18 +75,24 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
     /// content height, so hiding cards shrinks the panel instead of leaving
     /// an empty area at the bottom.
     private func applyContentHeight(_ height: CGFloat) {
-        let size = NSSize(width: DashboardLayout.width, height: height)
         if let menuPanel {
-            menuPanel.setContentSize(size)
-            // Re-anchor: keep the top fixed just below the status item and let
-            // the panel grow downward as content height changes.
-            menuPanel.setFrameOrigin(NSPoint(
+            // Atomic top-anchored resize: size and origin land in the window
+            // server in one call (2026-11-21 BounceDiag 实测 anchor 恒定、
+            // 逐帧无跳变，这套几何是编辑态高度动画的基础).
+            let frame = NSRect(
                 x: menuPanel.frame.origin.x,
-                y: menuPanelAnchorTopY - size.height
-            ))
+                y: menuPanelAnchorTopY - height,
+                width: DashboardLayout.width,
+                height: height
+            )
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0
+                context.allowsImplicitAnimation = false
+                menuPanel.setFrame(frame, display: true)
+            }
         }
-        if let dashboardWindow { dashboardWindow.setContentSize(size) }
-        if let previewWindow { previewWindow.setContentSize(size) }
+        if let dashboardWindow { dashboardWindow.setContentSize(NSSize(width: DashboardLayout.width, height: height)) }
+        if let previewWindow { previewWindow.setContentSize(NSSize(width: DashboardLayout.width, height: height)) }
     }
 
     private func setupPersistentHostingView() {

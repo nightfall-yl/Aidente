@@ -32,6 +32,13 @@ import Foundation
         target: UInt8,
         reply: @escaping @Sendable (Bool, String?) -> Void
     )
+    /// Writes the battery power source's `lowpowermode` pmset key
+    /// (`pmset -b`). Used by the dashboard「恢复正常模式」shortcut: off while
+    /// on battery, restored to the saved value when the adapter attaches.
+    func setLowPowerMode(
+        enabled: Bool,
+        reply: @escaping @Sendable (Bool, String?) -> Void
+    )
     func setResetOnDisconnect(_ enabled: Bool)
     /// Announces a self-update so the daemon can re-pin the client manifest
     /// after the updater swaps /Applications (new ad-hoc build → new cdhash),

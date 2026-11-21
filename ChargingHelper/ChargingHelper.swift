@@ -502,6 +502,37 @@ final class ChargingHelper: NSObject, AidenteControlProtocol {
         }
     }
 
+    func setLowPowerMode(enabled: Bool, reply: @escaping @Sendable (Bool, String?) -> Void) {
+        queue.sync {
+        // Low Power Mode has no public API; pmset is the only interface and
+        // needs root. `-b` scopes the write to the battery power profile so an
+        // AC-side user setting is never touched.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        process.arguments = ["-b", "lowpowermode", enabled ? "1" : "0"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try process.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                let message = String(decoding: data, as: UTF8.self)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                logger.error("pmset lowpowermode failed: \(message, privacy: .public)")
+                reply(false, message.isEmpty ? "pmset 退出状态 \(process.terminationStatus)" : message)
+                return
+            }
+            logger.info("pmset battery lowpowermode set to \(enabled)")
+            reply(true, nil)
+        } catch {
+            logger.error("setLowPowerMode failed: \(error.localizedDescription)")
+            reply(false, error.localizedDescription)
+        }
+        }
+    }
+
     func setResetOnDisconnect(_ enabled: Bool) {
         queue.sync {
         resetOnDisconnect = enabled

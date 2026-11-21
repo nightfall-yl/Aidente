@@ -19,6 +19,7 @@
     --hero-bg: rgba(255,255,255,.06);
     --btn: rgba(255,255,255,.08);
     --amber: #ff972e; --jade: #2ed680; --ocean: #3d8ffa; --coral: #ff6b5e;
+    --surf-tint: rgba(61,143,250,.16); --surf-edge: rgba(61,143,250,.34);
   }
   body.light {
     --win: #f2f2f4;
@@ -32,6 +33,7 @@
     --tick2: rgba(0,0,0,.10);
     --hero-bg: rgba(255,255,255,.85);
     --btn: rgba(0,0,0,.06);
+    --surf-tint: rgba(61,143,250,.09); --surf-edge: rgba(61,143,250,.25);
   }
   * { box-sizing: border-box; margin: 0; }
   body {
@@ -40,8 +42,8 @@
     min-height: 100vh; padding: 34px 0 60px;
     transition: background .25s, color .25s;
   }
-  /* 430 → 410：对应 Swift DashboardLayout.width 400 → 380（减 20，卡片宽 402 → 382） */
-  .wrap { width: 410px; margin: 0 auto; }
+  /* 430 → 400：对应 Swift DashboardLayout.width 400 → 380 → 370（各减 10，卡片宽 = 面板宽 + 30 − 28） */
+  .wrap { width: 400px; margin: 0 auto; }
   .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
   .topbar h1 { font-size: 15px; font-weight: 700; }
   .topbar .spacer { flex: 1; }
@@ -178,7 +180,7 @@
   }
   .health-src .src { font-size: 11px; font-weight: 500; color: var(--text2); white-space: nowrap; }
   .health-src .va { font-size: 11px; font-weight: 500; color: var(--text2); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .health-div { height: 1px; background: var(--stroke); margin: 0 -15px 11px; }
+  .health-div { height: 1px; background: var(--stroke); margin: 0 0 11px; } /* 横线与内容同宽，不贴卡边（对齐竖向分割线） */
   .health-metrics { display: flex; }
   .hm {
     flex: 1; display: grid; justify-items: center; gap: 3px;
@@ -195,6 +197,46 @@
   body.light .hm.amber .v { color: #c76604; }
 
   svg.ic { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+
+  /* ====== 面板底部：提示放 11pt 间隔带（2026-11-21 v2，用户定稿） ====== */
+  /* 仪表盘外框示意：宽 370（Swift DashboardLayout.width），顶/底各留 11pt */
+  .pd {
+    position: relative; width: 370px; margin: 0 auto;
+    border: 1px dashed var(--tick); border-radius: 18px;
+    padding: 11px 0;
+  }
+  .pd-card {
+    margin: 0 14px; border-radius: 16px;
+    background: var(--card); border: 1px solid var(--stroke);
+    padding: 12px 15px; font-size: 12px;
+  }
+  .pd-row { display: flex; justify-content: space-between; padding: 5px 0; color: var(--text2); }
+  .pd-row b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .pd-row + .pd-row { border-top: 1px solid var(--stroke); }
+  /* 新方案：文字放在卡片与面板底边之间的 11pt 间隔带里——
+     高 10pt，上距卡片 0.5pt、下距面板底边 0.5pt，水平居中 */
+  .pd-hint {
+    position: absolute; left: 0; right: 0; bottom: 0.5px; height: 10px; line-height: 10px;
+    text-align: center; font-size: 10px; color: var(--text2); white-space: nowrap;
+    opacity: 0; transition: opacity .18s ease; pointer-events: none;
+  }
+  /* 透明热区：非编辑态常驻，高 11pt（= 间隔带），左右铺满面板宽度 */
+  .pd-zone { position: absolute; left: 0; right: 0; bottom: 0; height: 11px; }
+  /* hover 面色：ocean 渐变 + 底部发丝线（复用旧 footer 条的绘制），随热区显隐 */
+  .pd-surface {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 11px;
+    background: linear-gradient(to bottom, transparent, var(--surf-tint));
+    border-bottom: 1px solid var(--surf-edge);
+    opacity: 0; transition: opacity .18s ease; pointer-events: none;
+  }
+  .pd-zone:hover ~ .pd-surface, .pd-zone:hover ~ .pd-hint { opacity: 1; }
+  /* 现状对照：卡片下 2pt + 独立 18pt hover 条，文字在条内 */
+  .pd-legacy { padding-bottom: 0; margin-top: 26px; }
+  .pd-legacy .pd-card { margin-bottom: 2px; }
+  .pd-strip {
+    height: 18px; display: grid; place-items: center;
+    font-size: 10.5px; color: var(--text3);
+  }
 </style>
 </head>
 <body class="light">
@@ -264,7 +306,7 @@
     <b>方案要点（B 方案 + B1 整合，已全部并入上方演示）</b>：<br>
     ① header 区块取消——常态状态标题（operationStatusText，heroTint 色 17pt、固定 20pt 行高）在 hero 卡内第一行，与异常横幅同源、互斥：横幅出现时标题行隐藏；<br>
     ② 横幅仅在<b>异常 / 临时动作生效</b>时浮现（amber / coral 两种 tone，可点击修复态带副标题）；点击修复时<b>文案保持「充电控制未生效 / 点击修复充电控制」不变，不切换为「修复中…」短暂态</b>（2026-11-20 用户定：该中间态多余，去掉，仅给一次轻量按压反馈）；<br>
-    ③ 刷新 / 设置 / 退出三按钮悬浮 hero 右上角（半透明小圆钮，hover 提亮，top 与标题行同基准对齐），popover 再省约 2 行（2026-11-20 用户定：不采用 B2 窄工具条方案）；<br>
+    ③ 设置 / 退出两按钮悬浮 hero 右上角（半透明小圆钮，hover 提亮，top 与标题行同基准对齐；刷新按钮已删，2026-11-20 与 Swift 同步），popover 再省约 2 行（2026-11-20 用户定：不采用 B2 窄工具条方案）；<br>
     ④ 「实时电量 / 上限」标签保留原位（左：数字+标签，右：标签+数字，基线对齐）；<br>
     ⑤ hero 卡内不放电源信息脚注（2026-11-20 用户定：去掉 V@A）——适配器名与电压电流移入「电池健康」卡上半（见下节）；<br>
     ⑥ 滑杆手柄左侧一条虚线 = 巡航下限（设置项「电池巡航」的上限 − 5%），只展示、不可拖，拖动手柄时跟随移动；电池供电态不显示。
@@ -307,6 +349,40 @@
     ③ hero 卡与 header 区块都不再有电源信息，hero 彻底只剩状态标题 + 读数 + 滑杆；<br>
     ④ 电池健康卡若被用户关闭，这两行信息也随之隐藏（同一开关体系）。
   </div>
+
+  <div class="sec"><span data-zh="面板底部 · 提示入间隔带方案" data-en="Panel bottom · Hint in the 11pt gap">面板底部 · 提示入间隔带方案</span> <small data-zh="鼠标移到面板底部 11pt 间隔带体验 hover 显隐" data-en="Hover over the 11pt gap at the panel bottom">鼠标移到面板底部 11pt 间隔带体验 hover 显隐</small></div>
+
+  <!-- 新方案：11pt 对称下边距，文字放间隔带内（上 0.5pt / 下 0.5pt），热区铺满面板宽 -->
+  <div class="pd">
+    <div class="pd-card">
+      <div class="pd-row"><span data-zh="序列号" data-en="Serial Number">序列号</span><b>FGJXK2QW1L</b></div>
+      <div class="pd-row"><span data-zh="系统版本" data-en="OS Version">系统版本</span><b>macOS 26.1</b></div>
+      <div class="pd-row"><span data-zh="Aidente 版本" data-en="Aidente Version">Aidente 版本</span><b>6.1.7 (28)</b></div>
+    </div>
+    <div class="pd-zone"></div>
+    <div class="pd-surface"></div>
+    <div class="pd-hint" data-zh="长按进入编辑模式。" data-en="Long-press to enter edit mode.">长按进入编辑模式。</div>
+  </div>
+
+  <!-- 现状对照：卡片下 2pt + 独立 18pt hover 条 -->
+  <div class="pd pd-legacy">
+    <div class="pd-card">
+      <div class="pd-row"><span data-zh="序列号" data-en="Serial Number">序列号</span><b>FGJXK2QW1L</b></div>
+      <div class="pd-row"><span data-zh="系统版本" data-en="OS Version">系统版本</span><b>macOS 26.1</b></div>
+      <div class="pd-row"><span data-zh="Aidente 版本" data-en="Aidente Version">Aidente 版本</span><b>6.1.7 (28)</b></div>
+    </div>
+    <div class="pd-strip" data-zh="长按进入编辑模式。" data-en="Long-press to enter edit mode.">长按进入编辑模式。</div>
+  </div>
+
+  <div class="note">
+    <b>面板底部方案要点（2026-11-21 v2 用户定稿，已落 Swift 并编译）</b>：<br>
+    ① 卡片下边距 2pt → <b>11pt</b>，与顶部对称；常态 18pt footer hover 条取消，面板总高省约 16pt；<br>
+    ② 「长按进入编辑模式。」文字（10pt 高）放<b>卡片与面板底边之间的 11pt 间隔带</b>里：<b>上距卡片 0.5pt、下距面板底边 0.5pt</b>，水平居中，锚定面板底边、不以卡片为参照系；<br>
+    ③ hover 热区 = <b>11pt 间隔带本身</b>，左右铺满仪表盘宽度（Swift hotZoneHeight = 11）；编辑态时热区移除，编辑栏接管底部；<br>
+    ④ hover 显隐：ocean 渐变面色 + 底部发丝线（复用 AidenteFooterHintSurface，深/浅主题 16%/34%、9%/25%）与文字同步 0.15s 淡入淡出；长按 0.5s 进入编辑态；<br>
+    ⑤ 编辑态不变：编辑栏照常向下展开（34/80pt），卡片零位移；scrollHeight 上限不再扣 footer 常量（hoverHeight 已删）；<br>
+    ⑥ 虚线框 = 仪表盘外框示意（370pt，顶/底各 11pt）；上图新方案 / 下图现状对照。
+  </div>
 </div>
 
 <script>
@@ -323,9 +399,8 @@
   }
   langChip.onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; applyLang(); };
   applyLang();
-  // 整合演示：注入刷新 / 设置 / 退出三按钮
+  // 整合演示：注入设置 / 退出两按钮（刷新按钮已删，2026-11-20 与 Swift 同步）
   const BTN_HTML = `
-    <div class="hbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div>
     <div class="hbtn"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
     <div class="hbtn"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg></div>`;
   document.querySelectorAll('[data-btns]').forEach(el => { el.innerHTML = BTN_HTML; });

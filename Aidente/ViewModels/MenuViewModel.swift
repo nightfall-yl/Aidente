@@ -48,6 +48,7 @@ class MenuViewModel {
 
     var chargeLimitOverrideActive: Bool { chargeManager.chargeLimitOverrideActive }
     var forceDischargeActive: Bool { chargeManager.forceDischargeActive }
+    var lowPowerOverrideActive: Bool { chargeManager.lowPowerOverrideActive }
     var manualPauseActive: Bool { chargeManager.manualPauseActive }
     var calibrationActive: Bool { chargeManager.calibrationStage != .idle }
     var operationStatusText: String { chargeManager.operationStatusTitle }
@@ -155,6 +156,10 @@ class MenuViewModel {
 
     func toggleForceDischarge() {
         chargeManager.toggleForceDischarge()
+    }
+
+    func toggleLowPowerOverride() {
+        chargeManager.toggleLowPowerOverride()
     }
 
     func toggleManualPause() {

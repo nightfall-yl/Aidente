@@ -91,12 +91,18 @@ class ChargeManager {
     private(set) var topUpActive = Defaults[.topUpActive]
     private(set) var forceDischargeActive = false
     private(set) var manualPauseActive = Defaults[.manualPauseActive]
+    /// 「恢复正常模式」捷径：电池供电时临时关闭低电量模式，接通适配器自动恢复。
+    private(set) var lowPowerOverrideActive = false
     private(set) var calibrationStage =
         CalibrationStage(rawValue: Defaults[.calibrationStage]) ?? .idle
     private(set) var operationStatus: ChargeOperationStatus = .monitoring
     private var serviceControlError: String?
     private var chargingControlError: String?
     private var adapterControlError: String?
+    /// 「恢复正常模式」执行失败时的独立错误位（不影响充电控制语义）。
+    private var lowPowerControlError: String?
+    /// 开启「恢复正常模式」前系统的低电量模式原值，插电时按它恢复。
+    private var savedLowPowerModeEnabled: Bool?
 
     var chargeLimitOverrideActive: Bool { topUpActive }
     var controlDiagnostics: [String: String] {
@@ -115,7 +121,8 @@ class ChargeManager {
 
     var controlError: String? {
         guard let rawError =
-            serviceControlError ?? chargingControlError ?? adapterControlError ?? powerFlowError
+            serviceControlError ?? chargingControlError ?? adapterControlError
+            ?? lowPowerControlError ?? powerFlowError
         else {
             return nil
         }
@@ -246,6 +253,10 @@ class ChargeManager {
             lastAdapterConnected = controlState.adapterConnected
             clearCachedState()
             stateWasCleared = true
+            // 「恢复正常模式」随插电自动失效，恢复用户原本的低电量模式设置。
+            if controlState.adapterConnected, lowPowerOverrideActive || savedLowPowerModeEnabled != nil {
+                restoreLowPowerMode()
+            }
         }
 
         guard !isSystemSleeping else { return } // The daemon owns the sleep transition.
@@ -574,6 +585,10 @@ class ChargeManager {
         verificationTask = Task { [weak self] in
             var verification = ChargeHoldVerification()
             var lastSample: Date?
+            // 刚切入保持请求时固件有停充滞后，电流可能再流几十秒。前 4 个
+            // 采样（≈32s）不计入连续失败，避免「已请求暂停，但电池仍持续
+            // 充电」在滞后窗口内误报（2026-11-21 方案 A）。
+            var graceSamplesRemaining = 4
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(8)) } catch { return }
                 guard let self, pendingPowerRequest == request, !isSystemSleeping else { return }
@@ -592,7 +607,17 @@ class ChargeManager {
                     continue
                 }
                 lastSample = sampleDate
-                switch verification.sample(batteryPower: batteryService.metrics.batteryPower) {
+                let result = verification.sample(batteryPower: batteryService.metrics.batteryPower)
+                if graceSamplesRemaining > 0 {
+                    graceSamplesRemaining -= 1
+                    // 宽限期内保持成功照常成立，但充/放电采样不积累连续失败计数。
+                    if result == .charging || result == .discharging {
+                        verification = ChargeHoldVerification()
+                    }
+                    powerHoldVerified = false
+                    continue
+                }
+                switch result {
                 case .pending: powerHoldVerified = false
                 case .held:
                     powerHoldVerified = true
@@ -717,6 +742,62 @@ class ChargeManager {
             resumeNormalManagement()
         } else {
             startDischarge(to: Defaults[.chargeLimit])
+        }
+    }
+
+    /// 「恢复正常模式」捷径：电池供电时关闭低电量模式，插电自动恢复原值。
+    func toggleLowPowerOverride() {
+        if lowPowerOverrideActive {
+            restoreLowPowerMode()
+        } else {
+            startLowPowerOverride()
+        }
+    }
+
+    private func startLowPowerOverride() {
+        guard !lowPowerOverrideActive,
+              !batteryService.adapterMetrics.adapterConnected,
+              ProcessInfo.processInfo.isLowPowerModeEnabled
+        else { return }
+        savedLowPowerModeEnabled = true
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await batteryService.setLowPowerMode(enabled: false)
+                lowPowerControlError = nil
+                lowPowerOverrideActive = true
+                logger.info("Low Power Mode temporarily disabled on battery")
+            } catch {
+                savedLowPowerModeEnabled = nil
+                lowPowerControlError = AidenteL10n.t(
+                    "恢复正常模式失败：\(error.localizedDescription)",
+                    "Failed to restore full performance: \(error.localizedDescription)"
+                )
+                logger.error("setLowPowerMode(false) failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func restoreLowPowerMode() {
+        guard lowPowerOverrideActive || savedLowPowerModeEnabled != nil else { return }
+        // 原值恒为 true（仅在系统低电量模式开启时可开启此动作）；万一状态丢失，
+        // 按开启（用户此前的选择）恢复，避免把用户主动开启的模式悄悄关掉。
+        let restore = savedLowPowerModeEnabled ?? true
+        savedLowPowerModeEnabled = nil
+        lowPowerOverrideActive = false
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await batteryService.setLowPowerMode(enabled: restore)
+                lowPowerControlError = nil
+                logger.info("Low Power Mode restored to \(restore)")
+            } catch {
+                lowPowerControlError = AidenteL10n.t(
+                    "低电量模式恢复失败：\(error.localizedDescription)",
+                    "Failed to restore Low Power Mode: \(error.localizedDescription)"
+                )
+                logger.error("setLowPowerMode(\(restore)) failed: \(error.localizedDescription)")
+            }
         }
     }
 

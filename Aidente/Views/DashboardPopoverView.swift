@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import QuartzCore
 import Defaults
 import SwiftUI
 
@@ -8,7 +9,7 @@ import SwiftUI
 /// the height is an upper bound only — the real height is measured from the
 /// visible content and reported to AppKit.
 enum DashboardLayout {
-    static let width: CGFloat = 380
+    static let width: CGFloat = 370
     static let maxHeight: CGFloat = 800
     static let dividerHeight: CGFloat = 1
 }
@@ -61,10 +62,10 @@ private enum DashboardEditableCard: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .colorEnergyFlow: AidenteL10n.t("功率桑基图")
-        case .batteryHealth: AidenteL10n.t("系统信息")
+        case .batteryHealth: AidenteL10n.t("规格")
         case .capacityHistory: AidenteL10n.t("电池健康")
         case .energyAppRanking: AidenteL10n.t("高能耗应用")
-        case .careActions: AidenteL10n.t("快捷养护")
+        case .careActions: AidenteL10n.t("捷径")
         }
     }
 
@@ -80,7 +81,7 @@ private enum DashboardEditableCard: String, CaseIterable, Identifiable {
 }
 
 private enum DashboardFooterMetrics {
-    static let hoverHeight: CGFloat = 20
+    static let hotZoneHeight: CGFloat = 11
     static let barHeight: CGFloat = 34
     static let dockHeight: CGFloat = 46
     static let buttonCornerRadius: CGFloat = 8
@@ -162,6 +163,10 @@ struct DashboardPopoverView: View {
     @State private var contentHeight: CGFloat = 0
     @State private var isEditingCards = false
     @State private var isFooterHovering = false
+    /// 编辑态 footer 高度动画进度（0 = 常态 hover 条，1 = 编辑态完整 footer）。
+    /// 由 CADisplayLink 逐帧推进，SwiftUI 布局与 AppKit 面板 resize 在同一帧
+    /// 内由同一数值同步更新，从结构上消除两套系统各自插值的错位（方案 B）。
+    @StateObject private var footerProgress = FooterProgressDriver()
     @State private var draggingCard: DashboardEditableCard?
     @State private var dropTarget: DashboardEditableCard?
     @State private var cardFrames: [DashboardEditableCard: CGRect] = [:]
@@ -177,16 +182,30 @@ struct DashboardPopoverView: View {
     }
 
     private var footerHeight: CGFloat {
-        guard isEditingCards else { return DashboardFooterMetrics.hoverHeight }
-        return DashboardFooterMetrics.barHeight
+        // 常态无 footer 条（提示浮在卡片上，2026-11-21）；编辑态按 progress
+        // 从 0 平滑长高到编辑栏（+隐藏卡 dock），面板向下伸展、卡片零位移。
+        let editing = DashboardFooterMetrics.barHeight
             + (hiddenCards.isEmpty ? 0 : DashboardFooterMetrics.dockHeight)
+        return editing * footerProgress.progress
+    }
+
+    /// Screen space below the menu bar. Lets the panel grow while editing
+    /// (footer 0 → 34/80) without ever exceeding the visible frame.
+    private var panelHeightCeiling: CGFloat {
+        NSScreen.main?.visibleFrame.height ?? DashboardLayout.maxHeight
     }
 
     private var scrollHeight: CGFloat {
-        let available =
-            DashboardLayout.maxHeight
-            - footerHeight
-        return max(0, min(contentHeight, available))
+        // Card area is capped by the panel maximum only: normal mode has no
+        // footer strip any more, so the whole height budget belongs to the
+        // cards. The edit-mode footer grows downward via totalHeight instead,
+        // keeping every card at exactly the same position.
+        let base = max(0, min(contentHeight, DashboardLayout.maxHeight))
+        // Screen clamp: if the expanded footer would push the panel past the
+        // visible frame, hand the excess back to the scroll area. Only bites
+        // on short screens or with very tall content.
+        let excess = max(0, base + footerHeight - panelHeightCeiling)
+        return max(0, base - excess)
     }
 
     private var totalHeight: CGFloat {
@@ -212,10 +231,11 @@ struct DashboardPopoverView: View {
                     .coordinateSpace(name: "dashboardCards")
                     .padding(.horizontal, 14)
                     .padding(.top, 11)
-                    // 2pt to the hover hint; keep the old 11pt in edit mode so
-                    // the dock is not glued to the last card.
-                    .padding(.bottom, isEditingCards ? 11 : 2)
                     .fixedSize(horizontal: false, vertical: true)
+                    // 11pt bottom padding matches the top (2026-11-21 v2 定稿);
+                    // the hint text lives in this gap, anchored to the panel
+                    // bottom — not to the card.
+                    .padding(.bottom, 11)
                     .background(GeometryReader { geo in
                         Color.clear.preference(
                             key: DashboardContentHeightKey.self,
@@ -227,10 +247,21 @@ struct DashboardPopoverView: View {
                 .frame(height: scrollHeight)
 
                 dashboardFooter
-                    .frame(height: footerHeight)
+                    .frame(height: footerHeight, alignment: .top)
             }
+            // 底部间隔带（v2 定稿）：hover 时 ocean 渐变面色 + 提示文字。
+            // 文字放 11pt 间隔带内（上距卡片 0.5pt、下距面板底边 0.5pt，
+            // 不以卡片为参照系、锚定面板底边）；热区 = 间隔带本身，左右
+            // 铺满面板宽度，编辑态让位给编辑栏。热区最后挂（最上层）
+            // 独占 hover 跟踪，面色与文字在下面透出。
+            .overlay(alignment: .bottom) { footerHintSurface }
+            .overlay(alignment: .bottom) { footerHintText }
+            .overlay(alignment: .bottom) { footerHotZone }
         }
-        .frame(width: DashboardLayout.width, height: totalHeight)
+        // alignment .top：面板顶部锚定，内容在 hosting 边界内的纵向位置恒定
+        // 于顶部——尺寸动画期间任何瞬时错位都表现为底部裁切而非卡片位移
+        // （center 对齐会把错位变成卡片垂直弹跳，2026-11-21 曾实测复现）。
+        .frame(width: DashboardLayout.width, height: totalHeight, alignment: .top)
         .preferredColorScheme(resolvedPreferredScheme)
         .tint(AidenteTheme.jade)
         .onPreferenceChange(DashboardContentHeightKey.self) { contentHeight = $0 }
@@ -284,9 +315,9 @@ struct DashboardPopoverView: View {
 
     private func enterCardEditMode() {
         isFooterHovering = false
-        withAnimation(.easeInOut(duration: 0.18)) {
-            isEditingCards = true
-        }
+        // 切换即时生效，footer 高度/淡入由 driver 逐帧推进（方案 B）。
+        isEditingCards = true
+        footerProgress.animate(to: 1)
     }
 
     @ViewBuilder
@@ -430,48 +461,73 @@ struct DashboardPopoverView: View {
 
     @ViewBuilder
     private var dashboardFooter: some View {
-        if isEditingCards {
-            VStack(spacing: 0) {
-                if !hiddenCards.isEmpty { dockRow }
-                editingBar
+        // 内容挂载绑 progress 而非 isEditingCards（2026-11-21 弹跳排查定案）：
+        // 逐帧几何实测面板 anchor 恒定、AppKit 无跳变，弹跳来自退出时
+        // 编辑栏瞬时卸载——底部 80pt 闪空一帧再收回。挂载绑 progress 后，
+        // 编辑栏瞬时卸载——底部 80pt 闪空一帧再收回。挂载绑 progress 后，
+        // 退出与进入完全对称：编辑栏随高度收回渐隐。
+        Group {
+            if footerProgress.progress > 0.001 {
+                VStack(spacing: 0) {
+                    if !hiddenCards.isEmpty { dockRow }
+                    editingBar
+                }
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
+                        .frame(height: DashboardLayout.dividerHeight)
+                }
+                .opacity(footerProgress.progress)
             }
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
-                    .frame(height: DashboardLayout.dividerHeight)
-            }
-        } else {
-            hoverHint
         }
     }
 
-    private var hoverHint: some View {
-        // Keep the hint vertically centred between the last card's bottom
-        // edge and the panel's bottom edge; `AidenteFooterHintSurface` still
-        // fills the whole 20pt hover strip via its own max-size frame.
-        ZStack {
-            if isFooterHovering {
-                AidenteFooterHintSurface()
-                    .transition(.opacity)
-                Text(AidenteL10n.t("长按进入编辑模式", "Long-press to enter edit mode"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .transition(.opacity)
+    /// hover 时 11pt 间隔带的 ocean 渐变面色（复用旧 footer 条的绘制组件）。
+    /// 淡入淡出用视图级 .animation(value:)，不用 withAnimation（进出路径禁
+    /// withAnimation，见 footerHotZone 注释）。可见条件绑 progress < 0.001：
+    /// 退出动画期间不闪现，面板完全关闭后才允许出现。
+    @ViewBuilder
+    private var footerHintSurface: some View {
+        AidenteFooterHintSurface()
+            .frame(height: DashboardFooterMetrics.hotZoneHeight)
+            .opacity(isFooterHovering && footerProgress.progress < 0.001 ? 1 : 0)
+            .animation(.easeInOut(duration: 0.15), value: isFooterHovering)
+    }
+
+    /// 「长按进入编辑模式」提示文字：10pt 高，放在卡片与面板底边之间的
+    /// 11pt 间隔带里——上距卡片 0.5pt、下距面板底边 0.5pt，水平居中，
+    /// 锚定面板底边（v2 定稿：不以卡片为参照系）。
+    @ViewBuilder
+    private var footerHintText: some View {
+        Text(AidenteL10n.t("长按进入编辑模式", "Long-press to enter edit mode"))
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(height: 10)
+            .padding(.bottom, 0.5)
+            .opacity(isFooterHovering && footerProgress.progress < 0.001 ? 1 : 0)
+            .animation(.easeInOut(duration: 0.15), value: isFooterHovering)
+    }
+
+    /// 底部透明热区：高 11pt = 间隔带本身，左右铺满面板宽度；hover 显隐
+    /// 提示文字、长按进入编辑态。可见条件绑 progress < 0.001——退出动画
+    /// 期间不重挂载（避免光标下 mouseEntered 闪现面色），面板关闭后才出现。
+    private var footerHotZone: some View {
+        Group {
+            if footerProgress.progress < 0.001 {
+                Color.clear
+                    .frame(height: DashboardFooterMetrics.hotZoneHeight)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        isFooterHovering = hovering
+                    }
+                    .onLongPressGesture(
+                        minimumDuration: 0.5,
+                        maximumDistance: 24,
+                        perform: enterCardEditMode
+                    )
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: DashboardFooterMetrics.hoverHeight)
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isFooterHovering = hovering
-            }
-        }
-        .onLongPressGesture(
-            minimumDuration: 0.5,
-            maximumDistance: 24,
-            perform: enterCardEditMode
-        )
     }
 
     private var dockRow: some View {
@@ -547,11 +603,12 @@ struct DashboardPopoverView: View {
             Spacer(minLength: 6)
 
             Button {
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    isEditingCards = false
-                    isFooterHovering = false
-                    resetDragState()
-                }
+                // 与进入态对称：分支即时切换，footer 高度收回由 driver
+                // 逐帧推进，totalHeight/面板每帧同步，无弹跳。
+                isEditingCards = false
+                isFooterHovering = false
+                resetDragState()
+                footerProgress.animate(to: 0)
             } label: {
                 Text(AidenteL10n.t("已完成", "Done"))
                     .font(.system(size: 11, weight: .semibold))
@@ -723,8 +780,7 @@ struct DashboardPopoverView: View {
                     Rectangle()
                         .fill(AidenteSurfaceTokens.stroke(scheme: colorScheme))
                         .frame(height: 1)
-                        // 负向水平 padding 抵消卡的 15pt 内边距，横线全宽贴到卡边缘（对齐原型）
-                        .padding(.horizontal, -15)
+                        // 横线与内容同宽、不贴卡边（与三格之间的竖向分割线一致）
                         .padding(.bottom, 11)
                 }
 
@@ -876,17 +932,9 @@ struct DashboardPopoverView: View {
 
     private var careActions: some View {
         PopoverCompactCard {
-            VStack(spacing: 10) {
-                HStack {
-                    Label(AidenteL10n.t("快捷养护"), systemImage: "leaf.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                    Spacer()
-                    Text(viewModel.operationStatusText)
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(
-                            AidenteTheme.legibleTextTint(statusTint, scheme: colorScheme)
-                        )
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                Label(AidenteL10n.t("捷径"), systemImage: "leaf.fill")
+                    .font(.system(size: 13, weight: .semibold))
 
                 CompactActionRow(
                     title: "暂停充电",
@@ -912,15 +960,12 @@ struct DashboardPopoverView: View {
                 )
 
                 CompactActionRow(
-                    title: "放电至充电上限",
-                    subtitle: AidenteL10n.t(
-                        "使用电池降低至 \(displayedChargeLimit)%",
-                        "Use the battery until it reaches \(displayedChargeLimit)%"
-                    ),
-                    icon: "arrow.down.circle.fill",
+                    title: "恢复正常模式",
+                    subtitle: lowPowerRowSubtitle,
+                    icon: "speedometer",
                     tint: AidenteTheme.ocean,
-                    isOn: viewModel.forceDischargeActive,
-                    action: viewModel.toggleForceDischarge
+                    isOn: viewModel.lowPowerOverrideActive,
+                    action: viewModel.toggleLowPowerOverride
                 )
 
                 CompactActionRow(
@@ -939,6 +984,26 @@ struct DashboardPopoverView: View {
         min(max(Int(chargeLimitDraft.rounded()), 20), 100)
     }
 
+    /// 「恢复正常模式」副标题：生效中说明恢复条件；不可用时说明前提。
+    private var lowPowerRowSubtitle: String {
+        if viewModel.lowPowerOverrideActive {
+            return AidenteL10n.t(
+                "低电量模式已临时关闭，接通电源自动恢复",
+                "Low Power Mode is temporarily off and will be restored on AC power"
+            )
+        }
+        if viewModel.adapterConnected || !viewModel.isLowPowerModeEnabled {
+            return AidenteL10n.t(
+                "电池供电且系统低电量模式开启时可用",
+                "Available on battery power while Low Power Mode is on"
+            )
+        }
+        return AidenteL10n.t(
+            "电池供电时关闭低电量模式，接通电源自动恢复",
+            "Turn off Low Power Mode on battery; restores automatically on AC power"
+        )
+    }
+
     private var statusTint: Color {
         if viewModel.hasControlError { return AidenteTheme.coral }
         if viewModel.isCharging { return AidenteTheme.amber }
@@ -948,16 +1013,16 @@ struct DashboardPopoverView: View {
     // MARK: Hero 状态行（B 方案：仅异常 / 用户主动触发的临时动作生效中显示）
 
     /// 异常（充电控制未生效）或临时动作（暂停充电、临时充至 100%、
-    /// 放电至上限、电池校准）生效中；常态由 header 标题承担。
+    /// 恢复正常模式、电池校准）生效中；常态由 header 标题承担。
     private var showsStatusBanner: Bool {
         viewModel.hasControlError
             || viewModel.manualPauseActive
             || viewModel.chargeLimitOverrideActive
-            || viewModel.forceDischargeActive
+            || viewModel.lowPowerOverrideActive
             || viewModel.calibrationActive
     }
 
-    /// 异常 = coral 警示；临时动作 = amber（与快捷养护四个动作行色调一致）。
+    /// 异常 = coral 警示；临时动作 = amber（与捷径四个动作行色调一致）。
     private var bannerTint: Color {
         viewModel.hasControlError ? AidenteTheme.coral : AidenteTheme.amber
     }
@@ -971,7 +1036,7 @@ struct DashboardPopoverView: View {
         if viewModel.hasControlError { return "exclamationmark.triangle.fill" }
         if viewModel.manualPauseActive { return "pause.fill" }
         if viewModel.chargeLimitOverrideActive { return "bolt.fill" }
-        if viewModel.forceDischargeActive { return "arrow.down.circle.fill" }
+        if viewModel.lowPowerOverrideActive { return "speedometer" }
         return "arrow.triangle.2.circlepath"   // 电池校准
     }
 
@@ -1665,6 +1730,61 @@ private struct FlowNodeView: View {
     private let innerRadius: CGFloat = 5
 }
 
+/// 编辑态 footer 高度动画驱动器（方案 B，2026-11-21）。
+///
+/// 此前所有失败方案（withAnimation、NSAnimationContext setFrame、
+/// sizingOptions=[]）的共同根因：SwiftUI 布局插值与 AppKit `setContentSize`
+/// 一次性 resize 互不感知，中间态必然错位。本驱动用 120Hz Timer 逐帧推进
+/// progress，`footerHeight` / `totalHeight` / footer 内容 opacity 全部由这一个
+/// 数值每帧重算，`onChange(of: totalHeight)` 每帧把同一高度同步给 AppKit——
+/// 两个系统共享同一数据源，不存在独立的插值路径，结构上不可能错位。
+/// （CADisplayLink 在 macOS SDK 标记 API_UNAVAILABLE，故用 Timer。）
+private final class FooterProgressDriver: ObservableObject {
+    @Published private(set) var progress: CGFloat = 0
+
+    private var timer: Timer?
+    private var startTime: CFTimeInterval = 0
+    private var fromValue: CGFloat = 0
+    private var target: CGFloat = 0
+
+    private static let duration: CFTimeInterval = 0.18
+    private static let tickInterval: TimeInterval = 1.0 / 120.0
+
+    /// easeInOutQuad，观感对齐此前 0.18s `.easeInOut`。
+    private static func eased(_ t: Double) -> Double {
+        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+    }
+
+    func animate(to newTarget: CGFloat) {
+        guard newTarget != progress else { return }
+        fromValue = progress
+        target = newTarget
+        startTime = CACurrentMediaTime()
+        if timer == nil {
+            let tick = Timer(timeInterval: Self.tickInterval, repeats: true) { [weak self] _ in
+                self?.step()
+            }
+            RunLoop.main.add(tick, forMode: .common)
+            timer = tick
+        }
+    }
+
+    private func step() {
+        let t = min(1, (CACurrentMediaTime() - startTime) / Self.duration)
+        progress = fromValue + (target - fromValue) * CGFloat(Self.eased(t))
+        if t >= 1 {
+            progress = target
+            timer?.invalidate()
+            timer = nil
+        }
+    }
+
+    deinit {
+        timer?.invalidate()
+        timer = nil
+    }
+}
+
 private enum FlowNodeSide: Equatable {
     case left
     case right
@@ -1672,7 +1792,7 @@ private enum FlowNodeSide: Equatable {
 
 private struct PopoverCompactCard<Content: View>: View {
     @ViewBuilder let content: Content
-    /// 水平内边距；默认 13pt，个别卡可覆盖（如「系统信息」卡 15pt）。
+    /// 水平内边距；默认 13pt，个别卡可覆盖（如「规格」卡 15pt）。
     var horizontalPadding: CGFloat = 13
 
     init(

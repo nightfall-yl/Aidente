@@ -349,6 +349,14 @@ class BatteryService {
         }
     }
 
+    /// Dashboard「恢复正常模式」shortcut: toggle the battery power profile's
+    /// low-power-mode bit via the root helper (no public macOS API).
+    func setLowPowerMode(enabled: Bool) async throws {
+        try await performControlCommand { helper, reply in
+            helper.setLowPowerMode(enabled: enabled, reply: reply)
+        }
+    }
+
     func checkChargingHelper() async throws {
         try await ChargingHelperManager.shared.prepareForControl()
         try await performControlCommand { helper, reply in

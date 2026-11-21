@@ -553,9 +553,10 @@ struct AidenteMaterialLayer: View {
     }
 }
 
-/// Hover-only hint band below the dashboard cards. The dashboard never draws
-/// this itself: the gradient and its hairline edge live here with the other
-/// painting outlets, so the fixed L0–L3 level scale stays measurable.
+/// Hover-only tint band in the dashboard's bottom 11pt gap (2026-11-21 v2):
+/// ocean gradient rising from the panel bottom edge plus a hairline. The
+/// dashboard shows it on hover; painting lives here with the other outlets so
+/// the fixed L0–L3 level scale stays measurable.
 struct AidenteFooterHintSurface: View {
     @Environment(\.colorScheme) private var colorScheme
 
