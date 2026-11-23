@@ -9,20 +9,24 @@ import SwiftUI
 /// the height is an upper bound only — the real height is measured from the
 /// visible content and reported to AppKit.
 enum DashboardLayout {
-    static let width: CGFloat = 370
+    static let width: CGFloat = 360
     static let maxHeight: CGFloat = 800
     static let dividerHeight: CGFloat = 1
+    /// 卡片内文字到卡片左右边缘的距离（hero / 普通卡 / 规格卡统一）。
+    static let cardTextInset: CGFloat = 12
 }
 
 /// The six cards that can be toggled and reordered from the dashboard itself.
 /// Raw values are persisted in `dashboardCardOrder`, so keep them stable;
 /// `allCases` doubles as the canonical order for newly added cards.
 private enum DashboardEditableCard: String, CaseIterable, Identifiable {
-    case colorEnergyFlow
+    // 默认顺序（2026-11-23 用户定）：规格 → 功率桑基图 → 高能耗应用 → 电池健康 → 捷径。
+    // hero 卡单独常驻渲染，不在此列。rawValue 已持久化，勿改动其字符串。
     case batteryHealth
+    case colorEnergyFlow
     case energyAppRanking
-    case careActions
     case capacityHistory
+    case careActions
 
     var id: String { rawValue }
 
@@ -229,7 +233,7 @@ struct DashboardPopoverView: View {
                         }
                     }
                     .coordinateSpace(name: "dashboardCards")
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 11)
                     .padding(.top, 11)
                     .fixedSize(horizontal: false, vertical: true)
                     // 11pt bottom padding matches the top (2026-11-21 v2 定稿);
@@ -566,7 +570,7 @@ struct DashboardPopoverView: View {
                 // Let the row keep its intrinsic width: titles never collapse and
                 // the dock scrolls right instead of squeezing everything in.
                 .fixedSize(horizontal: true, vertical: false)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 11)
                 // When only a few capsules remain they are narrower than the
                 // panel: give the row a minimum width equal to the visible dock
                 // area so the capsules centre instead of pinning to the leading
@@ -627,7 +631,7 @@ struct DashboardPopoverView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: DashboardFooterMetrics.barHeight)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 11)
     }
 
     // B1 整合（2026-11-20）：原 header 区块取消——
@@ -699,9 +703,10 @@ struct DashboardPopoverView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(.horizontal, DashboardLayout.cardTextInset)
+        .padding(.vertical, 14)
         .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: colorScheme == .dark
@@ -719,9 +724,9 @@ struct DashboardPopoverView: View {
                     .opacity(heroCardFillAlpha)
                 )
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(
                     colorScheme == .dark
                         ? Color.white.opacity(0.12)
@@ -754,7 +759,7 @@ struct DashboardPopoverView: View {
             ("温度", viewModel.batteryTemperatureText, AidenteTheme.amber, false),
         ]
 
-        return PopoverCompactCard(horizontalPadding: 15) {
+        return PopoverCompactCard {
             VStack(spacing: 0) {
                 // 上半：当前供电来源单行（左来源名 / 右 V@A 居右），受「电源适配器」「电压与电流」开关控制。
                 // 两者均 11pt medium 次要色（2026-11-20 用户定：升 11pt 但颜色保持次要色，不升 primary）。
@@ -1792,11 +1797,11 @@ private enum FlowNodeSide: Equatable {
 
 private struct PopoverCompactCard<Content: View>: View {
     @ViewBuilder let content: Content
-    /// 水平内边距；默认 13pt，个别卡可覆盖（如「规格」卡 15pt）。
-    var horizontalPadding: CGFloat = 13
+    /// 卡片内文字到左右边缘的距离，统一 12pt（2026-11-22 定）。
+    var horizontalPadding: CGFloat = DashboardLayout.cardTextInset
 
     init(
-        horizontalPadding: CGFloat = 13,
+        horizontalPadding: CGFloat = DashboardLayout.cardTextInset,
         @ViewBuilder content: () -> Content
     ) {
         self.horizontalPadding = horizontalPadding

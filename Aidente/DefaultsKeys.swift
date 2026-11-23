@@ -129,7 +129,7 @@ extension Defaults.Keys {
     /// does not move it to the end for users with a saved order.
     static let dashboardCardOrder = Key<String>(
         "dashboardCardOrder",
-        default: "colorEnergyFlow,batteryHealth,energyAppRanking,careActions,capacityHistory"
+        default: "batteryHealth,colorEnergyFlow,energyAppRanking,capacityHistory,careActions"
     )
 
     // Charging
