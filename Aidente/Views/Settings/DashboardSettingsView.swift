@@ -16,14 +16,7 @@ struct DashboardSettingsView: View {
                 headerOutside: true,
                 showsHeaderBadge: false
             ) {
-                // 2026-11-20 用户定：流动光效放第一行
-                AidenteSettingToggle(
-                    "流动光效",
-                    icon: "sparkles",
-                    colors: AidenteTheme.dashboardColors,
-                    isOn: $showPowerFlowSheen
-                )
-                AidenteRowDivider()
+                // 2026-11-24 用户定：流动光效放第三行
                 AidenteSettingToggle(
                     "电源适配器",
                     icon: "powerplug.fill",
@@ -36,6 +29,13 @@ struct DashboardSettingsView: View {
                     icon: "bolt.horizontal.circle.fill",
                     colors: AidenteTheme.dashboardColors,
                     isOn: $showPowerElectricalSubtitle
+                )
+                AidenteRowDivider()
+                AidenteSettingToggle(
+                    "流动光效",
+                    icon: "sparkles",
+                    colors: AidenteTheme.dashboardColors,
+                    isOn: $showPowerFlowSheen
                 )
             }
 

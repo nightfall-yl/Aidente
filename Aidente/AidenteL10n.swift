@@ -117,8 +117,6 @@ enum AidenteL10n {
         "登录后自动启动，并在菜单栏显示图标": "Launch automatically after sign-in and show the menu bar icon",
         "访问仪表盘": "Dashboard Access",
         "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。": "Open the full dashboard even when macOS hides the menu bar icon.",
-        "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。": "Double-click Aidente in Applications, Launchpad, or Spotlight to open a standalone dashboard window.",
-        "双击“应用程序”文件夹、启动台或聚焦搜索中的 Aidente 图标，即可打开独立仪表盘窗口。面板显示项可在仪表盘内配置。": "Double-click Aidente in Applications, Launchpad, or Spotlight to open a standalone dashboard window. Panel visibility is configured inside the dashboard.",
         "打开仪表盘": "Open Dashboard",
         "菜单栏": "Menu Bar",
         "菜单栏实时读数": "Live Menu Bar Readout",

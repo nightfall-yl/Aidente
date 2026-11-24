@@ -49,8 +49,17 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
         Defaults[.appAppearance].nsAppearance
     }
 
+    /// 仪表盘呈现来源。同一个 SwiftUI 根视图用在三个容器里，齿轮回调需要
+    /// 知道点击来自哪一个，才能决定设置页弹出时要收起哪些容器。
+    private enum DashboardPresentationSource {
+        case menuPanel
+        case dashboardWindow
+        case previewWindow
+    }
+
     private func makeDashboardRootView(
-        canSampleBackdrop: Bool = true
+        canSampleBackdrop: Bool = true,
+        source: DashboardPresentationSource
     ) -> some View {
         DashboardPopoverView(
             viewModel: viewModel,
@@ -58,7 +67,14 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
                 guard let self else { return }
                 self.closeMenuPanel()
                 self.previewWindow?.close()
-                self.dashboardWindow?.close()
+                switch source {
+                case .dashboardWindow:
+                    // 独立仪表盘保留：启动台打开后点齿轮，窗口留在设置页后面。
+                    break
+                case .menuPanel, .previewWindow:
+                    // 菜单栏 / 预览路径：独立仪表盘保持消失。
+                    self.dashboardWindow?.close()
+                }
                 self.settingsWindowController.showSettings(tab: tab)
             },
             onQuit: { [weak self] in
@@ -237,7 +253,7 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
         isPresenting = true
         if menuPanel == nil {
             let hostingController = NSHostingController(
-                rootView: makeDashboardRootView(canSampleBackdrop: true)
+                rootView: makeDashboardRootView(canSampleBackdrop: true, source: .menuPanel)
             )
             let panel = AidentePreviewPanel(contentViewController: hostingController)
             panel.styleMask = [.borderless]
@@ -363,7 +379,7 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
         guard dashboardWindow == nil else { return }
 
         let hostingController = NSHostingController(
-            rootView: makeDashboardRootView(canSampleBackdrop: true)
+            rootView: makeDashboardRootView(canSampleBackdrop: true, source: .dashboardWindow)
         )
         let window = NSWindow(contentViewController: hostingController)
         window.title = AidenteL10n.t("Aidente 仪表盘", "Aidente Dashboard")
@@ -400,7 +416,7 @@ final class StatusBarManager: NSObject, NSWindowDelegate {
         guard previewWindow == nil else { return }
 
         let hostingController = NSHostingController(
-            rootView: makeDashboardRootView(canSampleBackdrop: true)
+            rootView: makeDashboardRootView(canSampleBackdrop: true, source: .previewWindow)
         )
         let panel = AidentePreviewPanel(contentViewController: hostingController)
         panel.styleMask = [.borderless]
