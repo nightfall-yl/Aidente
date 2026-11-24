@@ -85,7 +85,7 @@ private enum DashboardEditableCard: String, CaseIterable, Identifiable {
 }
 
 private enum DashboardFooterMetrics {
-    static let hotZoneHeight: CGFloat = 11
+    static let hotZoneHeight: CGFloat = 12
     static let barHeight: CGFloat = 34
     static let dockHeight: CGFloat = 46
     static let buttonCornerRadius: CGFloat = 8
@@ -234,12 +234,12 @@ struct DashboardPopoverView: View {
                     }
                     .coordinateSpace(name: "dashboardCards")
                     .padding(.horizontal, 11)
-                    .padding(.top, 11)
+                    .padding(.top, 12)
                     .fixedSize(horizontal: false, vertical: true)
-                    // 11pt bottom padding matches the top (2026-11-21 v2 定稿);
+                    // 12pt bottom padding matches the top (2026-11-24: 11 → 12);
                     // the hint text lives in this gap, anchored to the panel
                     // bottom — not to the card.
-                    .padding(.bottom, 11)
+                    .padding(.bottom, 12)
                     .background(GeometryReader { geo in
                         Color.clear.preference(
                             key: DashboardContentHeightKey.self,
@@ -254,7 +254,7 @@ struct DashboardPopoverView: View {
                     .frame(height: footerHeight, alignment: .top)
             }
             // 底部间隔带（v2 定稿）：hover 时 ocean 渐变面色 + 提示文字。
-            // 文字放 11pt 间隔带内（上距卡片 0.5pt、下距面板底边 0.5pt，
+            // 文字放 12pt 间隔带内（上距卡片 1pt、下距面板底边 1pt，
             // 不以卡片为参照系、锚定面板底边）；热区 = 间隔带本身，左右
             // 铺满面板宽度，编辑态让位给编辑栏。热区最后挂（最上层）
             // 独占 hover 跟踪，面色与文字在下面透出。
@@ -486,7 +486,7 @@ struct DashboardPopoverView: View {
         }
     }
 
-    /// hover 时 11pt 间隔带的 ocean 渐变面色（复用旧 footer 条的绘制组件）。
+    /// hover 时 12pt 间隔带的 ocean 渐变面色（复用旧 footer 条的绘制组件）。
     /// 淡入淡出用视图级 .animation(value:)，不用 withAnimation（进出路径禁
     /// withAnimation，见 footerHotZone 注释）。可见条件绑 progress < 0.001：
     /// 退出动画期间不闪现，面板完全关闭后才允许出现。
@@ -499,7 +499,7 @@ struct DashboardPopoverView: View {
     }
 
     /// 「长按进入编辑模式」提示文字：10pt 高，放在卡片与面板底边之间的
-    /// 11pt 间隔带里——上距卡片 0.5pt、下距面板底边 0.5pt，水平居中，
+    /// 12pt 间隔带里——上距卡片 1pt、下距面板底边 1pt，水平居中，
     /// 锚定面板底边（v2 定稿：不以卡片为参照系）。
     @ViewBuilder
     private var footerHintText: some View {
@@ -508,12 +508,12 @@ struct DashboardPopoverView: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .frame(height: 10)
-            .padding(.bottom, 0.5)
+            .padding(.bottom, 1)
             .opacity(isFooterHovering && footerProgress.progress < 0.001 ? 1 : 0)
             .animation(.easeInOut(duration: 0.15), value: isFooterHovering)
     }
 
-    /// 底部透明热区：高 11pt = 间隔带本身，左右铺满面板宽度；hover 显隐
+    /// 底部透明热区：高 12pt = 间隔带本身，左右铺满面板宽度；hover 显隐
     /// 提示文字、长按进入编辑态。可见条件绑 progress < 0.001——退出动画
     /// 期间不重挂载（避免光标下 mouseEntered 闪现面色），面板关闭后才出现。
     private var footerHotZone: some View {
