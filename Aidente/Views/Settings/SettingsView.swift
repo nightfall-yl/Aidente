@@ -5,7 +5,6 @@ import smc_power
 
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
-    case dashboard = "Dashboard"
     case charging = "Charging"
     case permissions = "Permissions"
     case automation = "Automation"
@@ -26,7 +25,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: AidenteL10n.t("通用")
-        case .dashboard: AidenteL10n.t("仪表盘")
         case .charging: AidenteL10n.t("充电管理")
         case .permissions: AidenteL10n.t("睡眠行为", "Sleep Behavior")
         case .automation: AidenteL10n.t("自动化")
@@ -39,8 +37,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general:
             return "gearshape.fill"
-        case .dashboard:
-            return "gauge.with.dots.needle.67percent"
         case .charging:
             return "battery.100.bolt"
         case .permissions:
@@ -56,12 +52,12 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var colors: [Color] {
         switch self {
-        // 方案 A（2026-11-12）：蓝 → 紫 → 绿 → 靛 → 橙 → 橙红 → 蓝紫，
-        // 7 个 tab 顺序不变；仪表盘 / 睡眠行为色对互换，每页首卡与 tab 同色。
+        // 6 个 tab：蓝 → 绿 → 紫 → 橙 → 橙红 → 蓝紫（2026-11-27 调整）。
+        // 仪表盘 tab 删除后，充电管理改回 chargingColors 绿，
+        // 睡眠行为改用 dashboardColors 紫（原 advancedColors 靛）。
         case .general: AidenteTheme.generalColors
-        case .dashboard: AidenteTheme.chargingColors
-        case .charging: AidenteTheme.dashboardColors
-        case .permissions: AidenteTheme.advancedColors
+        case .charging: AidenteTheme.chargingColors
+        case .permissions: AidenteTheme.dashboardColors
         case .automation: AidenteTheme.automationColors
         case .diagnostics: AidenteTheme.aboutColors
         case .about: AidenteTheme.permissionColors
@@ -186,6 +182,9 @@ struct SettingsView: View {
                 // ~18% so the icon's built-in safe-area padding is cropped and
                 // the rounded square fills the 34pt frame, matching the visual
                 // weight of the functional-area badges.
+                // 2026-11-28: restored to the original 34pt + 1.18 after the
+                // icns itself was remapped back to the macOS 100pt safe-area
+                // standard (the interim 30pt frame treated a symptom).
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -400,8 +399,6 @@ struct SettingsView: View {
                     switch selectedTab {
                     case .general:
                         GeneralSettingsView(capabilities: capabilities)
-                    case .dashboard:
-                        DashboardSettingsView()
                     case .charging:
                         ChargingSettingsView(
                             capabilities: capabilities,

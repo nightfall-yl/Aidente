@@ -659,9 +659,8 @@ function legacyBadge(k, colors, size = TAB_BADGE_SIZE) {
 /* ---------- data: tabs + cards ---------- */
 const TABS = [
   { id:'general',    title:'通用',         icon:'gear',      colors:'general' },
-  { id:'dashboard',  title:'仪表盘',       icon:'gauge',     colors:'charging' },
-  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'dashboard' },
-  { id:'permissions',title:'睡眠行为',     icon:'shield',    colors:'advanced' },
+  { id:'charging',   title:'充电管理',     icon:'battery',   colors:'charging' },
+  { id:'permissions',title:'睡眠行为',     icon:'shield',    colors:'dashboard' },
   { id:'automation', title:'自动化', icon:'calendar',  colors:'automation' },
   { id:'diagnostics',title:'诊断',         icon:'waveform',  colors:'about' },
   { id:'about',      title:'关于',         icon:'heart',     colors:'permissions' },
@@ -713,32 +712,9 @@ const PAGES = {
       { title:'登录时启动', icon:'power', colors:'automation', rows:[
         rToggle('登录时启动 Aidente', '登录后自动启动，并在菜单栏显示图标', true, 'general', 'power'),
       ]},
-    ]
-  },
-  dashboard: {
-    cards: [
-      /* 2026-11-19 用户指令：供电方式 / 电压电流移到仪表盘顶部（原系统运行时间 / 电池剩余时间位置），
-         字号同原两行 10px；开关按内容命名为「电源适配器」/「电压与电流」。 */
-      /* 2026-11-20 用户指令：删副标题——「电源适配器」/「电压与电流」控制菜单栏，「显示流动光效」控制能量分流图，
-         三者作用位置不同，副标题「仪表盘菜单栏副标题。」不再准确。 */
-      /* 2026-11-20 用户指令：卡名「电源信息」→「控制面板」，流动光效移到第一行。 */
-      { title:'控制面板', icon:'gauge', colors:'charging', rows:[
-        rToggle('流动光效', '', true, 'dashboard', 'sparkles'),
-        rDiv(),
-        rToggle('电源适配器', '', true, 'dashboard', 'gauge'),
-        rDiv(),
-        rToggle('电压与电流', '', true, 'dashboard', 'gauge'),
-      ]},
-      /* 2026-11-19 用户指令：按 Stasis 项目展示图重画「能量分流」桑基图（单色流管 + 外侧圆角节点）；
-         2026-11-20 用户指令：电池供电态并入同一张卡，不再单独开卡。 */
-      { title:'能量分流', sub:'实时展示适配器、电池与系统之间的功率分配。', icon:'bolt.fill', colors:'charging', rows:[
-        rSankey('adapter', 'a'),
-        rDiv(),
-        rText('电池供电'),
-        rSankey('battery', 'b'),
-      ]},
       /* 2026-11-17 用户指令：访问仪表盘不给卡头，标题下移为卡片设置项行、与设置项同字号；
-         动作按钮落在该行右侧。 */
+         动作按钮落在该行右侧。
+         2026-11-27：随「仪表盘」tab 删除，原样搬到通用页末尾，保持 headless 形态。 */
       { title:'访问仪表盘', icon:'signal', colors:'automation', headless:true, rows:[
         rControl('访问仪表盘', '菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。',
           { t:'button', label:'打开仪表盘' }, 'automation', 'signal'),
@@ -747,7 +723,7 @@ const PAGES = {
   },
   charging: {
     cards: [
-      { title:'充电管理', icon:'battery', colors:'dashboard', rows:[
+      { title:'充电管理', icon:'battery', colors:'charging', rows:[
         rToggle('启用充电管理', '首次启用需管理员授权安装后台服务。', true, 'charging', 'plug'),
         rNotice('部分新固件在电量高于上限时会使用电池，不能保证仅由充电器供电；临时暂停使用当时电量的固件上限，允许小幅波动。', 'info', 'charging'),
         rControl('设置充电上限', '', rSlider(80, 20, 100, '%'), 'charging', 'sliders'),
@@ -758,7 +734,8 @@ const PAGES = {
         // 2026-11-11 用户指令恢复：自动放电回到原位，默认关闭
         rToggle('启用自动放电', '到达目标后自动恢复适配器供电。', false, 'charging', 'plug'),
       ]},
-      { title:'电池巡航', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'permissions', rows:[
+      // 2026-11-28：本卡徽章配色改用「语言与外观」的 general 蓝（原 permissions → dashboard 紫）。
+      { title:'电池巡航', sub:'允许电量在上限附近自然浮动，减少频繁微量补电。', icon:'signal', colors:'general', rows:[
         rToggle('启用电池巡航', '', false, 'permissions', 'signal'),
         rDiv(),
         rControl('低于上限多少时恢复充电', '', rSlider(3, 1, 20, '%'), 'permissions', 'sliders'),
@@ -857,9 +834,10 @@ const PAGES = {
   },
   permissions: {
     cards: [
-      // 2026-11-11 自「充电管理」页移入并更名「睡眠行为」，颜色 advanced（与仪表盘互换后）；
+      // 2026-11-11 自「充电管理」页移入并更名「睡眠行为」；
       // 2026-11-17 用户指令：导航栏更名「睡眠行为」，本页只此一张卡，去掉卡头标题 / 副标题，只保留卡片（headless）。
-      { title:'睡眠行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'advanced', headless: true, rows:[
+      // 2026-11-27：本卡（=本页首卡）配色随睡眠行为 tab 身份色改为 dashboard 紫（原 advanced 靛紫）。
+      { title:'睡眠行为', sub:'决定 Mac 睡眠以及 Aidente 未运行时如何保持充电状态。', icon:'power', colors:'dashboard', headless: true, rows:[
         rToggle('达到上限前阻止睡眠', '仅阻止因长时间无操作而自动睡眠，合盖仍会睡眠。', true, 'advanced', 'power'),
         rDiv(),
         rToggle('睡眠时暂停充电', '进入睡眠（含合盖）时暂停充电。', false, 'advanced', 'power'),
@@ -1462,8 +1440,8 @@ document.getElementById('appBadge').innerHTML = svg('bolt');
    数值即设计基准：原型 CSS 与 Swift 源码都以此为准。 */
 function renderLegend() {
   /* 色板：直接遍历 TABS，色块顺序、取色、标签与导航栏 tab 一一对应。
-     tab 与色对是交叉的（仪表盘用 chargingColors 绿、充电管理用
-     dashboardColors 紫），由 TABS 自身表达，末尾补高温保护字面量色对。 */
+     2026-11-27：仪表盘 tab 删除后，充电管理改回 chargingColors 绿、
+     睡眠行为改用 dashboardColors 紫，由 TABS 自身表达，末尾补高温保护字面量色对。 */
   const legendPairs = [
     ...TABS.map(t => [t.colors, t.title]),
     ['heat', '高温保护（字面量）'],

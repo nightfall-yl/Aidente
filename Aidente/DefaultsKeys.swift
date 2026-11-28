@@ -9,6 +9,9 @@ enum AidenteRuntime {
 enum AidenteMigration {
     private static let legacyBundleIdentifier = "com.iadente.app"
     private static let migrationMarker = "didMigrateLegacyPreferencesV1"
+    /// 2026-11-27：删「仪表盘」设置 tab 后，三个开关不再有 UI；
+    /// 一次性把老用户已保存的 false 重置为默认开启。
+    private static let dashboardTogglesMarker = "didResetDashboardTogglesOnViewRemoval"
 
     static func migrateLegacyPreferencesIfNeeded() {
         let defaults = UserDefaults.standard
@@ -28,6 +31,13 @@ enum AidenteMigration {
         }
 
         defaults.set(true, forKey: migrationMarker)
+
+        // 一次性：仪表盘 tab 删除后三个开关无 UI，统一恢复开启。
+        guard !defaults.bool(forKey: dashboardTogglesMarker) else { return }
+        for key in ["showPowerSourceTitle", "showPowerElectricalSubtitle", "showPowerFlowSheen"] {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(true, forKey: dashboardTogglesMarker)
     }
 }
 

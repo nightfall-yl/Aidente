@@ -879,19 +879,19 @@ final class UpdateService {
         let title: String
         let englishTitle: String
         if let updatedVersion {
-            title = "Aidente 已更新至 \(updatedVersion)，需要重新授权一次"
+            title = "Aidente 已更新至 \(updatedVersion)，需重新授权"
             englishTitle = "Aidente Was Updated to \(updatedVersion) — Re-authorization Needed"
         } else {
-            title = "需要重新授权后台控制服务"
-            englishTitle = "Background Control Service Needs Re-authorization"
+            title = "重新授权后台控制服务"
+            englishTitle = "Re-authorize Background Control Service"
         }
 
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = AidenteL10n.t(title, englishTitle)
         alert.informativeText = AidenteL10n.t(
-            "主程序已改变，后台控制服务登记的身份不再匹配，充电管理暂时不可用。点击「立即重新授权」，通过 macOS 管理员弹窗重新登记即可恢复。",
-            "The app changed, so the helper's pinned identity no longer matches and charging control is paused. Click Re-authorize Now to re-register through the macOS administrator prompt."
+            "主程序改变，后台控制服务登记身份不匹配，充电管理不可用。点击「立即重新授权」即可恢复。",
+            "The app changed, so the helper's registered identity no longer matches and charging control is unavailable. Click Re-authorize Now to restore it."
         )
         alert.addButton(withTitle: AidenteL10n.t("立即重新授权", "Re-authorize Now"))
         alert.addButton(withTitle: AidenteL10n.t("稍后", "Later"))

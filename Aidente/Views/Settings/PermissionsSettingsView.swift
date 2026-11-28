@@ -16,13 +16,13 @@ struct PermissionsSettingsView: View {
     var body: some View {
         AidenteSettingsPage {
             // 自「充电管理」页移入并更名（2026-11-12）；本页首卡，颜色与
-            // 页标题（advanced 靛，与仪表盘互换后）一致。
+            // 页标题（dashboard 紫，2026-11-27 由 advanced 靛改来）一致。
             // v2: this page has a single card, so the header is removed and
             // only the card body remains (headless).
             AidenteCard(
                 "睡眠行为",
                 icon: "moon.stars.fill",
-                colors: AidenteTheme.advancedColors,
+                colors: AidenteTheme.dashboardColors,
                 headless: true
             ) {
                 AidenteSettingToggle(

@@ -1,3 +1,4 @@
+import AppKit
 import Defaults
 import SwiftUI
 import smc_power
@@ -147,6 +148,32 @@ struct GeneralSettingsView: View {
                     colors: AidenteTheme.automationColors,
                     isOn: $launchAtLogin
                 )
+            }
+
+            // 2026-11-27：从「仪表盘」tab 原样搬移（headless，无卡头）。
+            AidenteCard(
+                "访问仪表盘",
+                icon: "macwindow.on.rectangle",
+                colors: AidenteTheme.automationColors,
+                headless: true
+            ) {
+                AidenteControlRow(
+                    "访问仪表盘",
+                    subtitle: "菜单栏图标被系统折叠时，仍然可以打开完整仪表盘。",
+                    icon: "macwindow.on.rectangle",
+                    colors: AidenteTheme.automationColors
+                ) {
+                    Button {
+                        if let url = URL(string: "aidente://dashboard") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    } label: {
+                        Label(AidenteL10n.t("打开仪表盘"), systemImage: "macwindow")
+                    }
+                    .buttonStyle(
+                        AidenteActionButtonStyle(colors: AidenteTheme.automationColors)
+                    )
+                }
             }
         }
         .onChange(of: launchAtLogin) { _, newValue in

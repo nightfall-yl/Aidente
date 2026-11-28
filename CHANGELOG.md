@@ -2,7 +2,7 @@
 
 记录 Aidente 的变更。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，使用中文。
 
-项目当前 bundle 版本为 **6.1.7 / Build 28**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。6.1.7 于 2026-11-20 正式发行（资产含 `Aidente-6.1.7.dmg` / `Aidente-6.1.7-macOS-arm64.zip` / `SHA256SUMS-6.1.7.txt`，自动更新源即本仓库），含 11-19 首版、11-20 / 11-21 / 11-22 / 11-24 补充的仪表盘重做、编辑态动画重构、捷径卡调整与「恢复正常模式」、尺寸与卡片布局及间距收敛、独立仪表盘与设置页共存、死代码清理等全部改进。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
+项目当前 bundle 版本为 **6.1.7 / Build 28**（`BuildSupport/Info.plist`、`BuildSupport/ReaderInfo.plist`、`Aidente.xcodeproj/project.pbxproj` 六个构建配置与 `AGENTS.md` 已同步）。6.1.7 于 2026-11-20 正式发行（资产含 `Aidente-6.1.7.dmg` / `Aidente-6.1.7-macOS-arm64.zip` / `SHA256SUMS-6.1.7.txt`，自动更新源即本仓库），含 11-19 首版、11-20 / 11-21 / 11-22 / 11-24 / 11-27 / 11-28 补充的仪表盘重做、编辑态动画重构、捷径卡调整与「恢复正常模式」、尺寸与卡片布局及间距收敛、独立仪表盘与设置页共存、设置页简化与配色重排、应用图标玻璃边缘与重新授权文案精简、死代码清理等全部改进。带版本号的发行说明见 `BuildSupport/release-notes-*.md`。
 
 ## [6.1.7]-2026-11-20
 
@@ -12,33 +12,31 @@
 
 - **清理菜单时代遗留死代码**：删除 `MenuViewModel` 中 7 个只写不读属性（`batteryPercentageText` / `timeRemainingText` / `uptimeText` / `batteryModeText` / `topEnergyApps` / `hasEnergyUsageSample` / `manageChargingEnabled`）及随之失去用途的系统运行时间刷新链（`updateUptimeText` / `startUptimeTimer` / `stopUptimeTimer` / `formatTimeRemaining`、`uptimeTask` 与配套生命周期代码），连带删除仅被 `uptimeText` 使用的 `SystemService.bootTimestamp()` 及整个 `SystemService.swift`；删除零引用历史协议 `HelperProtocol.swift` / `ChargingHelperProtocol.swift`（真协议在 `Shared/XPCProtocols.swift`）及 `Package.swift`、`Aidente.xcodeproj` 中对应引用；删除 `SMCBattery.firmwarePercentage()` 整数版（实际调用方均用 `firmwarePercentageExact()` 保留小数）；移除 `AidenteControlProtocol` 中无人通过 XPC 调用的 `resetToDefaults()` 协议声明及其 `ChargingHelper` 包装实现（`resetOnQueue()` 因断连恢复路径仍在使用而保留），`restoreDefaults` 仅移除协议声明、保留实现供卸载恢复直调；遗留的本地化资源 `Aidente/L10n/Localizable.xcstrings`（运行时纯靠 `AidenteL10n.t()` 字典，构建与 pbxproj 均不引用）归档至 `Archive/`。行为无变化，充电回归与编译不受影响。
 
+**设置页与界面**
+
+- **删除「仪表盘」设置 tab**：`SettingsTab.dashboard` 与 `DashboardSettingsView.swift` 一并移除，设置页由 7 项缩为 通用 / 充电管理 / 睡眠行为 / 自动化 / 诊断 / 关于 6 项；删除孤立词条「仪表盘」。原「访问仪表盘」卡改挂到通用页末尾。
+- **6 个 tab 与首卡配色重排**：充电管理改为 `chargingColors` 绿、睡眠行为改用 `dashboardColors` 紫，通用蓝 / 自动化橙 / 诊断橙红 / 关于蓝紫不变；各页首卡与 tab 同色——充电管理首卡绿、睡眠行为首卡紫；「电池巡航」卡徽章改用 `generalColors` 蓝（原 `permissionColors`）。原型同步。
+
 **充电管理与授权**
 
 - **更新成功提示改为自适应轮询**：更新后的版本启动时不再固定等待（原 0.7s 启动缓冲 + 2s 等 pin + 2×1s 确认 ≈ 3s），改为 300ms 启动缓冲 + 300ms 间隔自适应轮询 daemon 重 pin，pin 一收敛立即弹「更新成功」——弹窗时间从固定 ≈3s 降到 ≈2s，且跟随 daemon 实际节奏、不再有固定延迟感。轮询总窗口保持 ≥4.2s 不压缩，慢机器上 daemon 重 pin 超窗仍只会等待而非误弹重授权；非更新启动路径不受影响。
-
 - **暂停充电保持验证增加宽限期**：从充电中切回限充保持（如上限从 88% 拖回 80%）时，验证机制对固件的停充滞后给出约 32 秒宽限——前 4 个采样（8 秒/次）不计入「连续仍在充电」的失败判定，宽限期后行为不变（连续 3 次异常才报）。此前固件停充滞后超过约 24 秒时会短暂误报「充电控制未生效（已请求暂停，但电池仍持续充电）」，横幅随后自行消失；真实故障的检出仅延后约 32 秒。
+- **重新授权提示文案精简**：中文标题「需要重新授权后台控制服务」→「重新授权后台控制服务」，英文 `Background Control Service Needs Re-authorization` → `Re-authorize Background Control Service`；更新分支标题「Aidente 已更新至 X，需要重新授权一次」→「Aidente 已更新至 X，需重新授权」。中英正文同步压缩为「主程序改变，后台控制服务登记身份不匹配，充电管理不可用。点击「立即重新授权」即可恢复。」/ `The app changed, so the helper's registered identity no longer matches and charging control is unavailable. Click Re-authorize Now to restore it.`
 
 **仪表盘**
 
-- **hero 修复态去除、健康卡标签改名与面板宽度收缩**：① 点击 hero「充电控制未生效」横幅触发一键修复时，标题不再短暂切换为「修复中…」、副标题不再隐藏——修复期间文案恒为「充电控制未生效 / 点击修复充电控制」，`isRepairing` 状态（`ChargeManager` 字段与赋值、`MenuViewModel` 代理、`DashboardPopoverView` 横幅显示/tint/icon 判断）整体删除，该中间态多余。② 「系统信息」卡（原「电池健康」卡）三格读数标签改名：电池健康 → 健康度（Health）、循环次数 → 循环数（Cycles）、电池温度 → 温度（Temp），词典 key 同步；卡片名称「电池健康」不变。③ 仪表盘面板宽度收缩（终值 360pt，见本区块 11-22「尺寸与内边距收敛」条；popover / 独立窗口 / 预览定位全同步）；④ 删除 hero 右上角「刷新」按钮（面板打开时已每秒自动轮询 SMC、高功耗 App 每 4 秒采样，该按钮最多提前不到 1 秒，冗余）——连同 `MenuViewModel.refresh()` 与「刷新 / Refresh」词条一并移除，悬浮按钮剩设置 / 退出两枚。
-- **仪表盘菜单栏信息区改义与最终归宿**：原「系统运行时间」「电池剩余时间」两行改义为电源信息位（开关与默认 key `showUptime` / `showTimeTillDischarge` → `showPowerSourceTitle` / `showPowerElectricalSubtitle`）；后随顶部整合最终迁入「电池健康」卡上半（见「popover 顶部整合」），单行、单源显示。「电源信息」设置卡无副标题（原「仪表盘菜单栏副标题。」已删）；能量分流卡不再显示卡内标题/副标题，只保留桑基图。双语齐全，无词典漏项。
-- **popover 顶部整合（B1）**：仪表盘 header 区块取消——① 常态状态标题并入 hero 卡内（heroTint 色 17pt bold），信息源与异常横幅统一为 `operationStatusTitle`（充电管理运作状态），二者互斥；原 header 标题 `batteryModeText`（物理供电态推导）与状态行信息源不一致的问题就此对齐。② 设置 / 退出两按钮悬浮 hero 右上角（半透明小圆钮，hover 提亮，原刷新按钮已删见「hero 修复态去除」条），标题行固定 20pt 行高与按钮同基准水平对齐（两者中心同落 y=24）；hero 右侧 2pt 竖向光条装饰删除。③ 电源信息迁入「电池健康」卡上半：单行、当前供电来源单源显示——适配器供电 = 适配器名 + 适配器 V@A，电池供电 = 「电池供电」+ 电池 V@A，V@A 居右与来源名同行；横线分隔上下，下半健康度 / 循环数 / 温度三格不变；「电源适配器」「电压与电流」两开关分别控制名称与 V@A，电池健康卡整体关闭时一并隐藏。相关 popover 高度计算（`headerHeight` preference 与顶部 1pt 分隔线）随之移除。
-- **「流动光效」开关**：设置页仪表盘「控制面板」卡（2026-11-20 由「电源信息」更名；开关顺序终值 电源适配器 / 电压与电流 / 流动光效，见本区块 11-24 条）新增开关（默认开），控制功率桑基图的白色光带动效层——关闭时只保留彩色三色渐变信息层与底管，同时暂停动画时间线（无每帧重绘开销）；新增默认 key `showPowerFlowSheen`。系统「减弱动态效果」仍独立生效，双语齐全。
-- **hero 卡度量收敛**：徽章 39 → 34pt（图标 21 → 18pt、圆角 11 → 10pt）；实时电量与上限百分比 22/20 → 18pt（bold rounded），两个读数同档。
-- **hero 卡状态收敛与巡航下限虚线**：状态行（徽章 + 状态标题）仅在异常（充电控制未生效，coral 警示，保留点击修复）或用户主动触发的临时动作生效中（暂停充电 / 临时充至 100% / 放电至上限 / 电池校准，amber，图标随动作）显示；常态（充电 / 只读监测 / 巡航 / 高温与睡眠保护）隐藏状态行，状态语义由 hero 卡内标题行承担（后随顶部整合与横幅统一信息源）。删除 hero 底部「达到 X% 后自动暂停充电」状态点行与滑杆下方「0% · 拖动白色标记调整上限 · 100%」提示行——上限由滑杆行大数字与手柄位置表达。滑杆手柄左侧新增巡航下限虚线（上限 − 「电池巡航」设定的浮动值），仅适配器供电且开启巡航时显示、随上限拖动实时移动、不参与手势，颜色随 hero 状态 tint（亮色用 ink 深色变体保证对比）。无障碍标签与可调节动作保留。
-- **功率桑基图（原「能量分流」卡）重绘与移动高光动效**：流管由旧细线改为粗渐变流管，分三层绘制——① 无色底管常驻；② 彩色三色渐变常驻为「信息层」（起/中/终三色，透明度 .32/.3/.28，中间色去除浑浊过渡）；③ 白色光带（柔光底 + 亮芯两层）沿流管从左框外平移到右框外为「动效层」，扫描 2.5s + 出框停顿 1.5s = 周期 4s（循环间隔不压缩动画段）。动效由 display-link 驱动的 `TimelineView(.animation)` 按屏幕刷新率渲染（约 60fps，替代原 0.1s 定时刷新导致的卡顿），循环间隔内光带已出框时跳过光带层绘制以省开销；光带透明度分主题——暗色用淡值（柔光峰值 .069 / 亮芯峰值 .172），亮色因白色光带在浅色卡片上对比度低改用更浓的值（柔光峰值 .144 / 亮芯峰值 .36）。系统开启「减弱动态效果」时只保留彩色信息层、隐藏光带。流管四角与节点内侧相接处为 5pt 圆角（流管 path 按角圆角化：外侧自由角用贝塞尔近似圆弧、分叉/汇流相接角保持直角；节点内侧 5pt、外侧 16pt）。节点为全高侧节点（全高 120pt），右侧上下节点按功率贡献比例分配高度、间隔 20pt；功率文字：节点徽章只显示整数、流管内保留两位小数且字号对齐节点徽章（11pt semibold 等宽数字），仅适配器分流态显示节点功率。
-- **「系统信息」卡与自动保护卡下线**：① 「电池健康」卡更名为「系统信息」（编辑栏卡名与图标体系不变，卡内三个读数标签现为「健康度 / 循环数 / 温度」，改名见本区块「hero 修复态去除、健康卡标签改名与面板宽度收缩」条）；② 「自动保护」卡从仪表盘删除——三个开关（电池巡航 / 高温保护 / 阻止睡眠）设置页已有且低频切换，popover 面板误触成本高；可编辑卡片剩五张，「自动保护」显示开关与 `showAutomaticProtection` key、卡内视图与 `ProtectionPill` 组件一并移除，已保存的自定义卡片顺序中的 `automaticProtection` 标识自动忽略。
-- **「系统信息」卡排版精修与水平边距**：上半来源名与 V@A 均为 11pt medium 次要色、基线对齐（V@A 等宽数字）；横线上下留白均衡；三格数值与竖分隔线加垂直呼吸、标签加单行限制；本卡水平内边距 13 → 15pt（`PopoverCompactCard` 支持按卡覆盖，其余卡不受影响），分隔横线负向延伸保持全宽贴边。
-- **卡片更名与默认顺序调整**：① 「能量分流」→「功率桑基图」（/ Power Sankey），卡内无标题不受影响；② 「容量与寿命趋势」→「电池健康」（卡内标题与编辑栏卡名同步，词条「容量与寿命趋势」删除）；③ 默认顺序调整为：功率桑基图、系统信息、高能耗应用、电池健康（原容量与寿命趋势卡，移至末位）。已保存自定义顺序的用户不受影响（resolve 机制按保存顺序显示，缺失卡按 canonical 位置插入）。
-- **「高能耗应用」（原「当前耗电 App」）精简为单一高功耗 App**：删除卡片标题与采样说明、序号与三行榜单，只显示一个经过阈值筛选的 App（App 图标 + 名称 + CPU 百分比 + 进度条，进度按 100% 单核心刻度，不按榜首归一导致恒满格）。判定规则：`%cpu >= 25%` 且至少为第二名的 1.5 倍，连续 2 次采样（约 8 秒）达标才显示；低于 12% 连续 3 次才撤下，中间保持当前 App 防抖。无达标项时显示「当前无高功耗应用」（13pt semibold，与卡片标题同档、水平居中、整行居中占位；双语内嵌，无词典漏项）。原始快照与诊断输出不变。
-- **编辑态高度动画重构与底部间隔带**：① 进入/退出卡片编辑态的面板高度动画由单一进度数据源逐帧驱动（`FooterProgressDriver`，120Hz Timer、0.18s easeInOutQuad）——footer 高度、总高度、AppKit 面板 resize 每帧由同一数值同步更新，替代此前「SwiftUI 插值与 AppKit 一次性 resize 互不感知」导致的卡片位移/弹跳；面板采用原子顶部锚定 `setFrame`，外层内容顶部对齐。② 卡片下边距终值 12pt 与顶部对称（6.1.7 开发期 2 → 11 → 12pt，见本区块 11-24 条），常态 18pt footer hover 条整体取消（面板总高省约 16pt）；「长按进入编辑模式。」提示（10pt）移入卡片与面板底边之间的 12pt 间隔带——上下各距 1pt、水平居中、锚定面板底边，hover 显隐（ocean 渐变面色 + 底部发丝线复用 `AidenteFooterHintSurface`，热区即 12pt 间隔带、左右铺满面板宽度，编辑态让位给编辑栏）。③ 编辑栏挂载与可见性绑定动画进度：进入随高度展开渐显、退出随高度收回渐隐（此前退出为瞬时卸载，底部闪空一帧造成卡片弹跳的观感）。已修复「点击完成退出编辑态卡片弹跳」。
-- **卡片更名与捷径卡简化**：① 「系统信息」→「规格」（/ Specs）、「快捷养护」→「捷径」（/ Shortcuts），编辑栏卡名与本地化词典同步；② 「规格」卡上半横向分割线改为与内容同宽、不贴卡边（与三格间的竖向分隔线一致）；③ 「捷径」卡头移除状态文字（与 hero 同源、避免重复）。面板宽度继续收缩至终值 360pt（见本区块 11-22「尺寸与内边距收敛」条）。
-- **捷径卡「放电至充电上限」下线、「恢复正常模式」上线**：① 前者与设置页「启用自动放电」功能重合（自动放电开启后会在电量高于上限时主动放电至上限并自动恢复），按捷径删除；底层放电机制保留，自动化任务的「放电至指定电量」不受影响；此前该行副标题跟随滑杆实时变化与实际放电目标不一致的问题随之消失。② 新增「恢复正常模式」捷径：电池供电且系统低电量模式开启时可用，一键临时关闭低电量模式（macOS 无公开 API，经 root 助手执行 `pmset -b lowpowermode 0`，仅写电池电源配置不动适配器侧设置），接通电源自动恢复用户原本的低电量模式设置；hero 横幅（speedometer 图标）联动，副标题按 可用 / 不可用原因 / 生效中 三态显示；失败经独立错误位走「充电控制未生效」横幅提示。**此功能需要升级安装后台助手（新增 XPC `setLowPowerMode`）**；若助手在动作生效期间退出，低电量模式保持关闭直至下次接通电源。
-- **「高能耗应用」卡中文应用名乱码修复**：进程采样 `ps` 此前强制 `LC_ALL=C`，该 locale 下 `ps` 会把命令路径中的非 ASCII 字节做 `cat -v` 式转义（如「抖音」→ `M-fM^JM^V…`），无 GUI 注册的进程（如应用后台任务）走命令路径兜底时，转义后的 `.app` 目录名被当作应用名显示为乱码。现改为 `en_US.UTF-8` 让 `ps` 原样输出 UTF-8 路径，并给路径兜底增加磁盘存在性校验，杜绝任何拼错路径生成幽灵条目。
-- **仪表盘尺寸与卡片内边距收敛（11-22）**：① 面板宽度 `DashboardLayout.width` 定稿 370 → 360pt（popover / 独立窗口 / 预览定位全同步，为 6.1.7 开发期 400 → 380 → 370 → 360 的终值）。② 卡片左右距面板边缘 14 → 11pt——卡片区、编辑态 dock 行、编辑栏三处统一，保持编辑态与常态缩进一致。③ 卡片内文字距卡片左右边距统一 12pt：新增 `DashboardLayout.cardTextInset` 常量收口，hero 原四边 14pt 拆为左右 12pt / 垂直 14pt，普通卡默认 13pt、「规格」卡原覆盖 15pt 一并归入该常量（垂直内边距不变）。④ hero 卡圆角 16 → 14pt，与其余卡片一致；hero 的渐变填充、状态色描边与阴影设计保持不变，桑基图保留卡片背景包裹。
-- **仪表盘上下边距与提示文字位置微调（11-24）**：卡片区上下边距 11 → 12pt（`.padding(.top, ...)` / `.padding(.bottom, ...)`，左右水平边距 11pt 不变）；底部间隔带热区高度 `hotZoneHeight` 同步 11 → 12pt，保持 hover 面色与热区铺满间隔带；「长按进入编辑模式。」提示文字锚定面板底边由 0.5 → 1pt（高度 10pt 不变，12pt 间隔带内上下各余 1pt）。
-- **独立仪表盘与设置页共存（11-24）**：修复「从启动台打开独立仪表盘、点 hero 齿轮弹设置页时独立仪表盘被一起关掉」——`onOpenSettings` 此前是菜单栏面板 / 独立窗口 / 预览窗口三个容器共用的闭包，无条件关闭 `dashboardWindow`。现按呈现来源区分（`DashboardPresentationSource`，三处 rootView 创建点各传来源）：从独立仪表盘点齿轮只收起菜单栏面板与预览窗口、保留独立窗口留在设置页后面；从菜单栏面板 / 预览窗口点则照旧关闭独立窗口，保持其消失。`togglePopover` 的「点菜单栏先关独立窗口」逻辑不变。设置页「仪表盘」tab 的「访问仪表盘」卡及 `aidente://dashboard` 处理保留（常规路径从菜单栏进设置页，仍需按钮打开独立窗口）；另清理两条零引用的「双击启动台打开独立仪表盘」历史词条。
-- **控制面板开关顺序（11-24）**：设置页仪表盘「控制面板」卡开关顺序由「流动光效 / 电源适配器 / 电压与电流」调整为「电源适配器 / 电压与电流 / 流动光效」，流动光效由首行移到第三行。
+- **卡片更名、下线与默认顺序**：① 「能量分流」→「功率桑基图」（/ Power Sankey），6.1.6 的「电池健康」状态卡→「规格」（/ Specs），「容量与寿命趋势」→「电池健康」（卡内标题与编辑栏卡名同步，旧词条删除），「快捷养护」→「捷径」（/ Shortcuts），编辑栏卡名与本地化词典同步；② 「自动保护」卡下线——三个开关设置页已有、低频切换，popover 面板误触成本高，显示开关与 `showAutomaticProtection` key、卡内视图与 `ProtectionPill` 组件一并移除，已保存的自定义顺序中的 `automaticProtection` 标识自动忽略；③ 默认顺序为 hero、规格、功率桑基图、高能耗应用、电池健康、捷径，已保存自定义顺序的用户不受影响（resolve 机制按保存顺序显示，缺失卡按 canonical 位置插入）。
+- **hero 卡**：① 顶部 header 取消，常态状态标题并入卡内（heroTint 17pt bold），信息源与异常横幅统一为 `operationStatusTitle`，原 `batteryModeText` 与状态行信息源不一致的问题对齐；「系统运行时间」「电池剩余时间」两行、`showUptime` / `showTimeTillDischarge` 开关及对应词典词条一并删除，对应独立设置卡随「仪表盘」tab 移除。② 设置 / 退出两按钮悬浮右上角（半透明小圆钮、hover 提亮），刷新按钮删除（面板已每秒轮询 SMC、高功耗 App 每 4 秒采样），标题行固定 20pt 与按钮中心同落 y=24，右侧 2pt 竖光条删除。③ 一键修复不再切换「修复中…」中间态，标题恒为「充电控制未生效 / 点击修复充电控制」，`isRepairing` 状态删除。④ 状态行仅在异常或临时动作生效中显示，常态隐藏，状态语义由卡内标题行承担；底部「达到 X% 后自动暂停充电」状态点与滑杆下方提示行删除；滑杆手柄左侧新增巡航下限虚线（上限 − 电池巡航浮动值），仅适配器供电且开启巡航时显示、随拖动实时移动、不参与手势。⑤ 徽章 39 → 34pt（图标 21 → 18pt、圆角 11 → 10pt），电量与上限百分比 22/20 → 18pt bold rounded，无障碍标签与可调节动作保留。
+- **规格卡**：① 三格读数标签改名——电池健康 → 健康度（Health）、循环次数 → 循环数（Cycles）、电池温度 → 温度（Temp），词典 key 同步；② 上半新增供电来源单行：适配器供电 = 适配器名 + 适配器 V@A，电池供电 = 「电池供电」+ 电池 V@A，V@A 居右与来源名同行，横线分隔；供电来源与电压电流显示位分别由 `showPowerSourceTitle` / `showPowerElectricalSubtitle` 控制，本卡关闭时一并隐藏；③ 来源名与 V@A 均为 11pt medium 次要色、基线对齐等宽数字，横线上下留白均衡，三格数值与竖分隔线加垂直呼吸、标签单行限制；本卡水平内边距 13 → 15pt，分隔横线负向延伸全宽贴边；卡内上半横线与三格间竖线均与内容同宽、不贴卡边。
+- **功率桑基图**：卡内标题/副标题删除，只保留图形；流管由旧细线改为粗渐变流管，三层绘制——① 无色底管常驻；② 彩色三色渐变常驻为信息层（起/中/终三色，透明度 .32/.3/.28，中间色去除浑浊过渡）；③ 白色光带（柔光底 + 亮芯两层）从左框外平移到右框外为动效层，扫描 2.5s + 出框停顿 1.5s = 周期 4s。动效由 display-link 驱动的 `TimelineView(.animation)` 按屏幕刷新率渲染（约 60fps，替代原 0.1s 定时刷新卡顿），循环间隔内光带出框时跳过绘制；光带透明度分主题——暗色柔光峰值 .069 / 亮芯 .172，亮色 .144 / .36；系统「减弱动态效果」时只保留彩色信息层与底管。流管四角与节点内侧相接处 5pt 圆角（外侧自由角贝塞尔近似圆弧、相接角直角；节点内侧 5pt、外侧 16pt），节点全高 120pt，右侧上下节点按功率贡献比例分配高度、间隔 20pt；节点徽章显示整数、流管内保留两位小数且字号对齐节点徽章（11pt semibold 等宽数字），仅适配器分流态显示节点功率。
+- **高能耗应用**：① 由三行榜单精简为单一高功耗 App——删除卡片标题、采样说明、序号与榜单，只显示一个经阈值筛选的 App（图标 + 名称 + CPU 百分比 + 进度条，进度按 100% 单核心刻度，不按榜首归一导致恒满格）；判定 `%cpu >= 25%` 且至少为第二名 1.5 倍、连续 2 次采样（约 8 秒）达标才显示，低于 12% 连续 3 次才撤下，中间保持当前 App 防抖；无达标项显示「当前无高功耗应用」（13pt semibold、居中占位），原始快照与诊断输出不变。② 修复中文应用名乱码：`ps` 不再强制 `LC_ALL=C`（该 locale 会把非 ASCII 路径 `cat -v` 转义成 `M-fM^JM^V…`），改用 `en_US.UTF-8` 原样输出 UTF-8 路径，并给路径兜底增加磁盘存在性校验，杜绝拼错路径生成幽灵条目。
+- **电池健康卡**：卡内标题与编辑栏卡名同步，旧词条删除；容量 / 寿命趋势图与范围选择不变。
+- **捷径卡**：① 卡头移除状态文字（与 hero 同源、避免重复）；② 「放电至充电上限」捷径下线，与设置页「启用自动放电」重合，底层放电机制保留，自动化任务的「放电至指定电量」不受影响；③ 新增「恢复正常模式」捷径：电池供电且系统低电量模式开启时可用，一键经 root 助手 `pmset -b lowpowermode 0` 临时关闭，接通电源自动恢复用户原设置，hero 横幅（speedometer 图标）按 可用 / 不可用原因 / 生效中 三态联动，失败走「充电控制未生效」横幅；**需升级安装后台助手（新增 XPC `setLowPowerMode`）**，助手在动作期间退出时低电量模式保持关闭至下次接通电源。
+- **面板与交互（全局）**：① 面板宽度 360pt，卡片左右距面板边缘 11pt（卡片区、编辑态 dock 行、编辑栏统一），卡片内文字距左右边距统一 12pt（新增 `DashboardLayout.cardTextInset` 收口，hero 左右 12pt / 垂直 14pt，普通卡默认 13pt，规格卡原 15pt 归入该常量），hero 卡圆角 16 → 14pt（渐变填充、状态色描边与阴影不变，桑基图保留卡片背景）；卡片区上下边距 12pt，底部间隔带热区 12pt，「长按进入编辑模式。」提示高 10pt、锚定面板底边 1pt（上下各余 1pt），hover 显隐、编辑态让位给编辑栏。② 编辑态高度动画由单一 `FooterProgressDriver`（120Hz Timer、0.18s easeInOutQuad）逐帧驱动 footer、总高度与 AppKit resize，替代 SwiftUI 插值与 AppKit 一次性 resize 不同步导致的位移/弹跳；面板原子顶部锚定 `setFrame`，常态 18pt footer hover 条取消；编辑栏挂载与可见性绑定动画进度，进入渐显、退出渐隐。③ 独立仪表盘与设置页共存：按 `DashboardPresentationSource` 区分呈现来源——从独立仪表盘点齿轮只收起菜单栏面板与预览窗口、保留独立窗口；从菜单栏面板 / 预览窗口点则照旧关闭独立窗口；`togglePopover` 的「点菜单栏先关独立窗口」逻辑不变。「访问仪表盘」卡最终在通用页末尾，`aidente://dashboard` 与 `applicationShouldHandleReopen` 保留；另清理两条零引用历史词条。
+
+**应用图标**
+
+- **最外圈玻璃边缘**：圆角底板采用外圈高光渐变描边 + 模糊内发光，无额外硬细线；主体、配色、比例不变。按 macOS 标准将主体置于 824×824 居中框（四边 100pt、主体占比约 80.5%），`BuildSupport/Aidente.icns` 重新生成 10 档，bundle 内图标与源文件一致。
 
 ## [6.1.6]-2026-11-18
 
@@ -85,6 +83,7 @@
 - `zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.6.dmg`（3.5M，卷名 `Aidente 6.1.6`），`hdiutil verify` VALID；另产出 `Aidente-6.1.6-macOS-arm64.zip` 与 `SHA256SUMS-6.1.6.txt`（`Dist/` 内裸文件名格式）。
 - **发行**：GitHub Release `6.1.6`（tag `6.1.6`）发布于 `nightfall-yl/Aidente`，资产含上述 dmg / zip / SHA256SUMS；代码已提交并推送 `main`、打 tag `6.1.6`。已装 6.1.5 的机器会收到应用内更新提示。
 
+
 ## [6.1.5]-2026-11-16
 
 ### 变更
@@ -119,8 +118,6 @@
 **文档**
 
 - README 与英文版版本史对齐为「6.1.5 纲要 + 6.1」，6.1 节自英文版译入；三份设计文档更新至 6.1.5 已落地状态。
-
-
 
 ### 验证
 
@@ -160,17 +157,15 @@
 
 ### 修订
 
-- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。  
-  |  |  |  |  
-  | --- | --- | --- |
+- **修复更新器无法完成更新（2026-11-14 当日补发）**：6.1.4 初版发行后，从 6.1.3 升级到 6.1.4 在「安装」阶段报「无法完成更新 / Aidente did not quit before the update timeout」。根因为更新进度以**模态 SwiftUI `.sheet`** 呈现，而 `NSApplication.terminate` 在仍有模态 session 时被推迟、app 实际未退出，外部 updater 等满 60s 超时。修复：当 `UpdateService.phase` 变为 `.installing`（即将交棒外部 updater 并 terminate）时，于 `AboutSettingsView.swift` 先 `dismiss` 该 sheet 以消去阻塞 terminate 的模态 session，并把 `performInstall` 里的宽限由 450ms 提到 800ms 确保 sheet 退场动画走完。`UpdaterHelper/main.swift` 的 `processIsZombie` 此前把 `proc_bsdinfo` 的 `pbsd_status` 错读成偏移 4（实为 `pbsd_ppid`），已改为偏移 12，zombie 识别真正生效（双保险）。
+  |   |   |   |
+  | - | - | - |
 - **hero 卡新增「点击修复」备用入口（2026-11-14 补发）**：当 hero 显示「充电控制未生效」且根因为后台控制服务（helper）缺失 / 身份不匹配 / 连接或健康检查失败时，hero 顶部状态行变为可点击并显示「点击修复充电控制」提示（要求 `manageCharging` 开启且不在磁盘映像运行）；点击复用与启动 / 更新后重新授权同一路径（`ChargingHelperManager.repair()`，触发一次 macOS 管理员密码弹窗），完成后经 `ChargeManager.retryControlAfterRepair()` 重新下发充电策略。门控用 `ChargingHelperManager.needsRepair`（`!isInstalled || failure != nil`）区分「helper 授权类故障」与「瞬时 SMC 命令失败」（后者不弹管理员密码、由周期轮询自愈），避免对瞬时错误误给修复入口；修复期间 hero 就地显示「修复中…」，失败保留原错误。新增 `ChargeManager.canQuickRepair` / `attemptQuickRepair()` 与 `MenuViewModel` 透传，`AidenteL10n` 补「修复中…」「点击修复充电控制」中英词条。该入口作为授权意外消失时的备用触发点，避免用户只能去「充电管理」重开关开关。
 - **设置页配色与文案调整（2026-11-15 静默重发）**：仪表盘与充电管理两个 tab 颜色互换——`SettingsTab.colors` 中 `.dashboard` 返 `chargingColors`（绿）、`.charging` 返 `dashboardColors`（紫），侧栏 tab 徽章、页头大徽章与首卡框架色随之互换（仪表盘「状态信息」卡改绿、充电管理「充电管理」卡改紫）；充电管理「巡航模式」卡整卡改 `permissionColors`（蓝紫，与软件更新同色）。文案上「管理充电」改名为「启用充电管理」、「充电上限」改名为「设置充电上限」（`ChargingSettingsView` 字面量 + `AidenteL10n` 新增「启用充电管理」词条），`ChargingHelperManager` 报错文案与 `AboutSettingsView` 安全说明同步；能量流标签「彩色能量流」改为「能量分流」（`Sankey Diagram`），README 与 `settings-redesign-prototype.html` 同步。
 - **hero 充电状态文案修正（2026-11-15 静默重发）**：修正 head / 能量分流显示「正在充电」而 hero 显示「等待充电」的错位——`ChargeManager.operationStatusTitle` 新增分支，仅当 `operationStatus == .charging` 且硬件实测 `BatteryService.metrics.isCharging`（`batteryPower > 0`）才返回「正在充电」，否则保持「等待充电」（策略已请求充电、硬件尚未跟上的短暂窗口不谎报），与顶部标题栏、能量分流统一以硬件电流为准。
 - **三轮补发均已提交并同步 tag**：更新器修复、hero 入口与本轮设置页 / hero 充电文案三次补发都已提交到 `main`，`tag 6.1.4` 已移到包含全部补发的提交并强制推送，GitHub Release `6.1.4`（本仓库 `nightfall-yl/Aidente`）的 dmg / zip / SHA256SUMS 同步覆盖上传（silent patch，版本号与 tag 不变）。
 
 ## [6.1.3]-2026-11-13
-
-
 
 
 ### 变更

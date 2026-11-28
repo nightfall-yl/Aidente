@@ -60,7 +60,7 @@ struct ChargingSettingsView: View {
             AidenteCard(
                 "充电管理",
                 icon: "battery.75percent",
-                colors: AidenteTheme.dashboardColors,
+                colors: AidenteTheme.chargingColors,
                 headerOutside: true,
                 showsHeaderBadge: false
             ) {
@@ -155,11 +155,13 @@ struct ChargingSettingsView: View {
             }
 
             if manageCharging {
+                // 2026-11-28：徽章配色改用「语言与外观」的 generalColors 蓝
+                // （原 permissionColors → 2026-11-27 一度改 dashboardColors 紫）。
                 AidenteCard(
                     "电池巡航",
                     subtitle: "允许电量在上限附近自然浮动，减少频繁微量补电。",
                     icon: "sailboat.fill",
-                    colors: AidenteTheme.permissionColors,
+                    colors: AidenteTheme.generalColors,
                     headerOutside: true,
                     showsHeaderBadge: false
                 ) {
