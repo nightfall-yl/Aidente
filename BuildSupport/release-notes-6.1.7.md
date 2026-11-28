@@ -6,7 +6,7 @@
 
 - **删除「仪表盘」设置 tab**：设置页由 7 项缩为 通用 / 充电管理 / 睡眠行为 / 自动化 / 诊断 / 关于 6 项；原「访问仪表盘」卡改挂到「通用」页最后，保持 headless 形态（标题行 + 副标题 +「打开仪表盘」按钮），`aidente://dashboard` 仍可从设置页打开独立窗口。
 - **导航与首卡配色**：充电管理改为绿色（`chargingColors`）、睡眠行为改为紫色（`dashboardColors`），通用蓝 / 自动化橙 / 诊断橙红 / 关于蓝紫不变；各页首卡与 tab 同色，「电池巡航」卡徽章改用通用蓝。
-- **App 徽章**：侧栏主徽章为 34pt 框 + 1.18 缩放，与新图标的 100pt 安全区标准匹配。
+- **设置页专用徽章**：侧栏 App 徽章不再复用 `Aidente.icns`（外圈玻璃高光缩到 34pt 后四角出现白边），改用独立资源 `BuildSupport/SettingsBadge.png`——去掉玻璃外圈与内发光，深色底板满幅 34pt，电池组以中心缩至 75%，小尺寸下四角干净、电池不再撑满底板。
 
 ### 仪表盘
 
@@ -43,13 +43,13 @@
 
 ## 验证范围
 
-`zsh BuildSupport/build_app.sh` 完整构建 Exit 0，`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`；`zsh BuildSupport/test_charging.sh` 134 项充电 / 睡眠 / 固件 / 回滚 / 回读检查通过（本轮无充电策略改动，回归为纯逻辑确认）；`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.7.dmg`，`hdiutil verify` 结果为 VALID。bundle 内 `Info.plist` 为 **6.1.7 / 28**，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 完全一致。
+`zsh BuildSupport/build_app.sh` 完整构建 Exit 0，`codesign` 报 `valid on disk` / `satisfies its Designated Requirement`；`zsh BuildSupport/test_charging.sh` 134 项充电 / 睡眠 / 固件 / 回滚 / 回读检查通过（本轮无充电策略改动，回归为纯逻辑确认）；`zsh BuildSupport/make_dmg.sh` Exit 0，输出 `Dist/Aidente-6.1.7.dmg`，`hdiutil verify` 结果为 VALID。bundle 内 `Info.plist` 为 **6.1.7 / 28**，`Aidente.icns` 与 `BuildSupport/Aidente.icns` 完全一致，`SettingsBadge.png` 与 `BuildSupport/SettingsBadge.png` 完全一致。
 
 ## SHA-256
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `Aidente-6.1.7-macOS-arm64.zip` | `15496fc27b6ed5d985f480554a6c261c42b2c9ef425619a75fc5f357febbe48d` |
-| `Aidente-6.1.7.dmg` | `8af7ec1b0921286c14f564933568502936b87d4759e01fb6a8a376e04d31bb15` |
+| `Aidente-6.1.7-macOS-arm64.zip` | `c8afe5d2f507112c99b13c3481749c922560340cb173948da0f7828f1590905b` |
+| `Aidente-6.1.7.dmg` | `1ed7c77c39bd994c6b9f6ba24b886b25e264a4b1aaebc6789a3863125cf653b0` |
 
 应用内更新器校验的是 zip 的校验值（见 `SHA256SUMS-6.1.7.txt`），dmg 校验值供手动下载核对。

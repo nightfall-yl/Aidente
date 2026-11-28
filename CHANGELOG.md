@@ -16,6 +16,7 @@
 
 - **删除「仪表盘」设置 tab**：`SettingsTab.dashboard` 与 `DashboardSettingsView.swift` 一并移除，设置页由 7 项缩为 通用 / 充电管理 / 睡眠行为 / 自动化 / 诊断 / 关于 6 项；删除孤立词条「仪表盘」。原「访问仪表盘」卡改挂到通用页末尾。
 - **6 个 tab 与首卡配色重排**：充电管理改为 `chargingColors` 绿、睡眠行为改用 `dashboardColors` 紫，通用蓝 / 自动化橙 / 诊断橙红 / 关于蓝紫不变；各页首卡与 tab 同色——充电管理首卡绿、睡眠行为首卡紫；「电池巡航」卡徽章改用 `generalColors` 蓝（原 `permissionColors`）。原型同步。
+- **设置页专用徽章**：侧栏 App 徽章不再复用 `Aidente.icns`（其外圈玻璃高光缩到 34pt 后在四角形成白边），改用独立资源 `BuildSupport/SettingsBadge.png`——`build_app.sh` 复制进 bundle，`SettingsView.swift` 经 `Bundle.main.url(forResource:)` 加载，资源缺失时回退 App 图标。新徽章去掉玻璃外圈与内发光，深色底板满幅 34pt，电池组（本体 / 电量 / 电极 / 闪电）以中心缩至 75%，小尺寸下四角干净、电池不再撑满底板。
 
 **充电管理与授权**
 

@@ -178,19 +178,21 @@ struct SettingsView: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             HStack(spacing: 11) {
-                // App icon, matching the running Aidente app icon. Scaled up
-                // ~18% so the icon's built-in safe-area padding is cropped and
-                // the rounded square fills the 34pt frame, matching the visual
-                // weight of the functional-area badges.
-                // 2026-11-28: restored to the original 34pt + 1.18 after the
-                // icns itself was remapped back to the macOS 100pt safe-area
-                // standard (the interim 30pt frame treated a symptom).
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 34, height: 34)
-                    .scaleEffect(1.18)
-                    .clipped()
+                // Settings-specific 34pt badge: full-bleed artwork, no glass
+                // rim or inner glow, so the small size stays clean. Falls back
+                // to the app icon if the bundled resource is missing.
+                if let badgeURL = Bundle.main.url(forResource: "SettingsBadge", withExtension: "png"),
+                   let badgeImage = NSImage(contentsOf: badgeURL) {
+                    Image(nsImage: badgeImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 34, height: 34)
+                } else {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 34, height: 34)
+                }
                 Text("Aidente")
                     .font(.system(size: 18, weight: .bold))
                 Spacer(minLength: 0)

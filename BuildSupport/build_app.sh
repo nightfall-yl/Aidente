@@ -206,6 +206,7 @@ cp "$project_dir/THIRD_PARTY_NOTICES.md" "$app_dir/Contents/Resources/THIRD_PART
 cp "$project_dir/BuildSupport/install_local_control.sh" "$app_dir/Contents/Resources/install_local_control.sh"
 cp "$build_dir/AidenteCLI" "$app_dir/Contents/Resources/aidente"
 cp "$build_dir/AidenteUpdater" "$app_dir/Contents/Resources/AidenteUpdater"
+cp "$project_dir/BuildSupport/SettingsBadge.png" "$app_dir/Contents/Resources/SettingsBadge.png"
 
 reader_dir="$app_dir/Contents/XPCServices/com.aidente.app.reader.xpc"
 cp "$build_dir/AidenteReader" "$reader_dir/Contents/MacOS/AidenteReader"
